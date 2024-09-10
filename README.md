@@ -1,2 +1,2 @@
-# rechain
-A recommendation system using Chain of Responsibility at Recommendation
+# rtrec
+An realtime recommendation system supporting online updates
