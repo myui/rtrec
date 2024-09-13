@@ -1,0 +1,41 @@
+// For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
+// https://github.com/microsoft/vscode-dev-containers/tree/v0.231.6/containers/docker-existing-dockerfile
+{
+	"name": "rtrec",
+	"image": "myui/rtrec:0.1",
+	"runArgs": ["--platform=linux/amd64"],
+	"containerEnv": {
+		// To enable integrated terminal
+		"SHELL": "/bin/bash",
+		"HOME": "/home/td-user"
+	},
+	// To prevent permission errors
+	"containerUser": "td-user",
+	"workspaceFolder": "/home/td-user/rtrec",
+	// To fix the mount path
+	"workspaceMount": "source=${localWorkspaceFolder},target=/home/td-user/rtrec,type=bind",
+	// Set *default* container specific settings.json values on container create.
+	// Add the IDs of extensions you want installed when the container is created.
+	"customizations": {
+		"remote.SSH.useLocalServer": true,
+		"vscode": {
+			"settings": {
+				// Revisit when https://github.com/microsoft/vscode/issues/174632 is closed
+				"extensions.verifySignature": false,
+				"python.analysis.diagnosticSeverityOverrides": {
+					"reportUnknownVariableType": "none",
+					"reportUnknownArgumentType": "none",
+					"reportUnknownMemberType": "none"
+				},
+				"jupyter.notebookFileRoot": "${fileDirname}/notebooks"
+			},
+			"extensions": [
+				"GitHub.copilot",
+				"GitHub.copilot-chat",
+				"ms-toolsai.jupyter",
+				"ms-toolsai.vscode-jupyter-cell-tags",
+				"ms-python.python"
+			]
+		}
+	}
+}

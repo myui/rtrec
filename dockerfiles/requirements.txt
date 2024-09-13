@@ -1,0 +1,18 @@
+numpy
+scipy
+scikit-learn
+pandas
+matplotlib
+
+hnswlib
+
+pytest
+
+#####################
+# Jupyter Notebooks #
+#####################
+
+jupyter
+jupyterlab
+ipywidgets
+
