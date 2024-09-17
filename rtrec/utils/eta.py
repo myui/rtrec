@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+from typing import Any
 
 class EtaEstimator(ABC):
     def __init__(self, initial_eta: float):
@@ -84,4 +85,25 @@ class InvscalingEtaEstimator(EtaEstimator):
         if self.t == 0:
             return self.eta0 # Avoid division by zero
         return self.eta0 / pow(self.t, self.power_t)
-    
+
+
+def get_eta_estimator(name: str, **kwargs: Any) -> EtaEstimator:
+    """
+    Create an instance of an EtaEstimator based on the provided name and keyword arguments.
+
+    :param name: The type of estimator to create ("fixed" or "invscaling").
+    :param kwargs: Additional parameters required for the estimator initialization.
+    :return: An instance of the specified EtaEstimator subclass.
+    :raises ValueError: If an unknown estimator name is provided.
+    """
+    name = name.lower()
+
+    if name == "fixed":
+        initial_eta = kwargs.get("eta0", 0.1)
+        return FixedEtaEstimator(initial_eta)
+    elif name == "invscaling":
+        initial_eta = kwargs.get("eta0", 0.1)
+        power_t = kwargs.get("power_t", 0.1)
+        return InvscalingEtaEstimator(initial_eta, power_t)
+    else:
+        raise ValueError(f"Unknown estimator type '{name}'. Available options: 'fixed', 'invscaling'.")

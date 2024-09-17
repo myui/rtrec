@@ -6,6 +6,7 @@ class UserItemInteractions:
         # defaultdict of Counters to store user interactions
         self.interactions: defaultdict[int, Counter[int]] = defaultdict(Counter)
         self.empty = Counter()
+        self.max_item_id = 0
 
     def add_interaction(self, user_id: int, item_id: int, count: int = 1) -> None:
         """
@@ -15,14 +16,8 @@ class UserItemInteractions:
         current_count = self.get_user_items(user_id).get(item_id, 0)
         new_count = current_count + count
 
-        if new_count > 0:
-            self.interactions[user_id][item_id] = new_count
-        else:
-            if user_id in self.interactions:
-                # Remove the item if the count is zero or less
-                del self.interactions[user_id][item_id]
-                # Remove the user if they have no more interactions
-                del self.interactions[user_id]
+        self.interactions[user_id][item_id] = new_count
+        self.max_item_id = max(self.max_item_id, item_id)
 
     def get_user_items(self, user_id: int) -> Counter[int]:
         """

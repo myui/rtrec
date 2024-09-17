@@ -16,7 +16,11 @@ def test_set_and_get_item_zero():
 def test_delete_item():
     matrix = DoKMatrix()
     matrix[1, 2] = 5.0
+    assert matrix.len() == 1
     del matrix[1, 2]
+    assert matrix.len() == 0
+    del matrix[1, 3]
+    assert matrix.len() == 0
     assert matrix[1, 2] == 0.0
 
 def test_max_dimensions():
