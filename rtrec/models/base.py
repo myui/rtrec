@@ -40,16 +40,23 @@ class BaseRecommender(ABC):
         """
         raise NotImplementedError("The _update method must be implemented by the subclass.")
 
-    def recommend(self, user: int, top_k: int = 10) -> List[int]:
+    def recommend(self, user: int, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
         """
         Recommend top-K items for a given user.
         :param user: User index
         :param top_k: Number of top items to recommend
+        :param filter_interacted: Whether to filter out items the user has already interacted with
         :return: List of top-K item indices recommended for the user
         """
 
-        candidate_items = self.interactions.get_all_items_for_user(user)
+        if filter_interacted:
+            # Get all items the user has not interacted with
+            candidate_items = self.interactions.get_all_non_interacted_items(user)
+        else:
+            # Get all non-negative items (non-interacted or positively interacted)
+            candidate_items = self.interactions.get_all_non_negative_items(user)
 
+        # Predict scores for candidate items
         scores = self._predict(candidate_items)
 
         # Return top-K items with the highest scores

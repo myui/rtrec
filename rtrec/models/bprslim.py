@@ -25,9 +25,6 @@ class BPRSLIM(BaseRecommender):
         """
         Predict scores for a list of items.
         """
-
-        # Calculate the inner product between user items and the item-item similarity matrix
-        # and return top-k items with the highest scores
         return [self.W.row_sum(item) for item in items]
 
     def _update(self, user: int, positive_item: int, negative_item: int) -> None:

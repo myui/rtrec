@@ -25,11 +25,11 @@ class UserItemInteractions:
         """
         return self.interactions.get(user_id, self.empty)
 
-    def get_user_item_count(self, user_id: int, item_id: int) -> int:
+    def get_user_item_count(self, user_id: int, item_id: int, default_count: int=0) -> int:
         """
         Get the interaction count for a specific user-item pair.
         """
-        return self.get_user_items(user_id).get(item_id, 0)
+        return self.get_user_items(user_id).get(item_id, default_count)
 
     def get_all_users(self) -> List[int]:
         """
@@ -42,3 +42,18 @@ class UserItemInteractions:
         Get a list of all items a user has interacted with.
         """
         return list(self.get_user_items(user_id).keys())
+
+    def get_all_non_interacted_items(self, user_id: int) -> List[int]:
+        """
+        Get a list of all items a user has not interacted with.
+        """
+        interacted_items = set(self.get_user_items(user_id).keys())
+        return [item_id for item_id in range(self.max_item_id + 1) if item_id not in interacted_items]
+
+    def get_all_non_negative_items(self, user_id: int) -> List[int]:
+        """
+        Get a list of all non-negative items.
+        """
+        interacted_items = set(self.get_user_items(user_id).keys())
+        # Return all items with non-negative interaction counts
+        return [item_id for item_id in range(self.max_item_id + 1) if self.get_user_item_count(user_id, item_id, default_count=-1) > 0]
