@@ -4,28 +4,26 @@ from typing import Dict, List
 class UserItemInteractions:
     def __init__(self) -> None:
         # defaultdict of Counters to store user interactions
-        self.interactions: defaultdict[int, Counter[int]] = defaultdict(Counter)
+        self.interactions: defaultdict[int, Counter[float]] = defaultdict(Counter)
         self.empty = Counter()
         self.max_item_id = 0
 
-    def add_interaction(self, user_id: int, item_id: int, count: int = 1) -> None:
+    def add_interaction(self, user_id: int, item_id: int, delta: float = 1.0) -> None:
         """
         Add or update an interaction count for a user-item pair.
         If the count becomes 0 or less, remove the interaction.
         """
-        current_count = self.get_user_items(user_id).get(item_id, 0)
-        new_count = current_count + count
-
-        self.interactions[user_id][item_id] = new_count
+        current = self.get_user_items(user_id).get(item_id, 0.0)
+        self.interactions[user_id][item_id] = current + delta
         self.max_item_id = max(self.max_item_id, item_id)
 
-    def get_user_items(self, user_id: int) -> Counter[int]:
+    def get_user_items(self, user_id: int) -> Counter[float]:
         """
         Get the dictionary of item_id -> interaction_count for a given user.
         """
         return self.interactions.get(user_id, self.empty)
 
-    def get_user_item_count(self, user_id: int, item_id: int, default_count: int=0) -> int:
+    def get_user_item_rating(self, user_id: int, item_id: int, default_count: float = 0.0) -> float:
         """
         Get the interaction count for a specific user-item pair.
         """
@@ -56,4 +54,4 @@ class UserItemInteractions:
         """
         interacted_items = set(self.get_user_items(user_id).keys())
         # Return all items with non-negative interaction counts
-        return [item_id for item_id in range(self.max_item_id + 1) if self.get_user_item_count(user_id, item_id, default_count=-1) > 0]
+        return [item_id for item_id in range(self.max_item_id + 1) if self.get_user_item_count(user_id, item_id, default_count=-1.0) > 0.0]

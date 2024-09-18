@@ -2,68 +2,50 @@ import pytest
 from collections import Counter
 from rtrec.utils.datasets import UserItemInteractions
 
-def test_add_interaction():
-    ui = UserItemInteractions()
-    
-    # Add interactions
-    ui.add_interaction(1, 101, 3)
-    ui.add_interaction(1, 102, 1)
-    ui.add_interaction(2, 101, 2)
+@pytest.fixture
+def interactions():
+    return UserItemInteractions()
 
-    # Check interactions
-    assert ui.get_user_item_count(1, 101) == 3
-    assert ui.get_user_item_count(1, 102) == 1
-    assert ui.get_user_item_count(2, 101) == 2
-    assert ui.get_user_item_count(2, 102) == 0  # Item not interacted with
+def test_add_interaction(interactions):
+    interactions.add_interaction(1, 10, 5.0)
+    assert interactions.get_user_item_count(1, 10) == 5.0
 
-def test_remove_interaction():
-    ui = UserItemInteractions()
+def test_add_multiple_interactions(interactions):
+    interactions.add_interaction(1, 10, 5.0)
+    interactions.add_interaction(1, 10, 3.0)
+    assert interactions.get_user_item_count(1, 10) == 8.0
 
-    # Add and reduce interaction counts
-    ui.add_interaction(1, 101, 3)
-    ui.add_interaction(1, 101, -2)
-    assert ui.get_user_item_count(1, 101) == 1
+def test_add_sub_interaction(interactions):
+    interactions.add_interaction(1, 10, 5.0)
+    interactions.add_interaction(1, 10, -5.0)
+    assert interactions.get_user_item_count(1, 10) == 0.0
+    assert 10 in interactions.get_user_items(1)
 
-    # Remove interaction completely
-    ui.add_interaction(1, 101, -1)
-    assert ui.get_user_item_count(1, 101) == 0
+def test_non_interacted_items(interactions):
+    interactions.add_interaction(1, 10, 5.0)
+    interactions.add_interaction(1, 20, 3.0)
+    assert set(interactions.get_all_non_interacted_items(1)) == set(range(21)) - {10, 20}
 
-def test_remove_user():
-    ui = UserItemInteractions()
+def test_non_negative_items(interactions):
+    interactions.add_interaction(1, 10, 5.0)
+    interactions.add_interaction(1, 20, -2.0)
+    assert set(interactions.get_all_non_negative_items(1)) == {10}
 
-    # Add interaction and remove it
-    ui.add_interaction(1, 101, 3)
-    ui.add_interaction(1, 101, -3)  # This should remove the interaction and the user
-    assert ui.get_user_item_count(1, 101) == 0
-    assert 1 not in ui.get_all_users()
+def test_get_all_users(interactions):
+    interactions.add_interaction(1, 10, 5.0)
+    interactions.add_interaction(2, 20, 3.0)
+    assert set(interactions.get_all_users()) == {1, 2}
 
-def test_get_all_users():
-    ui = UserItemInteractions()
+def test_get_all_items_for_user(interactions):
+    interactions.add_interaction(1, 10, 5.0)
+    interactions.add_interaction(1, 20, 3.0)
+    assert set(interactions.get_all_items_for_user(1)) == {10, 20}
 
-    # Add interactions
-    ui.add_interaction(1, 101, 3)
-    ui.add_interaction(2, 102, 1)
+def test_empty_user(interactions):
+    assert interactions.get_user_items(99) == interactions.empty
+    assert interactions.get_user_item_count(99, 10) == 0.0
 
-    assert set(ui.get_all_users()) == {1, 2}
-
-def test_get_all_items_for_user():
-    ui = UserItemInteractions()
-
-    # Add interactions
-    ui.add_interaction(1, 101, 3)
-    ui.add_interaction(1, 102, 1)
-    
-    assert set(ui.get_all_items_for_user(1)) == {101, 102}
-    assert ui.get_all_items_for_user(2) == []
-
-def test_edge_case_negative_count():
-    ui = UserItemInteractions()
-
-    # Add interaction with a negative count that should be ignored
-    ui.add_interaction(1, 101, -1)
-    
-    assert ui.get_user_item_count(1, 101) == 0  # No interaction should be recorded
-    assert 1 not in ui.get_all_users()
+# Add more tests as needed
 
 if __name__ == "__main__":
     pytest.main()

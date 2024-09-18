@@ -1,0 +1,19 @@
+[package]
+name = "slim_mse"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+name = "rtrec"  # This should match the module name
+path = "src/rtrec/lib.rs"
+crate-type = ["cdylib"]
+
+[dependencies]
+ndarray = "0.15" # For numerical operations
+
+[dependencies.pyo3]
+version = "0.18"
+features = ["extension-module"]
+
+[package.metadata.maturin]
+bindings = "pyo3"

@@ -2,13 +2,13 @@ from scipy.sparse import dok_matrix
 from scipy.special import expit
 from typing import Any, List, Tuple
 
-from .base import BaseRecommender
+from .base import ImplicitFeedbackRecommender
 from ..utils.optim import get_optimizer
 from ..utils.regularization import get_regularization
 from ..utils.eta import get_eta_estimator
 from ..utils.matrix import DoKMatrix
 
-class BPRSLIM(BaseRecommender):
+class BPRSLIM(ImplicitFeedbackRecommender):
     def __init__(self, **kwargs: Any):
         """
         Initialize the BPRSLIM model.
@@ -34,6 +34,8 @@ class BPRSLIM(BaseRecommender):
         :param positive_item: Item index for the positive sample
         :param negative_item: Item index for the negative sample
         """
+
+        self.eta.update()
     
         user_items = self.get_interacted_items(user)
 

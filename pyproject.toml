@@ -1,0 +1,18 @@
+[project]
+name = "rtrec"
+version = "0.1.0"
+description = "An realtime recommendation system supporting online updates"
+authors = [
+    { name = "myui", email = "myui@apache.org" }
+]
+dependencies = [
+    "cython>=3.0.11",
+    "numpy>=2.1.0",
+    "pandas>=2.2.2"
+]
+readme = "README.md"
+requires-python = ">= 3.8"
+
+[build-system]
+requires = ["maturin>=0.13"]
+build-backend = "maturin"
