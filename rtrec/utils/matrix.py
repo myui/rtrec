@@ -46,7 +46,6 @@ class DoKMatrix:
     def get_column(self, col: int) -> List[float]:
         return [self.data.get((row, col), 0) for row in range(self.max_row)]
 
-    @DeprecationWarning
     def to_csr(self) -> csr_matrix:
         if not self.data:
             return csr_matrix((0, 0))

@@ -1,18 +1,19 @@
 [package]
-name = "slim_mse"
+name = "rtrec"
 version = "0.1.0"
-edition = "2018"
+edition = "2021"
 
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [lib]
 name = "rtrec"  # This should match the module name
-path = "src/rtrec/lib.rs"
+path = "src/lib.rs"
 crate-type = ["cdylib"]
 
 [dependencies]
-ndarray = "0.15" # For numerical operations
+# ndarray = "0.15"
 
 [dependencies.pyo3]
-version = "0.18"
+version = "0.19"
 features = ["extension-module"]
 
 [package.metadata.maturin]

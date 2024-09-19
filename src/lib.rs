@@ -6,7 +6,7 @@ use slim::SlimMSE;
 use pyo3::prelude::*;
 
 #[pymodule]
-fn rtrec(_py: Python, m: &PyModule) -> PyResult<()> {
+fn _lowlevel(_py: Python, m: &PyModule) -> PyResult<()> {
     m.add_class::<SlimMSE>()?;
     Ok(())
 }

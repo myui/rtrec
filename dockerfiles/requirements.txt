@@ -2,9 +2,7 @@ numpy
 scipy
 scikit-learn
 pandas
-matplotlib
-
-hnswlib
+#hnswlib
 
 pytest
 
@@ -16,3 +14,4 @@ jupyter
 jupyterlab
 ipywidgets
 
+matplotlib

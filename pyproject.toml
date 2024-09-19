@@ -5,14 +5,32 @@ description = "An realtime recommendation system supporting online updates"
 authors = [
     { name = "myui", email = "myui@apache.org" }
 ]
-dependencies = [
-    "cython>=3.0.11",
-    "numpy>=2.1.0",
-    "pandas>=2.2.2"
-]
 readme = "README.md"
 requires-python = ">= 3.8"
+dependencies = [
+    "numpy>=2.1.1",
+    "scipy>=1.14.1",
+    "scikit-learn>=1.5.2",
+    "pandas>=2.2.2",
+]
+
+[project.urls]
+homepage = "https://github.com/myui/rtrec"
+repository = "https://github.com/myui/rtrec"
 
 [build-system]
-requires = ["maturin>=0.13"]
+requires = ["maturin>=0.13,<2.0"]
 build-backend = "maturin"
+
+[tool.rye]
+managed = true
+dev-dependencies = [
+    "pytest>=8.3.3",
+]
+
+[tool.maturin]
+python-source = "."
+module-name = "rtrec._lowlevel"
+
+# "extension-module" tells pyo3 we want to build an extension module (skips linking against libpython.so)
+features = ["pyo3/extension-module"]

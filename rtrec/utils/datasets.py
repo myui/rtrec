@@ -23,7 +23,7 @@ class UserItemInteractions:
         """
         return self.interactions.get(user_id, self.empty)
 
-    def get_user_item_rating(self, user_id: int, item_id: int, default_count: float = 0.0) -> float:
+    def get_user_item_count(self, user_id: int, item_id: int, default_count: float = 0.0) -> float:
         """
         Get the interaction count for a specific user-item pair.
         """
