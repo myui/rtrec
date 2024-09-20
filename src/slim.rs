@@ -75,7 +75,7 @@ impl SlimMSE {
         let mut scores: Vec<(i32, f32)> = candidate_items
             .iter()
             .map(|&item_id| {
-                let score = self.predict_rating(user_id, item_id);
+                let score = self._predict_rating(user_id, item_id);
                 (item_id, score)
             })
             .collect();
