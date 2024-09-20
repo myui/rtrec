@@ -17,6 +17,12 @@ class UserItemInteractions:
         self.interactions[user_id][item_id] = current + delta
         self.max_item_id = max(self.max_item_id, item_id)
 
+    def get_max_item_id(self) -> int:
+        """
+        Get the maximum item ID in the interactions.
+        """
+        return self.max_item_id
+
     def get_user_items(self, user_id: int) -> Counter[float]:
         """
         Get the dictionary of item_id -> interaction_count for a given user.

@@ -1,8 +1,21 @@
+######################
+# Minimun requiments #
+######################
+
 numpy
 scipy
 scikit-learn
 pandas
-#hnswlib
+
+################
+# Experimental #
+################
+
+hnswlib
+
+###############
+# Development #
+###############
 
 pytest
 
@@ -15,3 +28,4 @@ jupyterlab
 ipywidgets
 
 matplotlib
+

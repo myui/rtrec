@@ -13,6 +13,10 @@ impl UserItemInteractions {
         }
     }
 
+    pub fn max_item_id(&self) -> i32 {
+        self.max_item_id
+    }
+
     pub fn add_interaction(&mut self, user_id: i32, item_id: i32, rating: f32) {
         self.interactions
             .entry(user_id)
@@ -38,7 +42,21 @@ impl UserItemInteractions {
             .unwrap_or_default()
     }
 
-    pub fn max_item_id(&self) -> i32 {
-        self.max_item_id
+    pub fn get_all_non_interacted_items(&self, user_id: i32) -> Vec<i32> {
+        let interacted_items = self.get_all_items_for_user(user_id);
+        let interacted_items_set: std::collections::HashSet<_> = interacted_items.into_iter().collect();
+
+        (0..=self.max_item_id)
+            .filter(|&item_id| !interacted_items_set.contains(&item_id))
+            .collect()
     }
+
+    pub fn get_all_non_negative_items(&self, user_id: i32) -> Vec<i32> {
+        (0..=self.max_item_id)
+            .filter(|&item_id| {
+                self.get_user_item_count(user_id, item_id) >= 0.0
+            })
+            .collect()
+    }
+
 }

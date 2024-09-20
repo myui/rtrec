@@ -1,3 +1,4 @@
+from collections import defaultdict
 from typing import Any, List
 
 from .base import ExplictFeedbackRecommender
@@ -8,13 +9,13 @@ class SLIM_MSE(ExplictFeedbackRecommender):
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
 
-        self.optimizer = FTRL(**kwargs)
-        self.W = self.optimizer.W
+        self.ftrl = FTRL(**kwargs)
+        self.W = self.ftrl.W
 
         self.cumulative_loss = 0.0
         self.steps = 0
 
-    def get_emprical_loss(self) -> float:
+    def get_empirical_loss(self) -> float:
         if self.steps == 0:
             return 0.0
         return self.cumulative_loss / self.steps
@@ -23,7 +24,11 @@ class SLIM_MSE(ExplictFeedbackRecommender):
         """
         Predict scores for a list of items.
         """
-        return [self.W.row_sum(item) for item in items]
+        max_col = self.interactions.get_max_item_id()
+        return [
+            sum(self.W.get((item, col), 0) for col in range(max_col))
+            for item in items
+        ]
 
     def _update(self, user: int, item_id: int, rating: float) -> None:
         """
@@ -36,7 +41,7 @@ class SLIM_MSE(ExplictFeedbackRecommender):
         user_items = self.get_interacted_items(user)
 
         # Compute the gradient (MSE)        
-        dloss = self._predict_rating(user, item_id, rating, user_items) - rating
+        dloss = self._predict_rating(user, item_id) - rating
         self.cumulative_loss += dloss**2
         self.steps += 1
 
@@ -49,7 +54,7 @@ class SLIM_MSE(ExplictFeedbackRecommender):
             grad = dloss * self.get_rating(user, user_item)
             self.ftrl.update_gradients((user_item, item_id), grad)
 
-    def _predict_rating(self, user: int, item_id: int, rating: float, user_items: List[int]) -> float:
+    def _predict_rating(self, user: int, item_id: int) -> float:
         """
         Compute the derivative of the loss function.
         """
@@ -76,7 +81,7 @@ class FTRL():
         self.lambda2 = lambda2
         self.z: dict[tuple[int, int], float] = {}
         self.n: dict[tuple[int, int], float] = {}
-        self.W: dict[tuple[int, int], float] = {}
+        self.W: dict[tuple[int, int], float] = defaultdict(float)
 
     def update_gradients(self, key: tuple[int, int], grad: float) -> float:
         """

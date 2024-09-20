@@ -1,10 +1,10 @@
 import pytest
-from rtrec import SlimMSE  # Ensure this matches the module name in your Rust crate.
+from rtrec.models import Fast_SLIM_MSE, SLIM_MSE  # Ensure this matches the module name in your Rust crate.
 
 @pytest.fixture
 def slim():
     # Create a SlimMse instance with example hyperparameters
-    return SlimMSE(alpha=0.1, beta=1.0, lambda1=0.0002, lambda2=0.0001)
+    return SLIM_MSE(alpha=0.1, beta=1.0, lambda1=0.0002, lambda2=0.0001)
 
 def test_fit(slim):
     # Sample user interactions for fitting
@@ -29,7 +29,7 @@ def test_predict_rating(slim):
     slim.fit(interactions)
 
     # Predict rating for a known interaction
-    predicted_rating = slim.predict_rating(0, 1)
+    predicted_rating = slim._predict_rating(0, 1)
     assert isinstance(predicted_rating, float)
 
 def test_recommend(slim):

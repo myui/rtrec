@@ -39,7 +39,7 @@ impl SlimMSE {
 
     fn update_weights(&mut self, user_id: i32, item_id: i32, rating: f32) {
         let user_items = self.interactions.get_all_items_for_user(user_id);
-        let predicted = self.predict_rating(user_id, item_id);
+        let predicted = self._predict_rating(user_id, item_id);
         let dloss = predicted - rating;
 
         self.cumulative_loss += dloss.powi(2);
@@ -53,22 +53,37 @@ impl SlimMSE {
         }
     }
 
-    fn predict_rating(&self, user_id: i32, item_id: i32) -> f32 {
+    fn _predict_rating(&self, user_id: i32, item_id: i32) -> f32 {
         let user_items = self.interactions.get_all_items_for_user(user_id);
         user_items.iter()
             .map(|&ui| self.weights.get(&(ui, item_id)).unwrap_or(&0.0) * self.interactions.get_user_item_count(user_id, ui))
             .sum()
     }
 
-    pub fn recommend(&self, user_id: i32, top_k: usize) -> Vec<i32> {
-        let mut scores: Vec<(i32, f32)> = (0..=self.interactions.max_item_id())
-            .map(|item_id| {
+    pub fn recommend(&self, user_id: i32, top_k: usize, filter_interacted: Option<bool>) -> Vec<i32> {
+        // Use `unwrap_or` to set `filter_interacted` to `true` by default
+        let filter_interacted = filter_interacted.unwrap_or(true);
+
+        // Get the candidate items based on the filtering condition
+        let candidate_items = if filter_interacted {
+            self.interactions.get_all_non_interacted_items(user_id)
+        } else {
+            self.interactions.get_all_non_negative_items(user_id)
+        };
+
+        // Predict scores for the candidate items
+        let mut scores: Vec<(i32, f32)> = candidate_items
+            .iter()
+            .map(|&item_id| {
                 let score = self.predict_rating(user_id, item_id);
                 (item_id, score)
             })
             .collect();
 
-        scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+        // Sort items by score in descending order
+        scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+        // Take the top-k items and return their IDs
         scores.iter().take(top_k).map(|&(id, _)| id).collect()
     }
 

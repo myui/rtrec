@@ -8,7 +8,7 @@ from ..utils.regularization import get_regularization
 from ..utils.eta import get_eta_estimator
 from ..utils.matrix import DoKMatrix
 
-class BPRSLIM(ImplicitFeedbackRecommender):
+class BPR_SLIM(ImplicitFeedbackRecommender):
     def __init__(self, **kwargs: Any):
         """
         Initialize the BPRSLIM model.
@@ -47,38 +47,38 @@ class BPRSLIM(ImplicitFeedbackRecommender):
 
         # update item similarity matrix
         if self.optimizer.name == "ftrl":
-            for item in user_items:
+            for user_item in user_items:
                 # Note diagonal elements are not updated for item-item similarity matrix
-                if item != positive_item:
+                if user_item != positive_item:
                     if abs(pos_grad) < 1e-8:
-                        del self.W[positive_item, item]
+                        del self.W[user_item, positive_item]
                     else:
                         # similarity value is increased for positive item
-                        self.W[positive_item, item] += pos_grad
-                if item != negative_item:
+                        self.W[user_item, positive_item] += pos_grad
+                if user_item != negative_item:
                     if abs(neg_grad) < 1e-8:
-                        del self.W[negative_item, item]
+                        del self.W[user_item, negative_item]
                     else:
                         # similarity value is decreased for negative item
-                        self.W[negative_item, item] -= neg_grad
+                        self.W[user_item, negative_item] -= neg_grad
         else:
-            for item in user_items:
+            for user_item in user_items:
                 # Note diagonal elements are not updated for item-item similarity matrix
-                if item != positive_item:
+                if user_item != positive_item:
                     # similarity value is increased for positive item
-                    delta = self.eta.value * self.regularization.regularize(self.W[positive_item, item], pos_grad)
+                    delta = self.eta.value * self.regularization.regularize(self.W[user_item, positive_item], pos_grad)
                     if abs(delta) < 1e-8:
-                        del self.W[positive_item, item]
+                        del self.W[user_item, positive_item]
                     else:
-                        self.W[positive_item, item] += delta
+                        self.W[user_item, positive_item] += delta
 
-                if item != negative_item:
+                if user_item != negative_item:
                     # similarity value is decreased for negative item
-                    delta = self.eta.value * self.regularization.regularize(self.W[negative_item, item], neg_grad)
+                    delta = self.eta.value * self.regularization.regularize(self.W[user_item, negative_item], neg_grad)
                     if abs(delta) < 1e-8:
-                        del self.W[positive_item, item]
+                        del self.W[user_item, positive_item]
                     else:
-                        self.W[negative_item, item] -= delta
+                        self.W[user_item, negative_item] -= delta
 
     def _bpr_loss(self, user_items: List[int], positive_item: int, negative_item: int) -> float:
         """
@@ -90,7 +90,7 @@ class BPRSLIM(ImplicitFeedbackRecommender):
         """
 
         # Calculate the difference in scores between positive and negative items
-        diff = sum(self.W[positive_item, item] - self.W[negative_item, item] for item in user_items)
+        diff = sum(self.W[user_item, positive_item] - self.W[user_item, negative_item] for user_item in user_items)
 
         # minus in order for the exponent of the exponential to be positive
         return expit(-diff) # a.k.a. logistic sigmoid function
