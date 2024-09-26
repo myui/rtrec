@@ -1,11 +1,15 @@
 from collections import defaultdict, Counter
 from typing import Dict, List
+import numpy as np
 
 class UserItemInteractions:
-    def __init__(self) -> None:
+    def __init__(self, min_value:int=-5, max_value:int=10) -> None:
         self.interactions: defaultdict[int, Counter[float]] = defaultdict(Counter)
         self.empty = Counter()
         self.all_item_ids = set()
+        assert max_value > min_value, "max_value should be greater than min_value {} > {}".format(max_value, min_value)
+        self.min_value = min_value
+        self.max_value = max_value
 
     def add_interaction(self, user_id: int, item_id: int, delta: float = 1.0) -> None:
         """
@@ -13,7 +17,14 @@ class UserItemInteractions:
         If the count becomes 0 or less, remove the interaction.
         """
         current = self.get_user_items(user_id).get(item_id, 0.0)
-        self.interactions[user_id][item_id] = current + delta
+        new_value = current + delta
+
+        if new_value < self.min_value:
+            new_value = self.min_value
+        if new_value > self.max_value:
+            new_value = self.max_value
+
+        self.interactions[user_id][item_id] = new_value
 
         self.all_item_ids.add(item_id)
 
