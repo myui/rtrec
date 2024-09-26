@@ -7,10 +7,10 @@ edition = "2021"
 [lib]
 name = "rtrec"  # This should match the module name
 path = "src/lib.rs"
-crate-type = ["cdylib"]
+crate-type = ["cdylib", "lib"]
 
 [dependencies]
-# ndarray = "0.15"
+# no dependencies
 
 [dependencies.pyo3]
 version = "0.19"
@@ -18,3 +18,7 @@ features = ["extension-module"]
 
 [package.metadata.maturin]
 bindings = "pyo3"
+
+[dependencies.pyo3-ffi]
+version = "*"
+features = ["extension-module"]

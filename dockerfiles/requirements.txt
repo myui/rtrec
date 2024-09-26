@@ -7,11 +7,13 @@ scipy
 scikit-learn
 pandas
 
+#sortedcontainers
+
 ################
 # Experimental #
 ################
 
-hnswlib
+#hnswlib
 
 ###############
 # Development #

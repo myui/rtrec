@@ -14,6 +14,11 @@ dependencies = [
     "pandas>=2.2.2",
 ]
 
+classifiers = [
+    "Programming Language :: Python",
+    "Programming Language :: Rust",
+]
+
 [project.urls]
 homepage = "https://github.com/myui/rtrec"
 repository = "https://github.com/myui/rtrec"
@@ -34,3 +39,7 @@ module-name = "rtrec._lowlevel"
 
 # "extension-module" tells pyo3 we want to build an extension module (skips linking against libpython.so)
 features = ["pyo3/extension-module"]
+
+[tool.pytest.ini_options]
+addopts = "-s"
+testpaths = [ "tests" ]
