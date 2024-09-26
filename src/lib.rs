@@ -1,6 +1,6 @@
 pub mod slim;
-mod datasets;
-mod ftrl;
+pub mod datasets;
+pub mod ftrl;
 
 use slim::SlimMSE;
 use pyo3::prelude::*;

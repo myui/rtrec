@@ -17,12 +17,13 @@ pub struct SlimMSE {
 #[pymethods]
 impl SlimMSE {
     #[new]
-    pub fn new(alpha: f32, beta: f32, lambda1: f32, lambda2: f32) -> Self {
+    #[pyo3(signature = (alpha = 0.5, beta = 1.0, lambda1 = 0.0002, lambda2 = 0.0001, min_value = -5.0, max_value = 10.0))]
+    pub fn new(alpha: f32, beta: f32, lambda1: f32, lambda2: f32, min_value: f32, max_value: f32) -> Self {
         let ftrl = FTRL::new(alpha, beta, lambda1, lambda2);
         let weights = ftrl.get_weights().clone(); // Get the weights reference
 
         SlimMSE {
-            interactions: UserItemInteractions::new(),
+            interactions: UserItemInteractions::new(min_value, max_value),
             ftrl,
             weights,
             cumulative_loss: 0.0,

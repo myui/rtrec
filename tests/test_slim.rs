@@ -3,7 +3,7 @@ use rtrec::slim::SlimMSE;
 #[test]
 fn test_recommend() {
     // Initialize SlimMSE with sample hyperparameters
-    let mut model = SlimMSE::new(0.1, 1.0, 0.001, 0.002);
+    let mut model = SlimMSE::new(0.1, 1.0, 0.001, 0.002, -5.0, 10.0);
 
     // Add some user-item interactions for testing
     let user_interactions = vec![

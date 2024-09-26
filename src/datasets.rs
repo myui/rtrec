@@ -3,23 +3,34 @@ use std::collections::{HashMap, HashSet};
 pub struct UserItemInteractions {
     interactions: HashMap<i32, HashMap<i32, f32>>,
     all_item_ids: HashSet<i32>,
+    min_value: f32,
+    max_value: f32,
 }
 
 impl UserItemInteractions {
-    pub fn new() -> Self {
+    pub fn new(min_value: f32, max_value: f32) -> Self {
+        assert!(max_value > min_value, "max_value should be greater than min_value");
+
         UserItemInteractions {
             interactions: HashMap::new(),
             all_item_ids: HashSet::new(),
+            min_value,
+            max_value,
         }
     }
 
-    pub fn add_interaction(&mut self, user_id: i32, item_id: i32, rating: f32) {
-        self.interactions
-            .entry(user_id)
-            .or_default()
+    pub fn add_interaction(&mut self, user_id: i32, item_id: i32, delta: f32) {
+        // Use the entry API to get a mutable reference to the user-item interactions
+        let user_items = self.interactions.entry(user_id).or_insert_with(HashMap::new);
+
+        // Update the interaction value, clamping it within min_value and max_value
+        let new_value = user_items
             .entry(item_id)
-            .and_modify(|e| *e += rating)
-            .or_insert(rating);
+            .and_modify(|e| *e += delta)
+            .or_insert(delta); // Start with delta if the entry doesn't exist
+
+        // Clamp the new value between min_value and max_value
+        *new_value = new_value.clamp(self.min_value, self.max_value);
 
         // Keep track of all unique item IDs
         self.all_item_ids.insert(item_id);

@@ -14,11 +14,9 @@ crate-type = ["cdylib", "lib"]
 
 [dependencies.pyo3]
 version = "0.19"
-features = ["extension-module"]
+
+[features]
+extension-module = ["pyo3/extension-module"]
 
 [package.metadata.maturin]
 bindings = "pyo3"
-
-[dependencies.pyo3-ffi]
-version = "*"
-features = ["extension-module"]
