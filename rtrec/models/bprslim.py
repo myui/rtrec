@@ -1,4 +1,3 @@
-from scipy.sparse import dok_matrix
 from scipy.special import expit
 from typing import Any, List, Tuple
 
