@@ -23,7 +23,7 @@ class BaseRecommender(ABC):
         """
         Get the rating for a specific user-item pair.
         """
-        return self.interactions.get_user_item_count(user_id, item_id, default_count=0.0)
+        return self.interactions.get_user_item_rating(user_id, item_id, default_rating=0.0)
 
     def recommend(self, user: int, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
         """
@@ -97,7 +97,7 @@ class ExplictFeedbackRecommender(BaseRecommender):
     def fit(self, user_interactions: List[Tuple[int, int, float]]) -> None:
         for user, item_id, rating in user_interactions:
             self.interactions.add_interaction(user, item_id, rating)
-            self._update(user, item_id, rating)
+            self._update(user, item_id)
 
     @abstractmethod
     def _update(self, user: int, item_id: int, rating: float) -> None:

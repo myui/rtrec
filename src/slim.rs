@@ -34,21 +34,21 @@ impl SlimMSE {
     pub fn fit(&mut self, user_interactions: Vec<(i32, i32, f32)>) {
         for (user_id, item_id, rating) in user_interactions {
             self.interactions.add_interaction(user_id, item_id, rating);
-            self.update_weights(user_id, item_id, rating);
+            self.update_weights(user_id, item_id);
         }
     }
 
-    fn update_weights(&mut self, user_id: i32, item_id: i32, rating: f32) {
+    fn update_weights(&mut self, user_id: i32, item_id: i32) {
         let user_items = self.interactions.get_all_items_for_user(user_id);
         let predicted = self._predict_rating(user_id, item_id);
-        let dloss = predicted - rating;
+        let dloss = predicted - self.interactions.get_user_item_rating(user_id, item_id);
 
         self.cumulative_loss += dloss.powi(2);
         self.steps += 1;
 
         for &ui in &user_items {
             if ui != item_id {
-                let grad = dloss * self.interactions.get_user_item_count(user_id, ui);
+                let grad = dloss * self.interactions.get_user_item_rating(user_id, ui);
                 self.ftrl.update_gradients((ui, item_id), grad);
             }
         }
@@ -57,7 +57,7 @@ impl SlimMSE {
     fn _predict_rating(&self, user_id: i32, item_id: i32) -> f32 {
         let user_items = self.interactions.get_all_items_for_user(user_id);
         user_items.iter()
-            .map(|&ui| self.weights.get(&(ui, item_id)).unwrap_or(&0.0) * self.interactions.get_user_item_count(user_id, ui))
+            .map(|&ui| self.weights.get(&(ui, item_id)).unwrap_or(&0.0) * self.interactions.get_user_item_rating(user_id, ui))
             .sum()
     }
 

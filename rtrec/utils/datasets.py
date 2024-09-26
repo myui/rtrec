@@ -40,11 +40,11 @@ class UserItemInteractions:
         """
         return self.interactions.get(user_id, self.empty)
 
-    def get_user_item_count(self, user_id: int, item_id: int, default_count: float = 0.0) -> float:
+    def get_user_item_rating(self, user_id: int, item_id: int, default_rating: float = 0.0) -> float:
         """
         Get the interaction count for a specific user-item pair.
         """
-        return self.get_user_items(user_id).get(item_id, default_count)
+        return self.get_user_items(user_id).get(item_id, default_rating)
 
     def get_all_users(self) -> List[int]:
         """
@@ -71,4 +71,4 @@ class UserItemInteractions:
         """
         interacted_items = set(self.get_user_items(user_id).keys())
         # Return all items with non-negative interaction counts
-        return [item_id for item_id in self.all_item_ids if self.get_user_item_count(user_id, item_id, default_count=-1.0) > 0.0]
+        return [item_id for item_id in self.all_item_ids if self.get_user_item_rating(user_id, item_id, default_rating=-1.0) > 0.0]

@@ -11,16 +11,16 @@ fn test_add_interaction() {
     let mut interactions = UserItemInteractions::new(-5.0, 10.0);
 
     interactions.add_interaction(1, 100, 3.0); // User 1, Item 100, delta 3.0
-    assert_eq!(interactions.get_user_item_count(1, 100), 3.0);
+    assert_eq!(interactions.get_user_item_rating(1, 100), 3.0);
 
     interactions.add_interaction(1, 100, 5.0); // Modify interaction
-    assert_eq!(interactions.get_user_item_count(1, 100), 8.0); // Expect 8.0
+    assert_eq!(interactions.get_user_item_rating(1, 100), 8.0); // Expect 8.0
 
     interactions.add_interaction(1, 100, 5.0); // Clamping above max
-    assert_eq!(interactions.get_user_item_count(1, 100), 10.0); // Should be clamped to max_value
+    assert_eq!(interactions.get_user_item_rating(1, 100), 10.0); // Should be clamped to max_value
 
     interactions.add_interaction(1, 100, -100.0); // Clamping above max
-    assert_eq!(interactions.get_user_item_count(1, 100), -5.0); // Should be clamped to max_value
+    assert_eq!(interactions.get_user_item_rating(1, 100), -5.0); // Should be clamped to max_value
 }
 
 #[test]

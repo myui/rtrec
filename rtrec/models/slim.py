@@ -29,18 +29,17 @@ class SLIM_MSE(ExplictFeedbackRecommender):
             for i in items
         ]
 
-    def _update(self, user: int, item_id: int, rating: float) -> None:
+    def _update(self, user: int, item_id: int) -> None:
         """
         Incremental weight update based on SLIM loss.
         :param user: User index
         :param item_id: Item index
-        :param rating: Rating value
         """
 
         user_items = self.get_interacted_items(user)
 
         # Compute the gradient (MSE)        
-        dloss = self._predict_rating(user, item_id) - rating
+        dloss = self._predict_rating(user, item_id) - self.get_rating(user, item_id)
         self.cumulative_loss += dloss**2
         self.steps += 1
 
