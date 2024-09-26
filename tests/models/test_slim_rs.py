@@ -4,7 +4,7 @@ from rtrec.models import Fast_SLIM_MSE, SLIM_MSE  # Ensure this matches the modu
 @pytest.fixture
 def slim():
     # Create a SlimMse instance with example hyperparameters
-    return SLIM_MSE(alpha=0.1, beta=1.0, lambda1=0.0002, lambda2=0.0001)
+    return Fast_SLIM_MSE(alpha=0.1, beta=1.0, lambda1=0.0002, lambda2=0.0001)
 
 def test_fit(slim):
     # Sample user interactions for fitting
@@ -37,7 +37,9 @@ def test_recommend(slim):
     interactions = [
         (0, 1, 5.0),
         (0, 2, 3.0),
-        (0, 3, 4.0)
+        (0, 3, 4.0),
+        (1, 4, 3.0),
+        (1, 2, 4.0), # both user 0 and 1 interacted with item 2
     ]
     slim.fit(interactions)
 
@@ -45,7 +47,8 @@ def test_recommend(slim):
     recommendations = slim.recommend(0, top_k=2)
 
     # Check that we have the correct number of recommendations
-    assert len(recommendations) == 2
+    assert len(recommendations) == 1
+    assert recommendations[0] == 4
     # Ensure the recommendations are a list of integers
     assert all(isinstance(item_id, int) for item_id in recommendations)
 

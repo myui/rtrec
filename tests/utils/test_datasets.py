@@ -24,7 +24,9 @@ def test_add_sub_interaction(interactions):
 def test_non_interacted_items(interactions):
     interactions.add_interaction(1, 10, 5.0)
     interactions.add_interaction(1, 20, 3.0)
-    assert set(interactions.get_all_non_interacted_items(1)) == set(range(21)) - {10, 20}
+    interactions.add_interaction(2, 15, 3.0)
+    interactions.add_interaction(3, 9, 3.0)
+    assert set(interactions.get_all_non_interacted_items(1)) == {15, 9}
 
 def test_non_negative_items(interactions):
     interactions.add_interaction(1, 10, 5.0)

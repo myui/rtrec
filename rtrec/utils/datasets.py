@@ -3,10 +3,9 @@ from typing import Dict, List
 
 class UserItemInteractions:
     def __init__(self) -> None:
-        # defaultdict of Counters to store user interactions
         self.interactions: defaultdict[int, Counter[float]] = defaultdict(Counter)
         self.empty = Counter()
-        self.max_item_id = 0
+        self.all_item_ids = set()
 
     def add_interaction(self, user_id: int, item_id: int, delta: float = 1.0) -> None:
         """
@@ -15,13 +14,14 @@ class UserItemInteractions:
         """
         current = self.get_user_items(user_id).get(item_id, 0.0)
         self.interactions[user_id][item_id] = current + delta
-        self.max_item_id = max(self.max_item_id, item_id)
 
-    def get_max_item_id(self) -> int:
+        self.all_item_ids.add(item_id)
+
+    def get_all_item_ids(self) -> List[int]:
         """
-        Get the maximum item ID in the interactions.
+        Get a list of all unique item IDs.
         """
-        return self.max_item_id
+        return list(self.all_item_ids)
 
     def get_user_items(self, user_id: int) -> Counter[float]:
         """
@@ -52,7 +52,7 @@ class UserItemInteractions:
         Get a list of all items a user has not interacted with.
         """
         interacted_items = set(self.get_user_items(user_id).keys())
-        return [item_id for item_id in range(self.max_item_id + 1) if item_id not in interacted_items]
+        return [item_id for item_id in self.all_item_ids if item_id not in interacted_items]
 
     def get_all_non_negative_items(self, user_id: int) -> List[int]:
         """
@@ -60,4 +60,4 @@ class UserItemInteractions:
         """
         interacted_items = set(self.get_user_items(user_id).keys())
         # Return all items with non-negative interaction counts
-        return [item_id for item_id in range(self.max_item_id + 1) if self.get_user_item_count(user_id, item_id, default_count=-1.0) > 0.0]
+        return [item_id for item_id in self.all_item_ids if self.get_user_item_count(user_id, item_id, default_count=-1.0) > 0.0]

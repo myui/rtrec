@@ -1,4 +1,4 @@
-mod slim;
+pub mod slim;
 mod datasets;
 mod ftrl;
 

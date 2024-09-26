@@ -1,20 +1,16 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 pub struct UserItemInteractions {
     interactions: HashMap<i32, HashMap<i32, f32>>,
-    max_item_id: i32,
+    all_item_ids: HashSet<i32>,
 }
 
 impl UserItemInteractions {
     pub fn new() -> Self {
         UserItemInteractions {
             interactions: HashMap::new(),
-            max_item_id: 0,
+            all_item_ids: HashSet::new(),
         }
-    }
-
-    pub fn max_item_id(&self) -> i32 {
-        self.max_item_id
     }
 
     pub fn add_interaction(&mut self, user_id: i32, item_id: i32, rating: f32) {
@@ -24,7 +20,9 @@ impl UserItemInteractions {
             .entry(item_id)
             .and_modify(|e| *e += rating)
             .or_insert(rating);
-        self.max_item_id = self.max_item_id.max(item_id);
+
+        // Keep track of all unique item IDs
+        self.all_item_ids.insert(item_id);
     }
 
     pub fn get_user_item_count(&self, user_id: i32, item_id: i32) -> f32 {
@@ -43,19 +41,14 @@ impl UserItemInteractions {
     }
 
     pub fn get_all_non_interacted_items(&self, user_id: i32) -> Vec<i32> {
-        let interacted_items = self.get_all_items_for_user(user_id);
-        let interacted_items_set: std::collections::HashSet<_> = interacted_items.into_iter().collect();
-
-        (0..=self.max_item_id)
-            .filter(|&item_id| !interacted_items_set.contains(&item_id))
-            .collect()
+        let interacted_items: HashSet<_> = self.get_all_items_for_user(user_id).into_iter().collect();
+        self.all_item_ids.difference(&interacted_items).cloned().collect()
     }
 
     pub fn get_all_non_negative_items(&self, user_id: i32) -> Vec<i32> {
-        (0..=self.max_item_id)
-            .filter(|&item_id| {
-                self.get_user_item_count(user_id, item_id) >= 0.0
-            })
+        self.all_item_ids.iter()
+            .filter(|&&item_id| self.get_user_item_count(user_id, item_id) > 0.0)
+            .cloned()
             .collect()
     }
 

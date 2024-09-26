@@ -24,10 +24,9 @@ class SLIM_MSE(ExplictFeedbackRecommender):
         """
         Predict scores for a list of items.
         """
-        max_col = self.interactions.get_max_item_id()
         return [
-            sum(self.W.get((item, col), 0) for col in range(max_col))
-            for item in items
+            sum(self.W.get((i, j), 0) for j in self.interactions.get_all_item_ids() if j != i)
+            for i in items
         ]
 
     def _update(self, user: int, item_id: int, rating: float) -> None:

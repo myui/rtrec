@@ -45,7 +45,7 @@ class BaseRecommender(ABC):
         scores = self._predict(candidate_items)
 
         # Return top-K items with the highest scores
-        return sorted(candidate_items, key=lambda i: scores[i], reverse=True)[:top_k]
+        return sorted(candidate_items, key=dict(zip(candidate_items, scores)).get, reverse=True)[:top_k]
 
     @abstractmethod
     def _predict(self, items: List[int]) -> List[float]:
