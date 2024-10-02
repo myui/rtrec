@@ -58,7 +58,7 @@ impl UserItemInteractions {
 
     pub fn get_all_non_negative_items(&self, user_id: i32) -> Vec<i32> {
         self.all_item_ids.iter()
-            .filter(|&&item_id| self.get_user_item_rating(user_id, item_id) > 0.0)
+            .filter(|&&item_id| self.get_user_item_rating(user_id, item_id) >= 0.0)
             .cloned()
             .collect()
     }
