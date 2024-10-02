@@ -1,5 +1,5 @@
 pub mod slim;
-pub mod datasets;
+pub mod interactions;
 pub mod ftrl;
 
 use slim::SlimMSE;

@@ -3,7 +3,7 @@ use pyo3::prelude::*;
 use std::collections::HashMap;
 
 use crate::ftrl::FTRL;
-use crate::datasets::UserItemInteractions;
+use crate::interactions::UserItemInteractions;
 
 #[pyclass]
 pub struct SlimMSE {

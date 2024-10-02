@@ -1,4 +1,4 @@
-use rtrec::datasets::UserItemInteractions;
+use rtrec::interactions::UserItemInteractions;
 
 #[test]
 #[should_panic(expected = "max_value should be greater than min_value")]

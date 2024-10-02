@@ -2,7 +2,7 @@ import numpy as np
 from abc import ABC, abstractmethod
 from typing import Any, List, Tuple
 
-from rtrec.utils.datasets import UserItemInteractions
+from rtrec.utils.interactions import UserItemInteractions
 
 class BaseRecommender(ABC):
     def __init__(self, **kwargs: Any):

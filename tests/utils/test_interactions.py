@@ -1,6 +1,6 @@
 import pytest
 from collections import Counter
-from rtrec.utils.datasets import UserItemInteractions
+from rtrec.utils.interactions import UserItemInteractions
 
 @pytest.fixture
 def interactions():
@@ -8,17 +8,17 @@ def interactions():
 
 def test_add_interaction(interactions):
     interactions.add_interaction(1, 10, 5.0)
-    assert interactions.get_user_item_count(1, 10) == 5.0
+    assert interactions.get_user_item_rating(1, 10) == 5.0
 
 def test_add_multiple_interactions(interactions):
     interactions.add_interaction(1, 10, 5.0)
     interactions.add_interaction(1, 10, 3.0)
-    assert interactions.get_user_item_count(1, 10) == 8.0
+    assert interactions.get_user_item_rating(1, 10) == 8.0
 
 def test_add_sub_interaction(interactions):
     interactions.add_interaction(1, 10, 5.0)
     interactions.add_interaction(1, 10, -5.0)
-    assert interactions.get_user_item_count(1, 10) == 0.0
+    assert interactions.get_user_item_rating(1, 10) == 0.0
     assert 10 in interactions.get_user_items(1)
 
 def test_non_interacted_items(interactions):
@@ -45,7 +45,7 @@ def test_get_all_items_for_user(interactions):
 
 def test_empty_user(interactions):
     assert interactions.get_user_items(99) == interactions.empty
-    assert interactions.get_user_item_count(99, 10) == 0.0
+    assert interactions.get_user_item_rating(99, 10) == 0.0
 
 # Add more tests as needed
 
