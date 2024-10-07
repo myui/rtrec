@@ -1,9 +1,9 @@
 from collections import defaultdict
 from typing import List, Optional
-import time
+import time, math
 
 class UserItemInteractions:
-    def __init__(self, min_value: int = -5, max_value: int = 10, decay_rate: Optional[float] = None) -> None:
+    def __init__(self, min_value: int = -5, max_value: int = 10, decay_in_days: Optional[int] = None) -> None:
         """
         Initializes the UserItemInteractions class.
 
@@ -19,7 +19,13 @@ class UserItemInteractions:
         assert max_value > min_value, f"max_value should be greater than min_value {max_value} > {min_value}"
         self.min_value = min_value
         self.max_value = max_value
-        self.decay_rate = decay_rate
+        if decay_in_days is None:
+            self.decay_rate = None
+        else:
+            # Follow the way in "Time Weight collaborative filtering" in the paper
+            # Half-life decay in time: decay_rate = 1 - ln(2) / decay_in_days
+            # https://dl.acm.org/doi/10.1145/1099554.1099689
+            self.decay_rate = 1.0 - (math.log(2) / decay_in_days)
 
     def _apply_decay(self, value: float, last_timestamp: float) -> float:
         """
@@ -35,10 +41,12 @@ class UserItemInteractions:
         if self.decay_rate is None:
             return value
 
-        elapsed_time = time.time() - last_timestamp
-        return value * (1.0 - self.decay_rate) ** elapsed_time
+        elapsed_seconds = time.time() - last_timestamp
+        elapsed_days = elapsed_seconds / 86400.0
 
-    def add_interaction(self, user_id: int, item_id: int, delta: float = 1.0) -> None:
+        return value * self.decay_rate ** elapsed_days # approximated exponential decay in time e^(-ln(2)/decay_in_days * elapsed_days)
+
+    def add_interaction(self, user_id: int, item_id: int, tstamp: float, delta: float = 1.0) -> None:
         """
         Adds or updates an interaction count for a user-item pair.
 
@@ -54,7 +62,7 @@ class UserItemInteractions:
         new_value = max(self.min_value, min(new_value, self.max_value))
 
         # Store the updated value with the current timestamp
-        self.interactions[user_id][item_id] = (new_value, time.time())
+        self.interactions[user_id][item_id] = (new_value, tstamp)
         self.all_item_ids.add(item_id)
 
     def get_user_item_rating(self, user_id: int, item_id: int, default_rating: float = 0.0) -> float:

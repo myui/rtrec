@@ -63,15 +63,15 @@ class ImplicitFeedbackRecommender(BaseRecommender):
         """
         super().__init__(**kwargs)
 
-    def fit(self, user_interactions: List[Tuple[int, int, int]]) -> None:
+    def fit(self, user_interactions: List[Tuple[int, float, int, int]]) -> None:
         """
         Incrementally fit the BPRSLIM model with user interactions.
         :param user_interactions: List of (user, positive_item, negative_item) tuples
         """
-        for user, positive_item, negative_item in user_interactions:
+        for user, tstamp, positive_item, negative_item in user_interactions:
             # Update user-item interactions
-            self.interactions.add_interaction(user, positive_item, count=1)
-            self.interactions.add_interaction(user, negative_item, count=-1)
+            self.interactions.add_interaction(user, positive_item, tstamp, delta=1)
+            self.interactions.add_interaction(user, negative_item, tstamp, delta=-1)
             self._update(user, positive_item, negative_item)
 
     @abstractmethod
@@ -94,9 +94,9 @@ class ExplictFeedbackRecommender(BaseRecommender):
         """
         super().__init__(**kwargs)
 
-    def fit(self, user_interactions: List[Tuple[int, int, float]]) -> None:
-        for user, item_id, rating in user_interactions:
-            self.interactions.add_interaction(user, item_id, rating)
+    def fit(self, user_interactions: List[Tuple[int, int, float, float]]) -> None:
+        for user, item_id, tstamp, rating in user_interactions:
+            self.interactions.add_interaction(user, item_id, tstamp, rating)
             self._update(user, item_id)
 
     @abstractmethod

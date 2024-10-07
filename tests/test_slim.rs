@@ -3,17 +3,18 @@ use rtrec::slim::SlimMSE;
 #[test]
 fn test_recommend() {
     // Initialize SlimMSE with sample hyperparameters
-    let mut model = SlimMSE::new(0.1, 1.0, 0.001, 0.002, -5.0, 10.0);
+    let mut model = SlimMSE::new(0.1, 1.0, 0.001, 0.002, -5.0, 10.0, None);
 
     // Add some user-item interactions for testing
+    let current_time = 0.0; // Starting timestamp for simplicity
     let user_interactions = vec![
-        (1, 101, 5.0),  // User 1, Item 101, Rating 5.0
-        (1, 102, 3.0),  // User 1, Item 102, Rating 3.0
-        (2, 101, 4.0),  // User 2, Item 101, Rating 4.0
-        (2, 103, 2.0),  // User 2, Item 103, Rating 2.0
+        (1, 101, current_time, 5.0),  // User 1, Item 101, Rating 5.0, Timestamp
+        (1, 102, current_time, 3.0),  // User 1, Item 102, Rating 3.0, Timestamp
+        (2, 101, current_time, 4.0),  // User 2, Item 101, Rating 4.0, Timestamp
+        (2, 103, current_time, 2.0),  // User 2, Item 103, Rating 2.0, Timestamp
     ];
 
-    // Fit the model with the interactions
+    // Fit the model with the interactions including timestamps
     model.fit(user_interactions);
 
     // Test recommendations for User 1 with top_k = 2

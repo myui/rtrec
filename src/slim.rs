@@ -17,13 +17,13 @@ pub struct SlimMSE {
 #[pymethods]
 impl SlimMSE {
     #[new]
-    #[pyo3(signature = (alpha = 0.5, beta = 1.0, lambda1 = 0.0002, lambda2 = 0.0001, min_value = -5.0, max_value = 10.0))]
-    pub fn new(alpha: f32, beta: f32, lambda1: f32, lambda2: f32, min_value: f32, max_value: f32) -> Self {
+    #[pyo3(signature = (alpha = 0.5, beta = 1.0, lambda1 = 0.0002, lambda2 = 0.0001, min_value = -5.0, max_value = 10.0, decay_in_days = None))]
+    pub fn new(alpha: f32, beta: f32, lambda1: f32, lambda2: f32, min_value: f32, max_value: f32, decay_in_days: Option<f32>) -> Self {
         let ftrl = FTRL::new(alpha, beta, lambda1, lambda2);
         let weights = ftrl.get_weights().clone(); // Get the weights reference
 
         SlimMSE {
-            interactions: UserItemInteractions::new(min_value, max_value),
+            interactions: UserItemInteractions::new(min_value, max_value, decay_in_days),
             ftrl,
             weights,
             cumulative_loss: 0.0,
@@ -31,9 +31,9 @@ impl SlimMSE {
         }
     }
 
-    pub fn fit(&mut self, user_interactions: Vec<(i32, i32, f32)>) {
-        for (user_id, item_id, rating) in user_interactions {
-            self.interactions.add_interaction(user_id, item_id, rating);
+    pub fn fit(&mut self, user_interactions: Vec<(i32, i32, f32, f32)>) {
+        for (user_id, item_id, tstamp, rating) in user_interactions {
+            self.interactions.add_interaction(user_id, item_id, tstamp, rating);
             self.update_weights(user_id, item_id);
         }
     }
@@ -41,14 +41,14 @@ impl SlimMSE {
     fn update_weights(&mut self, user_id: i32, item_id: i32) {
         let user_items = self.interactions.get_all_items_for_user(user_id);
         let predicted = self._predict_rating(user_id, item_id);
-        let dloss = predicted - self.interactions.get_user_item_rating(user_id, item_id);
+        let dloss = predicted - self.interactions.get_user_item_rating(user_id, item_id, 0.0);
 
         self.cumulative_loss += dloss.powi(2);
         self.steps += 1;
 
         for &ui in &user_items {
             if ui != item_id {
-                let grad = dloss * self.interactions.get_user_item_rating(user_id, ui);
+                let grad = dloss * self.interactions.get_user_item_rating(user_id, ui, 0.0);
                 self.ftrl.update_gradients((ui, item_id), grad);
             }
         }
@@ -57,7 +57,7 @@ impl SlimMSE {
     fn _predict_rating(&self, user_id: i32, item_id: i32) -> f32 {
         let user_items = self.interactions.get_all_items_for_user(user_id);
         user_items.iter()
-            .map(|&ui| self.weights.get(&(ui, item_id)).unwrap_or(&0.0) * self.interactions.get_user_item_rating(user_id, ui))
+            .map(|&ui| self.weights.get(&(ui, item_id)).unwrap_or(&0.0) * self.interactions.get_user_item_rating(user_id, ui, 0.0))
             .sum()
     }
 
