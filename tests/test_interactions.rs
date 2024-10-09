@@ -1,6 +1,7 @@
 use rtrec::interactions::UserItemInteractions;
 use std::thread::sleep;
 use std::time::{Duration, SystemTime};
+use std::f32::consts::E;
 
 #[test]
 #[should_panic(expected = "max_value should be greater than min_value")]
@@ -54,8 +55,11 @@ fn test_get_all_non_interacted_items() {
 
     // Adding an item that the user has not interacted with
     interactions.add_interaction(2, 200, current_time, 1.0); // User 2, Item 200
+    interactions.add_interaction(2, 101, current_time, 1.0); // User 2, Item 200
+
     let non_interacted_items_user_2 = interactions.get_all_non_interacted_items(2);
-    assert!(non_interacted_items_user_2.contains(&200)); // Item 200 should be in non-interacted for User 2
+    assert!(non_interacted_items_user_2.contains(&100));
+    assert!(!non_interacted_items_user_2.contains(&101));
 }
 
 #[test]
@@ -74,18 +78,30 @@ fn test_get_all_non_negative_items() {
 
 #[test]
 fn test_decay_with_decay_rate() {
-    let mut interactions = UserItemInteractions::new(-5.0, 10.0, Some(0.1)); // 10% decay rate
+    let mut interactions = UserItemInteractions::new(-5.0, 10.0, Some(7_f32)); // Decay rate of 7 days
+    let decay_rate = 1.0_f32 - (E.ln() / 7_f32);
     let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs() as f32;
 
-    interactions.add_interaction(1, 100, current_time, 5.0); // User 1, Item 100, delta 5.0
-    assert_eq!(interactions.get_user_item_rating(1, 100, 0.0), 5.0);
+    let tstamp_7_days_ago = current_time - (7_f32 * 86400_f32);
+    interactions.add_interaction(1, 100, tstamp_7_days_ago, 5.0); // User 1, Item 100, delta 5.0
+    let actual_rating = interactions.get_user_item_rating(1, 100, 0.0);
+
+    let elapsed_days = 7_f32;  // 7 days
+    let decay_factor = decay_rate.powf(elapsed_days);
+    let expected_rating1 = 5.0_f32 * decay_factor;
+
+    assert!((actual_rating - expected_rating1).abs() < 1e-5, "Expected: {}, Actual: {}", expected_rating1, actual_rating);
 
     // Sleep for 2 seconds to allow decay to occur
     sleep(Duration::from_secs(2));
+    let actual_rating = interactions.get_user_item_rating(1, 100, 0.0);
 
-    // Apply decay: expected new value should be 5.0 * (1 - 0.1) ^ 2
-    let expected_value = 5.0_f32 * (1.0_f32 - 0.1_f32).powi(2);
-    assert!((interactions.get_user_item_rating(1, 100, 0.0) - expected_value).abs() < 1e-6);
+    let elapsed_days = 7_f32 + 2_f32 / 86400.0_f32;  // 7 days + 2 second in days
+    let decay_factor = decay_rate.powf(elapsed_days);
+    let expected_rating2 = 5.0_f32 * decay_factor;
+
+    assert!((actual_rating - expected_rating2).abs() < 1e-5, "Expected: {}, Actual: {}", expected_rating2, actual_rating);
+    assert!(expected_rating1 > expected_rating2, "Expected rating should be greater than the rating after 2 seconds");
 }
 
 #[test]
