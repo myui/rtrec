@@ -1,5 +1,7 @@
+use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FTRL {
     alpha: f32,
     beta: f32,

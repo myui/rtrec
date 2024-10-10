@@ -1,7 +1,9 @@
 use std::collections::{HashMap, HashSet};
 use std::time::SystemTime;
 use std::f32::consts::E;
+use serde::{Serialize, Deserialize};
 
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct UserItemInteractions {
     interactions: HashMap<i32, HashMap<i32, (f32, f32)>>, // Store interaction value and timestamp
     all_item_ids: HashSet<i32>,

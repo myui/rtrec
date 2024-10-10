@@ -1,11 +1,15 @@
 use pyo3::prelude::*;
 
 use std::collections::HashMap;
+use std::fs::File;
+use std::io::{BufReader, BufWriter};
+use serde::{Serialize, Deserialize};
 
 use crate::ftrl::FTRL;
 use crate::interactions::UserItemInteractions;
 
 #[pyclass]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct SlimMSE {
     interactions: UserItemInteractions,
     ftrl: FTRL,
@@ -95,5 +99,26 @@ impl SlimMSE {
             self.cumulative_loss / self.steps as f32
         }
     }
-}
 
+    /// Save the SlimMSE model to a file using MessagePack.
+    pub fn save(&self, file_path: &str) -> PyResult<()> {
+        let file = File::create(file_path).map_err(|e| pyo3::exceptions::PyIOError::new_err(format!("Failed to create file: {}", e)))?;
+        let mut writer = BufWriter::new(file);
+
+        // Serialize the SlimMSE struct to MessagePack
+        rmp_serde::encode::write(&mut writer, &self).map_err(|e| pyo3::exceptions::PyIOError::new_err(format!("Failed to serialize: {}", e)))?;
+        Ok(())
+    }
+
+    /// Load the SlimMSE model from a file using MessagePack.
+    #[staticmethod]
+    pub fn load(file_path: &str) -> PyResult<Self> {
+        let file = File::open(file_path).map_err(|e| pyo3::exceptions::PyIOError::new_err(format!("Failed to open file: {}", e)))?;
+        let reader = BufReader::new(file);
+
+        // Deserialize the SlimMSE struct from MessagePack
+        let slim: SlimMSE = rmp_serde::decode::from_read(reader).map_err(|e| pyo3::exceptions::PyIOError::new_err(format!("Failed to deserialize: {}", e)))?;
+        Ok(slim)
+    }
+
+}
