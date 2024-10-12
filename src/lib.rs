@@ -1,6 +1,7 @@
 pub mod slim;
 pub mod interactions;
 pub mod ftrl;
+pub mod identifiers;
 
 use slim::SlimMSE;
 use pyo3::prelude::*;

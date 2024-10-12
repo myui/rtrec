@@ -1,4 +1,6 @@
 import numpy as np
+import logging
+
 from abc import ABC, abstractmethod
 from typing import Any, List, Tuple
 
@@ -82,12 +84,17 @@ class ImplicitFeedbackRecommender(BaseRecommender):
         """
         for user, tstamp, positive_item, negative_item in user_interactions:
             # Update user-item interactions
-            user_id = self.user_ids.identify(user)
-            positive_item_id = self.item_ids.identify(positive_item)
-            negative_item_id = self.item_ids.identify(negative_item)
-            self.interactions.add_interaction(user_id, positive_item_id, tstamp, delta=1)
-            self.interactions.add_interaction(user_id, negative_item_id, tstamp, delta=-1)
-            self._update(user_id, positive_item_id, negative_item_id)
+            try:
+                user_id = self.user_ids.identify(user)
+                positive_item_id = self.item_ids.identify(positive_item)
+                negative_item_id = self.item_ids.identify(negative_item)
+                self.interactions.add_interaction(user_id, positive_item_id, tstamp, delta=1)
+                self.interactions.add_interaction(user_id, negative_item_id, tstamp, delta=-1)
+                self._update(user_id, positive_item_id, negative_item_id)
+            except Exception as e:
+                logging.warning(f"Error processing interaction: {e}")
+                continue
+
 
     @abstractmethod
     def _update(self, user: int, positive_item_id: int, negative_item_id: int) -> None:
@@ -111,10 +118,14 @@ class ExplictFeedbackRecommender(BaseRecommender):
 
     def fit(self, user_interactions: List[Tuple[Any, Any, float, float]]) -> None:
         for user, item, tstamp, rating in user_interactions:
-            user_id = self.user_ids.identify(user)
-            item_id = self.item_ids.identify(item)
-            self.interactions.add_interaction(user_id, item_id, tstamp, rating)
-            self._update(user_id, item_id)
+            try:
+                user_id = self.user_ids.identify(user)
+                item_id = self.item_ids.identify(item)
+                self.interactions.add_interaction(user_id, item_id, tstamp, rating)
+                self._update(user_id, item_id)
+            except Exception as e:
+                logging.warning(f"Error processing interaction: {e}")
+                continue
 
     @abstractmethod
     def _update(self, user_id: int, item_id: int, rating: float) -> None:

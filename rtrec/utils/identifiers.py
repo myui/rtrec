@@ -10,14 +10,18 @@ class Identifier:
         self.name = name
         self.obj_set: set[Any] = set()
         self.id_to_obj: list[Any] = []
-        self.pass_through = True # If True, return the object as-is if it is an integer
+        self.pass_through : Optional[bool] = None # If True, return the object as-is if it is an integer
 
     def identify(self, obj: Any) -> int:
         # If the object is an integer, return it as-is
         if isinstance(obj, int):
-            if not self.pass_through:
+            if self.pass_through is False:
                 raise ValueError(f"Mixed types detected for {self.name}: {obj}")
+            self.pass_through = True
             return obj
+
+        if self.pass_through is True:
+            raise ValueError(f"Mixed types detected for {self.name}: {obj}")
 
         # If the object is already in the set, find its ID
         obj_id = self.obj_to_id.get(obj, None)
@@ -33,6 +37,8 @@ class Identifier:
     def get_id(self, obj: Any) -> Optional[int]:
         # If the object is an integer, return it as-is
         if isinstance(obj, int):
+            if not self.pass_through:
+                raise ValueError(f"Mixed types detected for {self.name}: {obj}")
             return obj
 
         return self.obj_to_id.get(obj, None)

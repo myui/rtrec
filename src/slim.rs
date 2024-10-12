@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
 use serde::{Serialize, Deserialize};
+use log::warn;
 
 use rusoto_core::Region;
 use rusoto_s3::{PutObjectRequest, GetObjectRequest, S3Client, S3};
@@ -42,8 +43,13 @@ impl SlimMSE {
 
     pub fn fit(&mut self, user_interactions: Vec<(i32, i32, f32, f32)>) {
         for (user_id, item_id, tstamp, rating) in user_interactions {
-            self.interactions.add_interaction(user_id, item_id, tstamp, rating);
-            self.update_weights(user_id, item_id);
+            if let Err(e) = (|| -> Result<(), Box<dyn std::error::Error>> {
+                self.interactions.add_interaction(user_id, item_id, tstamp, rating);
+                self.update_weights(user_id, item_id);
+                Ok(())
+            })() {
+                warn!("Failed to process interaction for user_id: {}, item_id: {}: {}", user_id, item_id, e);
+            }
         }
     }
 
