@@ -20,13 +20,13 @@ class BPR_SLIM(ImplicitFeedbackRecommender):
         # Initialize item-to-item similarity matrix as DoK matrix
         self.W = DoKMatrix()
 
-    def _predict(self, items: List[int]) -> List[float]:
+    def _predict(self, item_ids: List[int]) -> List[float]:
         """
         Predict scores for a list of items.
         """
-        return [self.W.row_sum(item) for item in items]
+        return [self.W.row_sum(item) for item in item_ids]
 
-    def _update(self, user: int, positive_item: int, negative_item: int) -> None:
+    def _update(self, user_id: int, positive_item_id: int, negative_item_id: int) -> None:
         """
         Incremental weight update based on BPR loss.
         :param user: User index
@@ -36,50 +36,50 @@ class BPR_SLIM(ImplicitFeedbackRecommender):
 
         self.eta.update()
     
-        user_items = self.get_interacted_items(user)
+        user_items = self._get_interacted_items(user_id)
 
-        grad = self._bpr_loss(user_items, positive_item, negative_item)
+        grad = self._bpr_loss(user_items, positive_item_id, negative_item_id)
 
         # get updated gradients
-        pos_grad = self.optimizer.update_gradients(positive_item, grad)
-        neg_grad = self.optimizer.update_gradients(negative_item, grad)
+        pos_grad = self.optimizer.update_gradients(positive_item_id, grad)
+        neg_grad = self.optimizer.update_gradients(negative_item_id, grad)
 
         # update item similarity matrix
         if self.optimizer.name == "ftrl":
             for user_item in user_items:
                 # Note diagonal elements are not updated for item-item similarity matrix
-                if user_item != positive_item:
+                if user_item != positive_item_id:
                     if abs(pos_grad) < 1e-8:
-                        del self.W[user_item, positive_item]
+                        del self.W[user_item, positive_item_id]
                     else:
                         # similarity value is increased for positive item
-                        self.W[user_item, positive_item] += pos_grad
-                if user_item != negative_item:
+                        self.W[user_item, positive_item_id] += pos_grad
+                if user_item != negative_item_id:
                     if abs(neg_grad) < 1e-8:
-                        del self.W[user_item, negative_item]
+                        del self.W[user_item, negative_item_id]
                     else:
                         # similarity value is decreased for negative item
-                        self.W[user_item, negative_item] -= neg_grad
+                        self.W[user_item, negative_item_id] -= neg_grad
         else:
             for user_item in user_items:
                 # Note diagonal elements are not updated for item-item similarity matrix
-                if user_item != positive_item:
+                if user_item != positive_item_id:
                     # similarity value is increased for positive item
-                    delta = self.eta.value * self.regularization.regularize(self.W[user_item, positive_item], pos_grad)
+                    delta = self.eta.value * self.regularization.regularize(self.W[user_item, positive_item_id], pos_grad)
                     if abs(delta) < 1e-8:
-                        del self.W[user_item, positive_item]
+                        del self.W[user_item, positive_item_id]
                     else:
-                        self.W[user_item, positive_item] += delta
+                        self.W[user_item, positive_item_id] += delta
 
-                if user_item != negative_item:
+                if user_item != negative_item_id:
                     # similarity value is decreased for negative item
-                    delta = self.eta.value * self.regularization.regularize(self.W[user_item, negative_item], neg_grad)
+                    delta = self.eta.value * self.regularization.regularize(self.W[user_item, negative_item_id], neg_grad)
                     if abs(delta) < 1e-8:
-                        del self.W[user_item, positive_item]
+                        del self.W[user_item, positive_item_id]
                     else:
-                        self.W[user_item, negative_item] -= delta
+                        self.W[user_item, negative_item_id] -= delta
 
-    def _bpr_loss(self, user_items: List[int], positive_item: int, negative_item: int) -> float:
+    def _bpr_loss(self, user_item_ids: List[int], positive_item_id: int, negative_item_id: int) -> float:
         """
         BPR Loss function
         :param user_items: user interacted items
@@ -89,7 +89,7 @@ class BPR_SLIM(ImplicitFeedbackRecommender):
         """
 
         # Calculate the difference in scores between positive and negative items
-        diff = sum(self.W[user_item, positive_item] - self.W[user_item, negative_item] for user_item in user_items)
+        diff = sum(self.W[user_item, positive_item_id] - self.W[user_item, negative_item_id] for user_item in user_item_ids)
 
         # minus in order for the exponent of the exponential to be positive
         return expit(-diff) # a.k.a. logistic sigmoid function

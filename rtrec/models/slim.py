@@ -20,26 +20,26 @@ class SLIM_MSE(ExplictFeedbackRecommender):
             return 0.0
         return self.cumulative_loss / self.steps
 
-    def _predict(self, items: List[int]) -> List[float]:
+    def _predict(self, item_ids: List[int]) -> List[float]:
         """
         Predict scores for a list of items.
         """
         return [
             sum(self.W.get((i, j), 0) for j in self.interactions.get_all_item_ids() if j != i)
-            for i in items
+            for i in item_ids
         ]
 
-    def _update(self, user: int, item_id: int) -> None:
+    def _update(self, user_id: int, item_id: int) -> None:
         """
         Incremental weight update based on SLIM loss.
         :param user: User index
         :param item_id: Item index
         """
 
-        user_items = self.get_interacted_items(user)
+        user_items = self._get_interacted_items(user_id)
 
         # Compute the gradient (MSE)        
-        dloss = self._predict_rating(user, item_id) - self.get_rating(user, item_id)
+        dloss = self._predict_rating(user_id, item_id) - self._get_rating(user_id, item_id)
         self.cumulative_loss += dloss**2
         self.steps += 1
 
@@ -49,17 +49,17 @@ class SLIM_MSE(ExplictFeedbackRecommender):
             if user_item == item_id:
                 continue
 
-            grad = dloss * self.get_rating(user, user_item)
+            grad = dloss * self._get_rating(user_id, user_item)
             self.ftrl.update_gradients((user_item, item_id), grad)
 
-    def _predict_rating(self, user: int, item_id: int) -> float:
+    def _predict_rating(self, user_id: int, item_id: int) -> float:
         """
         Compute the derivative of the loss function.
         """
         predicted = 0.0
 
-        for user_item in self.get_interacted_items(user):
-            predicted += self.W[user_item, item_id] * self.get_rating(user, user_item)
+        for user_item in self._get_interacted_items(user_id):
+            predicted += self.W[user_item, item_id] * self._get_rating(user_id, user_item)
 
         return predicted
 
