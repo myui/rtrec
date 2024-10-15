@@ -4,11 +4,15 @@ use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
 
+use pyo3::types::PyString;
+use pyo3::{FromPyObject, PyAny, PyObject, PyResult, Python};
+use pyo3::conversion::IntoPy;
+
 /// Custom error for identifier-related issues.
 #[derive(Debug)]
 struct IdentifierError {
     id_name: String,
-    obj_id: usize,
+    obj_id: i32,
 }
 
 impl fmt::Display for IdentifierError {
@@ -42,22 +46,50 @@ pub enum SerializableValue {
 
 impl SerializableValue {
     /// Converts to `&dyn Any`.
-    #[allow(dead_code)]
-    fn as_any(&self) -> &dyn Any {
+    pub fn as_any(&self) -> &dyn Any {
         match self {
             SerializableValue::Integer(v) => v,
             SerializableValue::Text(v) => v,
         }
     }
 
-    #[allow(dead_code)]
-    fn from_any(value: &dyn Any) -> Option<Self> {
+    pub fn from_any(value: &dyn Any) -> Option<Self> {
         if let Some(v) = value.downcast_ref::<i32>() {
             Some(SerializableValue::Integer(*v))
         } else if let Some(v) = value.downcast_ref::<String>() {
             Some(SerializableValue::Text(v.clone()))
         } else {
-            None
+            None // Unsupported type
+        }
+    }
+
+    pub fn into_py(self) -> PyObject {
+        Python::with_gil(|py| match self {
+            SerializableValue::Integer(v) => v.into_py(py),
+            SerializableValue::Text(v) => PyString::new(py, &v).into_py(py),
+        })
+    }
+}
+
+impl<'source> FromPyObject<'source> for SerializableValue {
+
+    fn extract(ob: &'source PyAny) -> PyResult<Self> {
+        if let Ok(val) = ob.extract::<String>() {
+            Ok(SerializableValue::from_any(&val).unwrap())
+        } else if let Ok(val) = ob.extract::<i32>() {
+            Ok(SerializableValue::from_any(&val).unwrap())
+        } else {
+            Err(pyo3::exceptions::PyTypeError::new_err("Unsupported type for SerializableValue"))
+        }
+    }
+}
+
+// Implement conversion for SerializableValue to PyObject
+impl IntoPy<PyObject> for SerializableValue {
+    fn into_py(self, py: Python<'_>) -> PyObject {
+        match self {
+            SerializableValue::Integer(v) => v.into_py(py),
+            SerializableValue::Text(v) => PyString::new(py, &v).into_py(py),
         }
     }
 }
@@ -67,7 +99,7 @@ impl SerializableValue {
 pub struct Identifier {
     name: String,
     pass_through: Option<bool>,
-    obj_to_id: HashMap<SerializableValue, usize>,
+    obj_to_id: HashMap<SerializableValue, i32>,
     id_to_obj: Vec<SerializableValue>,
 }
 
@@ -83,7 +115,7 @@ impl Identifier {
     }
 
     /// Identifies an object and returns its ID.
-    pub fn identify(&mut self, obj: SerializableValue) -> Result<usize, Box<dyn Error>> {
+    pub fn identify(&mut self, obj: SerializableValue) -> Result<i32, Box<dyn Error>> {
         if let Some(id) = self.as_integer(&obj) {
             if self.pass_through == Some(false) {
                 return Err(Box::new(MixedTypeError {
@@ -106,7 +138,7 @@ impl Identifier {
             return Ok(id);
         }
 
-        let new_id = self.id_to_obj.len();
+        let new_id = self.id_to_obj.len() as i32;
         self.obj_to_id.insert(obj.clone(), new_id);
         self.id_to_obj.push(obj);
         self.pass_through = Some(false);
@@ -114,7 +146,7 @@ impl Identifier {
     }
 
     /// Retrieves the ID of an object if it exists.
-    pub fn get_id(&self, obj: &SerializableValue) -> Result<Option<usize>, Box<dyn Error>> {
+    pub fn get_id(&self, obj: &SerializableValue) -> Result<Option<i32>, Box<dyn Error>> {
         if let Some(id) = self.as_integer(obj) {
             if self.pass_through == Some(false) {
                 return Err(Box::new(MixedTypeError {
@@ -129,12 +161,12 @@ impl Identifier {
     }
 
     /// Retrieves an object by its ID.
-    pub fn get(&self, obj_id: usize) -> Result<SerializableValue, Box<dyn Error>> {
+    pub fn get(&self, obj_id: i32) -> Result<SerializableValue, Box<dyn Error>> {
         if self.pass_through == Some(true) {
-            return Ok(SerializableValue::Integer(obj_id as i32));
+            return Ok(SerializableValue::Integer(obj_id));
         }
 
-        self.id_to_obj.get(obj_id).cloned().ok_or_else(|| {
+        self.id_to_obj.get(obj_id as usize).cloned().ok_or_else(|| {
             Box::new(IdentifierError {
                 id_name: self.name.clone(),
                 obj_id,
@@ -145,19 +177,24 @@ impl Identifier {
     /// Retrieves an object by its ID or returns a default value.
     pub fn get_or_default(
         &self,
-        obj_id: usize,
+        obj_id: i32,
         default: Option<SerializableValue>,
     ) -> SerializableValue {
         if self.pass_through == Some(true) {
             return SerializableValue::Integer(obj_id as i32);
         }
-        self.id_to_obj.get(obj_id).cloned().unwrap_or_else(|| default.unwrap())
+
+        self.id_to_obj.get(obj_id as usize).cloned().unwrap_or_else(|| {
+            default.unwrap_or_else(|| {
+                panic!("Identifier not found for {}: {}", self.name, obj_id);
+            })
+        })
     }
 
     /// Helper function to treat integer-like values as their IDs.
-    fn as_integer(&self, obj: &SerializableValue) -> Option<usize> {
+    fn as_integer(&self, obj: &SerializableValue) -> Option<i32> {
         if let SerializableValue::Integer(v) = obj {
-            Some(*v as usize)
+            Some(*v)
         } else {
             None
         }

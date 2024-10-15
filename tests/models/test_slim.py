@@ -1,12 +1,12 @@
 import pytest
 import time
 
-from rtrec.models import Fast_SLIM_MSE, SLIM_MSE  # Ensure this matches the module name in your Rust crate.
+from rtrec.models import SLIM_MSE as SlimMSE
 
 @pytest.fixture
 def slim():
     # Create a SlimMse instance with example hyperparameters
-    return SLIM_MSE(alpha=0.1, beta=1.0, lambda1=0.0002, lambda2=0.0001)
+    return SlimMSE(alpha=0.1, beta=1.0, lambda1=0.0002, lambda2=0.0001)
 
 def test_fit(slim):
     # Sample user interactions for fitting with timestamps

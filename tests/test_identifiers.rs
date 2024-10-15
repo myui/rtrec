@@ -1,5 +1,6 @@
 #[cfg(test)]
 mod tests {
+
     use rtrec::identifiers::{Identifier, SerializableValue};
 
     #[test]
@@ -71,6 +72,8 @@ mod tests {
         let id = identifier.identify(obj.clone()).unwrap();
 
         assert_eq!(identifier.get_or_default(id, Some(default_obj.clone())), obj);
+
+        // passthrough mode
         assert_eq!(identifier.get_or_default(999, Some(default_obj.clone())), default_obj);
     }
 

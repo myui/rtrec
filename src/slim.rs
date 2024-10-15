@@ -13,6 +13,7 @@ use tokio::io::AsyncReadExt;
 
 use crate::ftrl::FTRL;
 use crate::interactions::UserItemInteractions;
+use crate::identifiers::{Identifier, SerializableValue};
 
 #[pyclass]
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -22,6 +23,8 @@ pub struct SlimMSE {
     weights: HashMap<(i32, i32), f32>, // Direct reference to FTRL's weights
     cumulative_loss: f32,
     steps: usize,
+    user_ids: Identifier,
+    item_ids: Identifier,
 }
 
 #[pymethods]
@@ -38,24 +41,36 @@ impl SlimMSE {
             weights,
             cumulative_loss: 0.0,
             steps: 0,
+            user_ids: Identifier::new("user"),
+            item_ids: Identifier::new("item"),
         }
     }
 
-    pub fn fit(&mut self, user_interactions: Vec<(i32, i32, f32, f32)>) {
-        for (user_id, item_id, tstamp, rating) in user_interactions {
+    pub fn fit(&mut self, user_interactions: Vec<(SerializableValue, SerializableValue, f32, f32)>) {
+        for (user, item, tstamp, rating) in user_interactions {
             if let Err(e) = (|| -> Result<(), Box<dyn std::error::Error>> {
+                let user_id = self.identify_user(user);
+                let item_id = self.identify_item(item);
                 self.interactions.add_interaction(user_id, item_id, tstamp, rating);
                 self.update_weights(user_id, item_id);
                 Ok(())
             })() {
-                warn!("Failed to process interaction for user_id: {}, item_id: {}: {}", user_id, item_id, e);
+                warn!("Failed to fit interaction: {}", e);
             }
         }
     }
 
+    fn identify_user(&mut self, user: SerializableValue) -> i32 {
+        self.user_ids.identify(user).unwrap_or_else(|_| panic!("Failed to identify user")) as i32
+    }
+
+    fn identify_item(&mut self, item: SerializableValue) -> i32 {
+        self.item_ids.identify(item).unwrap_or_else(|_| panic!("Failed to identify item")) as i32
+    }
+
     fn update_weights(&mut self, user_id: i32, item_id: i32) {
         let user_items = self.interactions.get_all_items_for_user(user_id);
-        let predicted = self._predict_rating(user_id, item_id);
+        let predicted = self.predict_rating(user_id, item_id);
         let dloss = predicted - self.interactions.get_user_item_rating(user_id, item_id, 0.0);
 
         self.cumulative_loss += dloss.powi(2);
@@ -69,38 +84,49 @@ impl SlimMSE {
         }
     }
 
-    fn _predict_rating(&self, user_id: i32, item_id: i32) -> f32 {
+    fn predict_rating(&self, user_id: i32, item_id: i32) -> f32 {
         let user_items = self.interactions.get_all_items_for_user(user_id);
         user_items.iter()
             .map(|&ui| self.weights.get(&(ui, item_id)).unwrap_or(&0.0) * self.interactions.get_user_item_rating(user_id, ui, 0.0))
             .sum()
     }
 
-    pub fn recommend(&self, user_id: i32, top_k: usize, filter_interacted: Option<bool>) -> Vec<i32> {
+    pub fn recommend(&self, user: SerializableValue, top_k: usize, filter_interacted: Option<bool>) -> Vec<SerializableValue> {
+        let user_id = match self.get_user_id(user) {
+            Some(id) => id,
+            None => return vec![], // TODO: Return empty list if user ID not found
+        };
+
         // Use `unwrap_or` to set `filter_interacted` to `true` by default
         let filter_interacted = filter_interacted.unwrap_or(true);
 
         // Get the candidate items based on the filtering condition
-        let candidate_items = if filter_interacted {
+        let candidate_item_ids = if filter_interacted {
             self.interactions.get_all_non_interacted_items(user_id)
         } else {
             self.interactions.get_all_non_negative_items(user_id)
         };
 
         // Predict scores for the candidate items
-        let mut scores: Vec<(i32, f32)> = candidate_items
+        let mut scores: Vec<(SerializableValue, f32)> = candidate_item_ids
             .iter()
             .map(|&item_id| {
-                let score = self._predict_rating(user_id, item_id);
-                (item_id, score)
+                let score = self.predict_rating(user_id, item_id);
+                let item = self.item_ids.get(item_id).unwrap();
+                (item, score)
             })
             .collect();
 
         // Sort items by score in descending order
         scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
-        // Take the top-k items and return their IDs
-        scores.iter().take(top_k).map(|&(id, _)| id).collect()
+        // Take the top-k items and return their them
+        scores.iter().take(top_k).map(|&(ref item, _)| item.clone()).collect()
+    }
+
+    /// Helper function to extract user ID from PyObject.
+    fn get_user_id(&self, user: SerializableValue) -> Option<i32> {
+        self.user_ids.get_id(&user).unwrap()
     }
 
     pub fn get_empirical_loss(&self) -> f32 {
