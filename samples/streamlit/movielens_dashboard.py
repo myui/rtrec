@@ -4,6 +4,8 @@ import pandas as pd
 import requests
 from datetime import datetime, timedelta
 
+OMDB_API_KEY = os.getenv("OMDB_API_KEY")
+
 # URLs for MovieLens 100K dataset
 DATASET_URL = "http://files.grouplens.org/datasets/movielens/ml-100k/"
 RATINGS_FILE = DATASET_URL + "u.data"
@@ -44,6 +46,40 @@ def load_movie_posters():
         poster_dict[row['movie_id']] = row['url']
     return poster_dict
 
+def fetch_movie_details(title):
+    def extract_title_year(movie_str):
+        # Use regex to find the title and year
+        import re
+        match = re.match(r'^(.*)\s\((\d{4})\)$', movie_str)
+        if match:
+            title = match.group(1).strip()
+            year = match.group(2)
+            return title, year
+        return title, None
+
+    title, year = extract_title_year(title)
+    import urllib.parse
+    title = urllib.parse.quote_plus(title)
+    if year:
+        url = f"http://www.omdbapi.com/?t={title}&y={year}&apikey={OMDB_API_KEY}"
+    else:
+        url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
+    response = requests.get(url)
+    
+    if response.status_code == 200:
+        data = response.json()
+        if data.get("Response") == "True":
+            return data.get("Poster"), data.get("Plot")
+        else:
+            # OMDb returns a reason in 'Error' field if 'Response' is 'False'
+            error_message = data.get("Error", "Unknown error")
+            print(f"Error from OMDb API: {error_message}")
+            return None, "No description available."
+    else:
+        # Handle HTTP errors
+        print(f"HTTP Error: {response.status_code} - {response.reason}")
+        return None, "No description available."
+
 # Recommend movies for a given user
 def recommend(user_id, merged_df, feedback, top_n=5, cutoff_days=180):
     recent_date = datetime.now() - timedelta(days=cutoff_days)
@@ -83,13 +119,21 @@ if st.button("Get Recommendations"):
         title = row["movie_title"]
         movie_id = row["movie_id"]
 
+        poster, plot = fetch_movie_details(title)
+        if poster is None:
+            poster = poster_dict.get(movie_id)
+
         st.write(f"**{title}**")
-        
-        poster_url = poster_dict.get(movie_id)
-        if poster_url:
-            st.image(poster_url, width=100)
-        else:
-            st.write("No image available.")
+        col1, col2 = st.columns([1, 3])
+
+        with col1:
+            if poster:
+                st.image(poster, width=100)
+            else:
+                st.write("No image available.")
+
+        with col2:
+            st.write(plot)
 
         liked = st.checkbox(f"👍 Like {title}", key=f"like_{row['movie_id']}")
         disliked = st.checkbox(f"👎 Dislike {title}", key=f"dislike_{row['movie_id']}")
