@@ -7,8 +7,6 @@ scipy
 scikit-learn
 pandas
 
-#sortedcontainers
-
 ################
 # Experimental #
 ################
@@ -21,6 +19,13 @@ pandas
 
 pytest
 
+#############
+# Streamlit #
+#############
+
+streamlit
+matplotlib
+
 #####################
 # Jupyter Notebooks #
 #####################
@@ -28,6 +33,3 @@ pytest
 jupyter
 jupyterlab
 ipywidgets
-
-matplotlib
-

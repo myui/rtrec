@@ -24,6 +24,8 @@ RUN apt-get -y update \
  && apt-get install -y build-essential python3-dev git sudo wget curl \
  && apt-get install -y cmake libboost-all-dev libeigen3-dev libgsl0-dev \
  && apt-get install -y libopenblas-dev \
+ # for RUST
+ # && apt-get install -y extra-runtime-dependencies \
  && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 ADD requirements.txt /tmp/requirements.txt
