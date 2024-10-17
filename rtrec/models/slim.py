@@ -20,13 +20,13 @@ class SLIM_MSE(ExplictFeedbackRecommender):
             return 0.0
         return self.cumulative_loss / self.steps
 
-    def _predict(self, item_ids: List[int]) -> List[float]:
+    def _predict(self, user_id: int, item_ids: List[int]) -> List[float]:
         """
         Predict scores for a list of items.
         """
         return [
-            sum(self.W.get((i, j), 0) for j in self.interactions.get_all_item_ids() if j != i)
-            for i in item_ids
+            self._predict_rating(user_id, item_id, bypass_prediction=False)
+            for item_id in item_ids
         ]
 
     def _update(self, user_id: int, item_id: int) -> None:
@@ -36,7 +36,7 @@ class SLIM_MSE(ExplictFeedbackRecommender):
         :param item_id: Item index
         """
 
-        user_items = self._get_interacted_items(user_id)
+        user_item_ids = self._get_interacted_items(user_id)
 
         # Compute the gradient (MSE)        
         dloss = self._predict_rating(user_id, item_id) - self._get_rating(user_id, item_id)
@@ -44,27 +44,31 @@ class SLIM_MSE(ExplictFeedbackRecommender):
         self.steps += 1
 
         # update item similarity matrix
-        for user_item in user_items:
+        for user_item_id in user_item_ids:
             # Note diagonal elements are not updated for item-item similarity matrix
-            if user_item == item_id:
+            if user_item_id == item_id:
                 continue
 
-            grad = dloss * self._get_rating(user_id, user_item)
-            self.ftrl.update_gradients((user_item, item_id), grad)
+            grad = dloss * self._get_rating(user_id, user_item_id)
+            self.ftrl.update_gradients((user_item_id, item_id), grad)
 
-    def _predict_rating(self, user_id: int, item_id: int) -> float:
-        """
-        Compute the derivative of the loss function.
-        """
+    def _predict_rating(self, user_id: int, item_id: int, bypass_prediction: bool=False) -> float:
+        user_item_ids = self._get_interacted_items(user_id)
+        if bypass_prediction:
+            if len(user_item_ids) == 1 and user_item_ids[0] == item_id:
+                # return raw rating if user has only interacted with the item
+                return self._get_rating(user_id, item_id)
+
         predicted = 0.0
-
-        for user_item in self._get_interacted_items(user_id):
-            predicted += self.W[user_item, item_id] * self._get_rating(user_id, user_item)
+        for user_item_id in user_item_ids:
+            if user_item_id == item_id:
+                continue # diagonal elements are not updated for item-item similarity matrix
+            predicted += self.W[user_item_id, item_id] * self._get_rating(user_id, user_item_id)
 
         return predicted
 
 class FTRL():
-    def __init__(self, alpha: float = 0.5, beta: float = 1.0, lambda1: float = 0.0002, lambda2: float = 0.0001):
+    def __init__(self, alpha: float = 0.5, beta: float = 1.0, lambda1: float = 0.0002, lambda2: float = 0.0001, **kwargs: Any):
         """
         FTRL Constructor
         :param alpha: Learning rate

@@ -70,7 +70,7 @@ impl SlimMSE {
 
     fn update_weights(&mut self, user_id: i32, item_id: i32) {
         let user_items = self.interactions.get_all_items_for_user(user_id);
-        let predicted = self.predict_rating(user_id, item_id);
+        let predicted = self._predict_rating(user_id, item_id, false);
         let dloss = predicted - self.interactions.get_user_item_rating(user_id, item_id, 0.0);
 
         self.cumulative_loss += dloss.powi(2);
@@ -84,15 +84,38 @@ impl SlimMSE {
         }
     }
 
-    fn predict_rating(&self, user_id: i32, item_id: i32) -> f32 {
+    pub fn predict_rating(&self, user: SerializableValue, item: SerializableValue) -> f32 {
+        let user_id = match self.user_ids.get_id(&user).unwrap() {
+            Some(id) => id,
+            None => return 0.0, // Return 0 if user ID not found
+        };
+        let item_id = match self.item_ids.get_id(&item).unwrap() {
+            Some(id) => id,
+            None => return 0.0, // Return 0 if item ID not found
+        };
+        self._predict_rating(user_id, item_id, true)
+    }
+
+    fn _predict_rating(&self, user_id: i32, item_id: i32, bypass_prediction: bool) -> f32 {
         let user_items = self.interactions.get_all_items_for_user(user_id);
+
+        if bypass_prediction && user_items.len() == 1 && user_items[0] == item_id {
+            // Return raw rating if user has only interacted with the item
+            return self.interactions.get_user_item_rating(user_id, item_id, 0.0);
+        }
+
         user_items.iter()
-            .map(|&ui| self.weights.get(&(ui, item_id)).unwrap_or(&0.0) * self.interactions.get_user_item_rating(user_id, ui, 0.0))
+            .filter(|&&ui| ui != item_id) // Skip diagonal elements
+            .map(|&ui| {
+                let weight = self.weights.get(&(ui, item_id)).unwrap_or(&0.0);
+                let rating = self.interactions.get_user_item_rating(user_id, ui, 0.0);
+                weight * rating
+            })
             .sum()
     }
 
     pub fn recommend(&self, user: SerializableValue, top_k: usize, filter_interacted: Option<bool>) -> Vec<SerializableValue> {
-        let user_id = match self.get_user_id(user) {
+        let user_id = match self.user_ids.get_id(&user).unwrap() {
             Some(id) => id,
             None => return vec![], // TODO: Return empty list if user ID not found
         };
@@ -111,7 +134,7 @@ impl SlimMSE {
         let mut scores: Vec<(SerializableValue, f32)> = candidate_item_ids
             .iter()
             .map(|&item_id| {
-                let score = self.predict_rating(user_id, item_id);
+                let score = self._predict_rating(user_id, item_id, false);
                 let item = self.item_ids.get(item_id).unwrap();
                 (item, score)
             })
@@ -122,11 +145,6 @@ impl SlimMSE {
 
         // Take the top-k items and return their them
         scores.iter().take(top_k).map(|&(ref item, _)| item.clone()).collect()
-    }
-
-    /// Helper function to extract user ID from PyObject.
-    fn get_user_id(&self, user: SerializableValue) -> Option<i32> {
-        self.user_ids.get_id(&user).unwrap()
     }
 
     pub fn get_empirical_loss(&self) -> f32 {

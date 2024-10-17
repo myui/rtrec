@@ -1,9 +1,9 @@
 from collections import defaultdict
-from typing import List, Optional
+from typing import List, Optional, Any
 import time, math
 
 class UserItemInteractions:
-    def __init__(self, min_value: int = -5, max_value: int = 10, decay_in_days: Optional[int] = None) -> None:
+    def __init__(self, min_value: int = -5, max_value: int = 10, decay_in_days: Optional[int] = None, **kwargs: Any) -> None:
         """
         Initializes the UserItemInteractions class.
 

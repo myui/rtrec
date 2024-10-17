@@ -20,7 +20,7 @@ class BPR_SLIM(ImplicitFeedbackRecommender):
         # Initialize item-to-item similarity matrix as DoK matrix
         self.W = DoKMatrix()
 
-    def _predict(self, item_ids: List[int]) -> List[float]:
+    def _predict(self, user_id: int, item_ids: List[int]) -> List[float]:
         """
         Predict scores for a list of items.
         """

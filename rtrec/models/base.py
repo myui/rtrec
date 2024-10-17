@@ -14,7 +14,7 @@ class BaseRecommender(ABC):
         :param kwargs: Additional keyword arguments for the model
         """
         # Initialize user-item interactions
-        self.interactions = UserItemInteractions()
+        self.interactions = UserItemInteractions(**kwargs)
 
         # Initialize user and item ID mappings
         self.user_ids = Identifier()
@@ -53,7 +53,7 @@ class BaseRecommender(ABC):
             candidate_item_ids = self.interactions.get_all_non_negative_items(user_id)
 
         # Predict scores for candidate items
-        scores = self._predict(candidate_item_ids)
+        scores = self._predict(user_id, candidate_item_ids)
 
         # Map item IDs back to original items
         candidate_items = [self.item_ids[id] for id in candidate_item_ids]
@@ -62,7 +62,7 @@ class BaseRecommender(ABC):
         return sorted(candidate_items, key=dict(zip(candidate_items, scores)).get, reverse=True)[:top_k]
 
     @abstractmethod
-    def _predict(self, item_ids: List[int]) -> List[float]:
+    def _predict(self, user_id: int, item_ids: List[int]) -> List[float]:
         """
         Predict scores for a list of items.
         """
@@ -130,3 +130,20 @@ class ExplictFeedbackRecommender(BaseRecommender):
     @abstractmethod
     def _update(self, user_id: int, item_id: int, rating: float) -> None:
         raise NotImplementedError("The _update method must be implemented by the subclass.")
+
+    def predict_rating(self, user: Any, item: Any) -> float:
+        user_id = self.user_ids.get_id(user)
+        item_id = self.item_ids.get_id(item)
+        if user_id is None or item_id is None:
+            return 0.0
+        return self._predict_rating(user_id, item_id, bypass_prediction=True)
+
+    @abstractmethod
+    def _predict_rating(self, user_id: int, item_id: int, bypass_prediction: bool=False) -> float:
+        """
+        Compute the derivative of the loss function.
+        :param user_id: User index
+        :param item_id: Item index
+        :param bypass_prediction: Flag to bypass prediction if user has only interacted with the item (default: False)
+        """
+        raise NotImplementedError("The _predict_rating method must be implemented by the subclass.")

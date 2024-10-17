@@ -8,8 +8,8 @@ class IdentifierError(Exception):
 class Identifier:
     def __init__(self, name: str="ID") -> None:
         self.name = name
-        self.obj_set: set[Any] = set()
-        self.id_to_obj: list[Any] = []
+        self.obj_to_id: dict[Any, int] = {}  # Store object-to-ID mapping
+        self.id_to_obj: list[Any] = []  # Store ID-to-object mapping
         self.pass_through : Optional[bool] = None # If True, return the object as-is if it is an integer
 
     def identify(self, obj: Any) -> int:
@@ -28,11 +28,12 @@ class Identifier:
         if obj_id is not None:
             return obj_id
 
-        # Add the object to the set and list, and assign a new ID based on the list size
-        self.obj_set.add(obj)
+        # Otherwise, assign a new ID
+        new_id = len(self.id_to_obj)
+        self.obj_to_id[obj] = new_id
         self.id_to_obj.append(obj)
-        self.pass_through = False
-        return len(self.id_to_obj) - 1
+        self.pass_through = False  # Disable pass-through after adding non-integer objects
+        return new_id
 
     def get_id(self, obj: Any) -> Optional[int]:
         # If the object is an integer, return it as-is
