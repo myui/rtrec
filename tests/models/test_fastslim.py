@@ -99,6 +99,31 @@ def test_predict_mean_close_to_zero(slim):
     # Assert the mean prediction is close to 0
     assert abs(mean_prediction) < 0.001, f"Mean prediction {mean_prediction} is not close to 0"
 
+def test_predict_mean_at_multiple_interactions_close_to_zero(slim):
+    np.random.seed(42)  # For reproducibility
+    current_time = time.time()
+
+    # Generate random interactions with normal distribution (mean=0, stddev=5)
+    num_interactions = 10000
+    user_ids = [f"user{i}" for i in np.random.randint(0, 1000, num_interactions)] # 100 users (each user has 10 interactions)
+    item_ids = np.random.randint(0, 100, num_interactions)  # 100 items
+    ratings = np.random.normal(0, 5, num_interactions)     # Normal distribution (mean=0, stddev=5)
+
+    interactions = [
+        (user, item, current_time, rating)
+        for user, item, rating in zip(user_ids, item_ids, ratings)
+    ]
+
+    # Fit the model with the generated interactions
+    slim.fit(interactions)
+
+    # Predict for all user-item pairs in the interactions
+    mean_prediction = sum(slim.predict_rating(user, item) for user, item, _, _ in interactions) / len(interactions)
+
+    # Assert the mean prediction is close to 0
+    assert abs(mean_prediction) < 0.1, f"Mean prediction {mean_prediction} is not close to 0"
+
+
 def test_get_empirical_loss(slim):
     # Before any interaction, empirical loss should be zero
     assert slim.get_empirical_loss() == 0.0

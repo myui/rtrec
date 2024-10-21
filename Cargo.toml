@@ -22,7 +22,9 @@ log = "0.4"
 version = "0.19"
 
 [dev-dependencies]
-# anyhow = "1.0"  # For error handling in tests
+rand = "0.8.5"
+rand_distr = "0.4.3"
+pretty_assertions = "1.4.1"
 
 [features]
 extension-module = ["pyo3/extension-module"]
