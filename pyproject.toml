@@ -12,6 +12,11 @@ dependencies = [
     "scipy>=1.14.1",
     "scikit-learn>=1.5.2",
     "pandas>=2.2.2",
+    "fastapi>=0.115.2",
+    "pydantic>=2.9.2",
+    "uvicorn>=0.32.0",
+    "httpx>=0.27.2",
+    "boto3>=1.35.47",
 ]
 
 classifiers = [

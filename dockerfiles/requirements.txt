@@ -6,12 +6,16 @@ numpy
 scipy
 scikit-learn
 pandas
+boto3
 
-################
-# Experimental #
-################
+############
+# Rest API #
+############
 
-#hnswlib
+fastapi
+uvicorn
+pydantic
+httpx
 
 ###############
 # Development #
