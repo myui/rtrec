@@ -1,253 +1,218 @@
-from typing import List, Any
-from math import log
+from typing import List, Any, Dict, Iterable, Tuple
+from math import log2
 
-def ndcg(ranked_list: List[Any], ground_truth: List[Any], recommend_size: int) -> float:
+def relevance(ranked_list: List[Any], ground_truth: List[Any], recommend_size: int) -> Tuple[List[int], int]:
     """
-    Computes the normalized Discounted Cumulative Gain (nDCG).
+    Computes the relevance vector for the ranked list and the total number of relevant items.
 
-    Formula:
-        DCG@k = sum(1 / log2(i + 2) * rel(i)) for i in range(k)
-        nDCG@k = DCG@k / IDCG@k
-
-    where rel(i) = 1 if the item at rank i is relevant, else 0.
-
-    Parameters:
-        ranked_list: List of recommended items.
-        ground_truth: List of relevant items.
-        recommend_size: Number of items to recommend.
+    Args:
+        ranked_list (List[Any]): List of recommended items.
+        ground_truth (List[Any]): List of relevant items.
+        recommend_size (int): Number of top items to consider.
 
     Returns:
-        nDCG score as a float.
+        Tuple[List[int], int]: A binary relevance vector indicating relevant items and the total number of relevant items.
+
+    Formula:
+        rel[i] = 1 if ranked_list[i] in ground_truth else 0
     """
-    def log2(x: int) -> float:
-        return log(x, 2)
-
-    def idcg(n: int) -> float:
-        return sum(1 / log2(i + 2) for i in range(n))
-
     k = min(len(ranked_list), recommend_size)
-    dcg = sum(1 / log2(i + 2) for i in range(k) if ranked_list[i] in ground_truth)
-    ideal_dcg = idcg(min(len(ground_truth), k))
-    return dcg / ideal_dcg if ideal_dcg > 0 else 0.0
+    ground_truth_set = set(ground_truth)  # Use a set for efficient membership checking
+    rel = [1 if item in ground_truth_set else 0 for item in ranked_list[:k]]
+    total_relevant = len(ground_truth_set)  # Total relevant items
+    return rel, total_relevant
 
-def precision(ranked_list: List[Any], ground_truth: List[Any], recommend_size: int) -> float:
+def precision(rel: List[int], k: int) -> float:
     """
     Computes Precision@k.
 
-    Formula:
-        Precision@k = |relevant ∩ recommended| / k
-
-    Parameters:
-        ranked_list: List of recommended items.
-        ground_truth: List of relevant items.
-        recommend_size: Number of items to recommend.
+    Args:
+        rel (List[int]): Binary relevance vector.
+        k (int): Number of top items considered.
 
     Returns:
-        Precision score as a float.
-    """
-    k = min(len(ranked_list), recommend_size)
-    true_positive = sum(1 for i in range(k) if ranked_list[i] in ground_truth)
-    return true_positive / k if k > 0 else 0.0
-
-def recall(ranked_list: List[Any], ground_truth: List[Any], recommend_size: int) -> float:
-    """
-    Computes Recall@k.
+        float: Precision score.
 
     Formula:
-        Recall@k = |relevant ∩ recommended| / |relevant|
+        Precision@k = (Number of relevant items in top-k) / k
+    """
+    return sum(rel) / k if k > 0 else 0.0
 
-    Parameters:
-        ranked_list: List of recommended items.
-        ground_truth: List of relevant items.
-        recommend_size: Number of items to recommend.
+def recall(rel: List[int], total_relevant: int) -> float:
+    """
+    Computes Recall.
+
+    Args:
+        rel (List[int]): Binary relevance vector.
+        total_relevant (int): Total number of relevant items.
 
     Returns:
-        Recall score as a float.
-    """
-    k = min(len(ranked_list), recommend_size)
-    true_positive = sum(1 for i in range(k) if ranked_list[i] in ground_truth)
-    return true_positive / len(ground_truth) if ground_truth else 1.0
-
-def f1_score(ranked_list: List[Any], ground_truth: List[Any], recommend_size: int) -> float:
-    """
-    Computes F1-score@k, the harmonic mean of precision and recall.
+        float: Recall score.
 
     Formula:
-        F1@k = 2 * (Precision@k * Recall@k) / (Precision@k + Recall@k)
+        Recall = (Number of relevant items retrieved) / (Total relevant items)
+    """
+    return sum(rel) / total_relevant if total_relevant > 0 else 1.0
 
-    Parameters:
-        ranked_list: List of recommended items.
-        ground_truth: List of relevant items.
-        recommend_size: Number of items to recommend.
+def true_positives(rel: List[int]) -> int:
+    """
+    Computes the number of true positives (tp).
+
+    Args:
+        rel (List[int]): Binary relevance vector.
 
     Returns:
-        F1-score as a float.
-    """
-    prec = precision(ranked_list, ground_truth, recommend_size)
-    rec = recall(ranked_list, ground_truth, recommend_size)
-    return 2 * (prec * rec) / (prec + rec) if (prec + rec) > 0 else 0.0
-
-def hit(ranked_list: List[Any], ground_truth: List[Any], recommend_size: int) -> float:
-    """
-    Computes Hit@k, indicating if at least one relevant item is recommended.
+        int: Number of true positives.
 
     Formula:
-        Hit@k = 1 if |relevant ∩ recommended| > 0 else 0
+        TP = Sum of rel
+    """
+    return sum(rel)
 
-    Parameters:
-        ranked_list: List of recommended items.
-        ground_truth: List of relevant items.
-        recommend_size: Number of items to recommend.
+def f1(precision_value: float, recall_value: float) -> float:
+    """
+    Computes the F1 score.
+
+    Args:
+        precision_value (float): Precision score.
+        recall_value (float): Recall score.
 
     Returns:
-        Hit score as a float.
-    """
-    k = min(len(ranked_list), recommend_size)
-    return 1.0 if any(ranked_list[i] in ground_truth for i in range(k)) else 0.0
-
-def reciprocal_rank(ranked_list: List[Any], ground_truth: List[Any], recommend_size: int) -> float:
-    """
-    Computes Reciprocal Rank (RR), the reciprocal of the rank of the first relevant item.
+        float: F1 score.
 
     Formula:
-        RR@k = 1 / rank of first relevant item
+        F1 = 2 * (Precision * Recall) / (Precision + Recall)
+    """
+    return 2 * precision_value * recall_value / (precision_value + recall_value) if (precision_value + recall_value) > 0 else 0.0
 
-    Parameters:
-        ranked_list: List of recommended items.
-        ground_truth: List of relevant items.
-        recommend_size: Number of items to recommend.
+def ndcg(rel: List[int], total_relevant: int) -> float:
+    """
+    Computes Normalized Discounted Cumulative Gain (nDCG).
+
+    Args:
+        rel (List[int]): Binary relevance vector.
+        total_relevant (int): Total number of relevant items.
 
     Returns:
-        Reciprocal Rank as a float.
+        float: nDCG score.
+
+    Formula:
+        DCG = Σ (rel[i] / log2(i + 2))
+        nDCG = DCG / IDCG
+
+        where IDCG is the ideal DCG, computed for the perfect ranking.
     """
-    k = min(len(ranked_list), recommend_size)
-    for i in range(k):
-        if ranked_list[i] in ground_truth:
+    dcg = sum(r / log2(i + 2) for i, r in enumerate(rel))
+    ideal_dcg = sum(1 / log2(i + 2) for i in range(min(total_relevant, len(rel))))
+    return dcg / ideal_dcg if ideal_dcg > 0 else 0.0
+
+def hit_rate(rel: List[int]) -> float:
+    """
+    Computes the Hit Rate.
+
+    Args:
+        rel (List[int]): Binary relevance vector.
+
+    Returns:
+        float: Hit rate.
+
+    Formula:
+        Hit Rate = 1 if any(rel) else 0
+    """
+    return 1.0 if any(rel) else 0.0
+
+def reciprocal_rank(rel: List[int]) -> float:
+    """
+    Computes the Reciprocal Rank.
+
+    Args:
+        rel (List[int]): Binary relevance vector.
+
+    Returns:
+        float: Reciprocal rank.
+
+    Formula:
+        Reciprocal Rank = 1 / (Rank of the first relevant item)
+    """
+    for i, r in enumerate(rel):
+        if r == 1:
             return 1.0 / (i + 1)
     return 0.0
 
-def mrr(ranked_lists: List[List[Any]], ground_truths: List[List[Any]], recommend_size: int) -> float:
+def average_precision(rel: List[int], total_relevant: int) -> float:
     """
-    Computes Mean Reciprocal Rank (MRR) across multiple queries.
+    Computes Average Precision (AP).
 
-    Formula:
-        MRR = (1 / |Q|) * sum(RR@k(q) for q in Q)
-
-    Parameters:
-        ranked_lists: List of recommended lists for each query.
-        ground_truths: List of relevant items for each query.
-        recommend_size: Number of items to recommend.
+    Args:
+        rel (List[int]): Binary relevance vector.
+        total_relevant (int): Total number of relevant items.
 
     Returns:
-        MRR score as a float.
-    """
-    rr_sum = sum(reciprocal_rank(r, g, recommend_size) for r, g in zip(ranked_lists, ground_truths))
-    return rr_sum / len(ranked_lists) if ranked_lists else 0.0
-
-def average_precision(ranked_list: List[Any], ground_truth: List[Any], recommend_size: int) -> float:
-    """
-    Computes Average Precision (AP)@k.
+        float: Average precision.
 
     Formula:
-        AP@k = (1 / |relevant|) * sum(Precision@i * rel(i)) for i in range(k)
-
-    where rel(i) = 1 if the item at rank i is relevant, else 0.
-
-    Parameters:
-        ranked_list: List of recommended items.
-        ground_truth: List of relevant items.
-        recommend_size: Number of items to recommend.
-
-    Returns:
-        Average Precision as a float.
+        AP = Σ (Precision@i * rel[i]) / Total relevant items
     """
-    k = min(len(ranked_list), recommend_size)
-    relevant_count = 0
-    ap_sum = 0.0
-
-    for i in range(k):
-        if ranked_list[i] in ground_truth:
-            relevant_count += 1
-            ap_sum += relevant_count / (i + 1)
-
-    return ap_sum / len(ground_truth) if ground_truth else 0.0
-
-def map_score(ranked_lists: List[List[Any]], ground_truths: List[List[Any]], recommend_size: int) -> float:
-    """
-    Computes Mean Average Precision (MAP) across multiple queries.
-
-    Formula:
-        MAP@k = (1 / |Q|) * sum(AP@k(q) for q in Q)
-
-    Parameters:
-        ranked_lists: List of recommended lists for each query.
-        ground_truths: List of relevant items for each query.
-        recommend_size: Number of items to recommend.
-
-    Returns:
-        MAP score as a float.
-    """
-    ap_sum = sum(average_precision(r, g, recommend_size) for r, g in zip(ranked_lists, ground_truths))
-    return ap_sum / len(ranked_lists) if ranked_lists else 0.0
-
-def auc(ranked_list: List[Any], ground_truth: List[Any], recommend_size: int) -> float:
-    """
-    Computes the Area Under the Curve (AUC) for ROC.
-
-    Formula:
-        AUC@k = #correct positive-negative pairs / #total positive-negative pairs
-
-    Parameters:
-        ranked_list: List of recommended items.
-        ground_truth: List of relevant items.
-        recommend_size: Number of items to recommend.
-
-    Returns:
-        AUC score as a float.
-    """
-    k = min(len(ranked_list), recommend_size)
-    true_positive, correct_pairs = 0, 0
-
-    for i in range(k):
-        if ranked_list[i] in ground_truth:
+    precision_sum, true_positive = 0.0, 0
+    for i, r in enumerate(rel):
+        if r == 1:
             true_positive += 1
-        else:
-            correct_pairs += true_positive
+            precision_sum += true_positive / (i + 1)
+    return precision_sum / total_relevant if total_relevant > 0 else 0.0
 
-    n_pairs = true_positive * (k - true_positive)
-    return correct_pairs / n_pairs if n_pairs > 0 else 0.5
-
-def coverage(ranked_list: List[Any], all_items: List[Any]) -> float:
+def compute_scores(
+    ranked_lists: Iterable[List[Any]], ground_truths: Iterable[List[Any]], recommend_size: int
+) -> Dict[str, float]:
     """
-    Computes Coverage@k, the proportion of all items that appear in recommendations.
+    Computes aggregate metrics over multiple queries, including MRR, MAP, and tp.
 
-    Formula:
-        Coverage@k = |unique recommended items| / |all items|
-
-    Parameters:
-        ranked_list: List of recommended items.
-        all_items: List of all possible items.
+    Args:
+        ranked_lists (Iterable[List[Any]]): Iterable of recommended item lists.
+        ground_truths (Iterable[List[Any]]): Iterable of ground truth item lists.
+        recommend_size (int): Number of top items to consider.
 
     Returns:
-        Coverage score as a float.
+        Dict[str, float]: Dictionary with average scores across queries.
     """
-    unique_recommended = set(ranked_list)
-    return len(unique_recommended) / len(all_items) if all_items else 0.0
+    precision_sum = recall_sum = f1_sum = ndcg_sum = hit_sum = 0.0
+    rr_sum = ap_sum = tp_sum = 0
+    num_queries = 0
 
-def true_positives(ranked_list: List[Any], ground_truth: List[Any], recommend_size: int) -> int:
-    """
-    Counts the number of true positives.
+    for ranked_list, ground_truth in zip(ranked_lists, ground_truths):
+        rel, total_relevant = relevance(ranked_list, ground_truth, recommend_size)
 
-    Formula:
-        True Positives@k = |relevant ∩ recommended|
+        precision_value = precision(rel, len(ranked_list))
+        recall_value = recall(rel, total_relevant)
+        f1_value = f1(precision_value, recall_value)
+        ndcg_value = ndcg(rel, total_relevant)
+        hit = hit_rate(rel)
+        rr = reciprocal_rank(rel)
+        ap = average_precision(rel, total_relevant)
+        tp = true_positives(rel)
 
-    Parameters:
-        ranked_list: List of recommended items.
-        ground_truth: List of relevant items.
-        recommend_size: Number of items to recommend.
+        precision_sum += precision_value
+        recall_sum += recall_value
+        f1_sum += f1_value
+        ndcg_sum += ndcg_value
+        hit_sum += hit
+        rr_sum += rr
+        ap_sum += ap
+        tp_sum += tp
+        num_queries += 1
 
-    Returns:
-        Number of true positives as an integer.
-    """
-    k = min(len(ranked_list), recommend_size)
-    return sum(1 for i in range(k) if ranked_list[i] in ground_truth)
+    if num_queries == 0:
+        return {
+            "precision": 0.0, "recall": 0.0, "f1": 0.0, "ndcg": 0.0,
+            "hit": 0.0, "mrr": 0.0, "map": 0.0, "tp": 0
+        }
+
+    return {
+        "precision": precision_sum / num_queries,
+        "recall": recall_sum / num_queries,
+        "f1": f1_sum / num_queries,
+        "ndcg": ndcg_sum / num_queries,
+        "hit": hit_sum / num_queries,
+        "mrr": rr_sum / num_queries,
+        "map": ap_sum / num_queries,
+        "tp": tp_sum / num_queries
+    }
