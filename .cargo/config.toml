@@ -1,0 +1,5 @@
+[env]
+
+LIBRARY_PATH = "/Users/myui/.rye/py/cpython@3.12.5/lib"
+LD_LIBRARY_PATH = "/Users/myui/.rye/py/cpython@3.12.5/lib"
+DYLD_LIBRARY_PATH = "/Users/myui/.rye/py/cpython@3.12.5/lib"
