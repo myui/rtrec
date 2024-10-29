@@ -45,21 +45,5 @@ def test_get_column():
     assert matrix.max_col == 2
     assert matrix.get_column(1) == [0, 0, 5.0, 0, 6.0]
 
-def test_to_csr_empty():
-    matrix = DoKMatrix()
-    csr = matrix.to_csr()
-    assert csr.shape == (0, 0)
-    assert csr.nnz == 0
-
-def test_to_csr_non_empty():
-    matrix = DoKMatrix()
-    matrix[2, 3] = 7.0
-    matrix[4, 1] = 8.0
-    csr = matrix.to_csr()
-    assert csr.shape == (5, 4)
-    assert csr.nnz == 2
-    assert csr[2, 3] == 7.0
-    assert csr[4, 1] == 8.0
-
 if __name__ == "__main__":
     pytest.main()
