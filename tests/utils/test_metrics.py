@@ -84,11 +84,49 @@ def test_average_precision(ranked_list, ground_truth, k, expected):
     assert average_precision(ranked_list, ground_truth, k) == pytest.approx(expected, rel=1e-4)
 
 @pytest.mark.parametrize("ranked_list, ground_truth, k, expected", [
+    # Perfect prediction with full overlap
+    ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], 5, 1.0),
+    # Relevant items: [1, 2, 3]
+    # Irrelevant items: [6, 7]
+    # Pairs to Compare: (1, 6), (1, 7), (2, 6), (2, 7), (3, 6), (3, 7)
+    ([1, 2, 3, 6, 7], [1, 2, 3, 4, 5], 5, 6 / 6),
+    # Relevant Items in ranked_list: [1, 2, 6, 7]
+    # Irrelevant Items in ranked_list: [3]
+    # Pairs to Compare: (1, 3), (2, 3), (6, 3), (7, 3)
+    ([1, 2, 3, 6, 7], [1, 2, 6, 4, 7], 5, 2 / 4),
+    ([1, 2, 3, 4, 5], [1, 3, 5], 5, 0.5),
+    # Non-overlapping ranked list
+    ([6, 7, 8, 9, 10], [1, 2, 3, 4, 5], 5, 0.0),
+    # Perfect prediction but with k < total items
+    ([1, 2, 3, 4, 5], [1, 2, 3, 4, 5], 3, 1.0),
+    # Empty ground truth
+    ([1, 2, 3, 4, 5], [], 5, 0.0),
+    # Empty ranked list
+    ([], [1, 2, 3, 4, 5], 5, 0.0),
+    # Larger k than both lists
+    ([1, 2, 3], [1, 2, 3], 10, 1.0),
+    # Pairs: (2, 1), (2, 3), (2, 5), (4, 1), (4, 3), (4, 5)
+    ([1, 2, 3, 4, 5], [2, 4], 5, 3 / 6),
+    # Relevant items: [b, d]
+    # Irrelevant items: [a, c, e]
+    # Pairs: (b, a), (b, c), (b, e), (d, a), (d, c), (d, e)
+    (['a', 'b', 'c', 'd', 'e'], ['b', 'd'], 5, 3 / 6),
+    # Relevant items: [b]
+    # Irrelevant items: [a]
+    # Pair: (b, a)
+    (['a', 'b', 'c', 'd', 'e'], ['b', 'd'], 2, 0 / 1),
+    # No irrelevant items in ranked list
+    (['b', 'd'], ['a', 'b', 'c', 'd', 'e'], 5, 1.0),
+    (['b', 'd'], ['a', 'b', 'c', 'd', 'e'], 2, 1.0),
+    # more tests
     ([1, 3, 2, 6], [1, 2, 4], 4, 0.75),
     ([1, 3, 2, 6], [1, 2, 4], 2, 1.0),
-    ([1, 3, 2, 6], [1, 3, 2, 6], 4, 0.5),  # meaningless case: all TPs
-    ([1, 3, 2, 6], [7, 8, 9, 10], 4, 0.5), # meaningless case: all FPs
+    ([1, 3, 2, 6], [1, 3, 2, 6], 4, 1.0),   # optimal ranking
+    ([1, 3, 2, 6], [7, 8, 9, 10], 4, 0.0),  # worst ranking
     ([1, 2, 3, 4, 5], [1, 3, 5], 5, 3 / 6),
+    ([], [], 4, 1.0),                       # both empty
+    ([1, 2, 3], [], 3, 0.0),                # no grand truth
+    ([], [1, 2, 3], 3, 0.0),                # no recommendations
 ])
 def test_auc(ranked_list, ground_truth, k, expected):
     assert auc(ranked_list, ground_truth, k) == pytest.approx(expected, rel=1e-4)

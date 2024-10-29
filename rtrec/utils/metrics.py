@@ -181,17 +181,31 @@ def auc(ranked_list: List[Any], ground_truth: List[Any], recommend_size: int) ->
     Returns:
         AUC score as a float.
     """
+    if not ground_truth:
+        return 1.0 if not ranked_list else 0.0
+    if not ranked_list:
+        # no recommendations while ground truth exists
+        return 0.0
+
     k = min(len(ranked_list), recommend_size)
-    true_positive, correct_pairs = 0, 0
+    true_positives, correct_pairs = 0, 0
 
-    for i in range(k):
-        if ranked_list[i] in ground_truth:
-            true_positive += 1
+    # count # of pairs of items that are ranked in the correct order (i.e. TP > FP)
+    for item in ranked_list[:k]:
+        if item in ground_truth:
+            true_positives += 1
         else:
-            correct_pairs += true_positive
+            correct_pairs += true_positives
 
-    n_pairs = true_positive * (k - true_positive)
-    return correct_pairs / n_pairs if n_pairs > 0 else 0.5
+    false_positives = k - true_positives
+    if true_positives == 0:
+        return 0.0 # all pairs are incorrect
+    if false_positives == 0:
+        return 1.0 # all pairs are correct
+
+    # the number of all possible <TP, FP> pairs
+    n_pairs = true_positives * false_positives
+    return correct_pairs / n_pairs
 
 def average_precision(ranked_list, ground_truth, recommend_size):
     """
