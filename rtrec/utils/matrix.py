@@ -1,5 +1,4 @@
 from typing import Callable, Dict, Tuple, List
-from scipy.sparse import csr_matrix
 
 class DoKMatrix:
     def __init__(self) -> None:
@@ -45,11 +44,3 @@ class DoKMatrix:
 
     def get_column(self, col: int) -> List[float]:
         return [self.data.get((row, col), 0) for row in range(self.max_row)]
-
-    def to_csr(self) -> csr_matrix:
-        if not self.data:
-            return csr_matrix((0, 0))
-        
-        rows, cols = zip(*self.data.keys())
-        values = list(self.data.values())
-        return csr_matrix((values, (rows, cols)), shape=(self.max_row, self.max_col))
