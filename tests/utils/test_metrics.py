@@ -1,131 +1,110 @@
 import pytest
+from math import log2
 from rtrec.utils.metrics import (
-    relevance,
     precision,
     recall,
-    true_positives,
-    f1,
+    f1_score,
     ndcg,
-    hit_rate,
+    hit,
     reciprocal_rank,
     average_precision,
     auc,
-    compute_scores,
+    true_positives,
 )
 
-
-@pytest.mark.parametrize("ranked_list, ground_truth, recommend_size, expected_rel, expected_total_relevant", [
-    ([1, 2, 3], [2, 3], 3, [0, 1, 1], 2),
-    ([1, 4, 3], [2, 3], 3, [0, 0, 0], 2),
-    ([1, 2, 3, 4], [2, 4], 2, [0, 1], 2),
+@pytest.mark.parametrize("ranked_list, ground_truth, k, expected", [
+    ([1, 3, 2, 6], [1, 2, 4], 4, 0.7039),
+    ([1, 3, 2, 6], [1, 2, 4], 2, 0.6131),
+    ([3, 2, 1, 6], [1], 2, 0.0),
+    ([3, 2, 1, 6], [1], 3, 0.5),
+    ([1, 2, 3, 4], [1, 2, 3], 3, 1.0), # optimal ranking
+    ([1, 3, 2, 4], [1, 2], 3, (1/log2(1+1) + 1/log2(3+1)) / (1/log2(1+1) + 1/log2(2+1))), # suboptimal ranking
+    ([5, 6, 7], [1, 2, 3], 3, 0.0), # no relevant items
 ])
-def test_relevance(ranked_list, ground_truth, recommend_size, expected_rel, expected_total_relevant):
-    rel, total_relevant = relevance(ranked_list, ground_truth, recommend_size)
-    assert rel == expected_rel
-    assert total_relevant == expected_total_relevant
+def test_ndcg(ranked_list, ground_truth, k, expected):
+    assert ndcg(ranked_list, ground_truth, k) == pytest.approx(expected, rel=1e-4)
 
-@pytest.mark.parametrize("rel, k, expected_precision", [
-    ([1, 1, 0, 1], 3, 2/3),
-    ([1, 0, 0, 0], 1, 1.0),
-    ([0, 0, 0, 0], 4, 0.0),
+@pytest.mark.parametrize("ranked_list, ground_truth, k, expected", [
+    ([1, 3, 2, 6], [1, 2, 4], 4, 0.66666),
+    ([1, 3, 2, 6], [1, 2, 4], 2, 0.33333),
+    ([], [], 2, 1.0),
+    ([1, 3, 2], [], 2, 0.0)
 ])
-def test_precision(rel, k, expected_precision):
-    assert precision(rel, k) == expected_precision
+def test_recall(ranked_list, ground_truth, k, expected):
+    assert recall(ranked_list, ground_truth, k) == pytest.approx(expected, rel=1e-4)
 
-@pytest.mark.parametrize("rel, total_relevant, expected_recall", [
-    ([1, 1, 0, 1], 3, 2/3),
-    ([1, 0, 0, 0], 1, 1.0),
-    ([0, 0, 0, 0], 0, 0.0),
+@pytest.mark.parametrize("ranked_list, ground_truth, recommend_size, expected", [
+    ([1, 2, 3], [1, 2, 3], 3, 1.0),            # Perfect match
+    ([1, 2, 3], [2, 3, 4], 3, 0.66666),        # Partial match
+    ([1, 2, 3], [4, 5, 6], 3, 0.0),            # No match
+    ([], [1, 2, 3], 3, 0.0),                   # Empty recommendation
+    ([1, 2, 3], [], 3, 0.0),                   # Empty ground truth
+    ([], [], 3, 1.0)                           # Both empty
 ])
-def test_recall(rel, total_relevant, expected_recall):
-    assert recall(rel, total_relevant) == expected_recall
+def test_f1_score(ranked_list, ground_truth, recommend_size, expected):
+    """Test the f1_score function with various cases."""
+    assert pytest.approx(f1_score(ranked_list, ground_truth, recommend_size), rel=1e-4) == expected
 
-@pytest.mark.parametrize("rel, expected_tp", [
-    ([1, 1, 0, 1], 3),
-    ([0, 0, 0, 0], 0),
+@pytest.mark.parametrize("ranked_list, ground_truth, k, expected", [
+    ([1, 3, 2, 6], [1, 2, 4], 4, 0.5),
+    ([1, 3, 2, 6], [1, 2, 4], 2, 0.5),
+    ([], [], 2, 1.0),
+    ([1, 3, 2], [], 2, 0.0)
 ])
-def test_true_positives(rel, expected_tp):
-    assert true_positives(rel) == expected_tp
+def test_precision(ranked_list, ground_truth, k, expected):
+    assert precision(ranked_list, ground_truth, k) == pytest.approx(expected, rel=1e-4)
 
-@pytest.mark.parametrize("precision_value, recall_value, expected_f1", [
-    (1.0, 1.0, 1.0),
-    (0.0, 1.0, 0.0),
-    (0.5, 0.5, 0.5),
+@pytest.mark.parametrize("ranked_list, ground_truth, k, expected", [
+    ([1, 3, 2, 6], [1, 2, 4], 4, 1.0),
+    ([6, 2, 3, 1], [1, 2, 4], 4, 0.5),
+    ([6, 2, 3, 1], [1, 2, 4], 1, 0.0)
 ])
-def test_f1(precision_value, recall_value, expected_f1):
-    assert f1(precision_value, recall_value) == expected_f1
+def test_reciprocal_rank(ranked_list, ground_truth, k, expected):
+    assert reciprocal_rank(ranked_list, ground_truth, k) == pytest.approx(expected, rel=1e-4)
 
-@pytest.mark.parametrize("rel, total_relevant, expected_ndcg", [
-    ([1, 1, 0, 1], 3, 0.5),
-    ([1, 0, 0, 0], 1, 1.0),
-    ([0, 0, 0, 0], 0, 0.0),
+@pytest.mark.parametrize("ranked_list, ground_truth, k, expected", [
+    ([1, 3, 2, 6], [1, 2, 4], 4, 1.0),
+    ([1, 3, 2, 6], [1, 2, 4], 2, 1.0),
+    ([5, 6], [1, 2, 4], 2, 0.0)
 ])
-def test_ndcg(rel, total_relevant, expected_ndcg):
-    assert ndcg(rel, total_relevant) == expected_ndcg
+def test_hit(ranked_list, ground_truth, k, expected):
+    assert hit(ranked_list, ground_truth, k) == pytest.approx(expected, rel=1e-4)
 
-@pytest.mark.parametrize("rel, expected_hit_rate", [
-    ([1, 1, 0, 1], 1.0),
-    ([0, 0, 0, 0], 0.0),
+@pytest.mark.parametrize("ranked_list, ground_truth, k, expected", [
+    ([1, 3, 2, 6], [1, 2, 4], 4, (1/1 + 2/3) / 2),
+    ([1, 3, 2, 6], [1, 2, 4], 3, (1/1 + 2/3) / 2),
+    ([1, 3, 2, 6], [1, 2, 4], 2, (1/1) / 1),
+    ([3, 1, 2, 6], [1, 2, 4], 2, (1/2) / 1),
+    ([3, 1], [1, 2], 1, 0),
+    ([3, 1], [1, 2], 2, (1/1) / 2),
+    ([1 ,3, 2, 6, 4, 5], [1, 2, 4], 6, (1/1 + 2/3 + 3/5) / 3),
+    ([1 ,3, 2, 4, 6, 5], [1, 2, 4], 6, (1/1 + 2/3 + 3/4) / 3),
 ])
-def test_hit_rate(rel, expected_hit_rate):
-    assert hit_rate(rel) == expected_hit_rate
+def test_average_precision(ranked_list, ground_truth, k, expected):
+    assert average_precision(ranked_list, ground_truth, k) == pytest.approx(expected, rel=1e-4)
 
-@pytest.mark.parametrize("rel, expected_reciprocal_rank", [
-    ([1, 0, 0, 1], 0.5),
-    ([0, 0, 0, 0], 0.0),
+@pytest.mark.parametrize("ranked_list, ground_truth, k, expected", [
+    ([1, 3, 2, 6], [1, 2, 4], 4, 0.75),
+    ([1, 3, 2, 6], [1, 2, 4], 2, 1.0),
+    ([1, 3, 2, 6], [1, 3, 2, 6], 4, 0.5),  # meaningless case: all TPs
+    ([1, 3, 2, 6], [7, 8, 9, 10], 4, 0.5), # meaningless case: all FPs
+    ([1, 2, 3, 4, 5], [1, 3, 5], 5, 3 / 6),
 ])
-def test_reciprocal_rank(rel, expected_reciprocal_rank):
-    assert reciprocal_rank(rel) == expected_reciprocal_rank
+def test_auc(ranked_list, ground_truth, k, expected):
+    assert auc(ranked_list, ground_truth, k) == pytest.approx(expected, rel=1e-4)
 
-@pytest.mark.parametrize("rel, total_relevant, expected_ap", [
-    ([1, 1, 0, 1], 3, 0.5),
-    ([1, 0, 0, 0], 1, 1.0),
-    ([0, 0, 0, 0], 0, 0.0),
+@pytest.mark.parametrize("ranked_list, ground_truth, recommend_size, expected", [
+    ([1, 2, 3], [1, 2, 3], 3, 3),             # All recommended items are true positives
+    ([1, 2, 3], [2, 3, 4], 3, 2),             # Two true positives
+    ([1, 2, 3], [4, 5, 6], 3, 0),             # No true positives
+    ([1, 2, 3], [1], 3, 1),                   # One true positive
+    ([1, 2, 3], [], 3, 0),                    # No ground truth
+    ([], [1, 2, 3], 3, 0),                    # No recommendations
+    ([], [], 3, 0),                           # Both empty
 ])
-def test_average_precision(rel, total_relevant, expected_ap):
-    assert average_precision(rel, total_relevant) == expected_ap
+def test_true_positives(ranked_list, ground_truth, recommend_size, expected):
+    """Test the true_positives function with various cases."""
+    assert true_positives(ranked_list, ground_truth, recommend_size) == expected
 
-@pytest.mark.parametrize("rel, expected_auc", [
-    ([1, 0, 1, 0], 0.5),
-    ([1, 1, 0, 0], 1.0),
-])
-def test_auc(rel, expected_auc):
-    assert auc(rel) == expected_auc
-
-def test_compute_scores():
-    ranked_lists = [
-        [1, 2, 3],
-        [1, 4, 5]
-    ]
-    ground_truths = [
-        [2, 3],
-        [1, 5]
-    ]
-    recommend_size = 3
-
-    scores = compute_scores(ranked_lists, ground_truths, recommend_size)
-
-    assert isinstance(scores, dict)
-    assert "precision" in scores
-    assert "recall" in scores
-    assert "f1" in scores
-    assert "ndcg" in scores
-    assert "hit_rate" in scores
-    assert "mrr" in scores
-    assert "map" in scores
-    assert "tp" in scores
-    assert "auc" in scores
-
-    assert scores["tp"] == 4  # 4 total true positives across both queries
-    assert scores["precision"] >= 0.0
-    assert scores["recall"] >= 0.0
-    assert scores["f1"] >= 0.0
-    assert scores["ndcg"] >= 0.0
-    assert scores["hit_rate"] in [0.0, 1.0]  # hit rate can only be 0 or 1
-    assert scores["mrr"] >= 0.0
-    assert scores["map"] >= 0.0
-    assert scores["auc"] >= 0.0
-
-# Run the tests
 if __name__ == "__main__":
     pytest.main()
