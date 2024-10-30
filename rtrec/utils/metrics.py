@@ -239,8 +239,10 @@ def average_precision(ranked_list, ground_truth, recommend_size):
             tp_sum += 1
             ap_sum += tp_sum / (i + 1)
 
+    # follows replay and https://arxiv.org/abs/2206.12858
+    x = min(len(ground_truth), recommend_size)
     # Avoid division by zero if no relevant items exist
-    return ap_sum / tp_sum if tp_sum > 0 else 0.0
+    return ap_sum / x if x > 0 else 0.0
 
 def compute_scores(
     ranked_lists: Iterable[List[Any]], ground_truths: Iterable[List[Any]], recommend_size: int
