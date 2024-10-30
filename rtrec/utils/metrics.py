@@ -124,8 +124,7 @@ def hit(ranked_list: List[Any], ground_truth: List[Any], recommend_size: int) ->
     Returns:
         Hit score as a float.
     """
-    k = min(len(ranked_list), recommend_size)
-    return 1.0 if any(ranked_list[i] in ground_truth for i in range(k)) else 0.0
+    return 1.0 if any(item in ground_truth for item in ranked_list[:recommend_size]) else 0.0
 
 def reciprocal_rank(ranked_list: List[Any], ground_truth: List[Any], recommend_size: int) -> float:
     """
@@ -148,7 +147,7 @@ def reciprocal_rank(ranked_list: List[Any], ground_truth: List[Any], recommend_s
             return 1.0 / (i + 1)
     return 0.0
 
-def mrr(ranked_lists: List[List[Any]], ground_truths: List[List[Any]], recommend_size: int) -> float:
+def mrr(ranked_lists: Iterable[List[Any]], ground_truths: Iterable[List[Any]], recommend_size: int) -> float:
     """
     Computes Mean Reciprocal Rank (MRR) across multiple queries.
 
@@ -207,7 +206,7 @@ def auc(ranked_list: List[Any], ground_truth: List[Any], recommend_size: int) ->
     n_pairs = true_positives * false_positives
     return correct_pairs / n_pairs
 
-def average_precision(ranked_list, ground_truth, recommend_size):
+def average_precision(ranked_list: List[Any], ground_truth: List[Any], recommend_size: int) -> float:
     """
     Computes the Average Precision (AP) for a ranked list of items.
 
@@ -243,6 +242,24 @@ def average_precision(ranked_list, ground_truth, recommend_size):
     x = min(len(ground_truth), recommend_size)
     # Avoid division by zero if no relevant items exist
     return ap_sum / x if x > 0 else 0.0
+
+def map_score(ranked_lists: Iterable[List[Any]], ground_truths: Iterable[List[Any]], recommend_size: int) -> float:
+    """
+    Computes the Mean Average Precision (MAP) across multiple queries.
+
+    Formula:
+        MAP = (1 / |Q|) * sum(AP@k(q) for q in Q)
+
+    Parameters:
+        ranked_lists: List of recommended lists for each query.
+        ground_truths: List of relevant items for each query.
+        recommend_size: Number of items to recommend.
+
+    Returns:
+        MAP score as a float.
+    """
+    ap_sum = sum(average_precision(r, g, recommend_size) for r, g in zip(ranked_lists, ground_truths))
+    return ap_sum / len(ranked_lists) if ranked_lists else 0.0
 
 def compute_scores(
     ranked_lists: Iterable[List[Any]], ground_truths: Iterable[List[Any]], recommend_size: int
