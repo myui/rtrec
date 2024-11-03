@@ -1,5 +1,6 @@
 from collections import defaultdict
 from typing import Any, List
+from math import inf
 
 from .base import ExplictFeedbackRecommender
 
@@ -10,7 +11,7 @@ class SLIM_MSE(ExplictFeedbackRecommender):
         super().__init__(**kwargs)
 
         self.ftrl = FTRL(**kwargs)
-        self.W = self.ftrl.W
+        self.W = self.ftrl.W # item-item similarity matrix
 
         self.cumulative_loss = 0.0
         self.steps = 0
@@ -19,6 +20,15 @@ class SLIM_MSE(ExplictFeedbackRecommender):
         if self.steps == 0:
             return 0.0
         return self.cumulative_loss / self.steps
+
+    def _get_similarity(self, item_id: int, target_item_id: int) -> float:
+        """
+        Get the similarity between two items.
+        :param item_id: Item index
+        :param target_item_id: Target item index
+        :return: Similarity between the two items
+        """
+        return self.W.get((item_id, target_item_id), -inf)
 
     def _predict(self, user_id: int, item_ids: List[int]) -> List[float]:
         """
@@ -44,6 +54,9 @@ class SLIM_MSE(ExplictFeedbackRecommender):
         self.steps += 1
 
         # update item similarity matrix
+        # Note: we only update the similarity matrix where the user has interacted with the item
+        # No interaction implies no update; grad = dloss * rating = 0
+        # see discussions in https://github.com/MaurizioFD/RecSys_Course_AT_PoliMi/issues/22
         for user_item_id in user_item_ids:
             # Note diagonal elements are not updated for item-item similarity matrix
             if user_item_id == item_id:
@@ -63,7 +76,7 @@ class SLIM_MSE(ExplictFeedbackRecommender):
         for user_item_id in user_item_ids:
             if user_item_id == item_id:
                 continue # diagonal elements are not updated for item-item similarity matrix
-            predicted += self.W[user_item_id, item_id] * self._get_rating(user_id, user_item_id)
+            predicted += self.W.get((user_item_id, item_id), 0.0) * self._get_rating(user_id, user_item_id)
 
         return predicted
 
@@ -83,7 +96,7 @@ class FTRL():
         self.lambda2 = lambda2
         self.z: dict[tuple[int, int], float] = {}
         self.n: dict[tuple[int, int], float] = {}
-        self.W: dict[tuple[int, int], float] = defaultdict(float)
+        self.W: dict[tuple[int, int], float] = {}
 
     def update_gradients(self, key: tuple[int, int], grad: float) -> float:
         """

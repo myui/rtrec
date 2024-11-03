@@ -1,3 +1,4 @@
+import random
 import pytest
 import time
 import os
@@ -123,6 +124,42 @@ def test_predict_mean_at_multiple_interactions_close_to_zero(slim):
     # Assert the mean prediction is close to 0
     assert abs(mean_prediction) < 0.1, f"Mean prediction {mean_prediction} is not close to 0"
 
+def test_similar_items(slim):
+    # Sample interactions for fitting the model
+    current_time = time.time()
+    interactions = [
+        ('a', 1, current_time, 5.0),
+        ('a', 2, current_time, 2.0),
+        ('a', 3, current_time, 3.0),
+        ('b', 1, current_time, 4.0),
+        ('b', 3, current_time, 2.0),
+        ('c', 2, current_time, 3.0),
+        ('c', 3, current_time, 4.0),
+    ]
+
+    rnd = random.Random(43)
+    for i in range(10):
+        rnd.shuffle(interactions)
+        slim.fit(interactions)
+
+    # Define query items
+    query_items = [1, 2]
+    top_k = 2
+
+    # Get similar items
+    similar_items = slim.similar_items(query_items, top_k=top_k, filter_query_items=True)
+
+    # Check that the results are of expected length
+    assert len(similar_items) == len(query_items)
+
+    # Check that each item returns the correct number of similar items
+    for similar in similar_items:
+        assert len(similar) <= top_k
+
+    # assert similar item for item 1
+    assert similar_items[0] == [3, 2]
+    # assert similar item for item 2
+    assert similar_items[1] == [3, 1]
 
 def test_get_empirical_loss(slim):
     # Before any interaction, empirical loss should be zero

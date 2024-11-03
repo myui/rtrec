@@ -3,6 +3,7 @@ use pyo3::prelude::*;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
+use std::f32::NEG_INFINITY;
 use serde::{Serialize, Deserialize};
 use log::warn;
 
@@ -20,7 +21,7 @@ use crate::identifiers::{Identifier, SerializableValue};
 pub struct SlimMSE {
     interactions: UserItemInteractions,
     ftrl: FTRL,
-    weights: HashMap<(i32, i32), f32>, // Direct reference to FTRL's weights
+    weights: HashMap<(i32, i32), f32>, // item-item similarity matrix. Direct reference to FTRL's weights.
     cumulative_loss: f32,
     steps: usize,
     user_ids: Identifier,
@@ -145,6 +146,61 @@ impl SlimMSE {
 
         // Take the top-k items and return their them
         scores.iter().take(top_k).map(|&(ref item, _)| item.clone()).collect()
+    }
+
+    pub fn similar_items(
+        &self,
+        query_items: Vec<SerializableValue>, // assuming item IDs are strings
+        top_k: usize,
+        filter_query_items: bool,
+    ) -> Vec<Vec<SerializableValue>> {
+        // Convert query items to internal IDs
+        let query_item_ids: Vec<Option<i32>> = query_items
+            .iter()
+            .map(|item| self.item_ids.get_id(item).unwrap())
+            .collect();
+
+        // Get all target item IDs from interactions
+        let target_item_ids = self.interactions.get_all_item_ids();
+
+        let mut similar_items: Vec<Vec<SerializableValue>> = Vec::new();
+
+        // Loop over each query item
+        for &query_item_id_opt in query_item_ids.iter() {
+            if let Some(query_item_id) = query_item_id_opt {
+                let mut item_scores: Vec<(i32, f32)> = target_item_ids
+                    .iter()
+                    .filter_map(|&target_item_id| {
+                        if !filter_query_items || target_item_id != query_item_id {
+                            // Retrieve similarity score from weights or use NEG_INFINITY as default
+                            let similarity_score: f32 = *self
+                                .weights
+                                .get(&(query_item_id, target_item_id))
+                                .unwrap_or(&NEG_INFINITY);
+
+                            Some((target_item_id, similarity_score))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect();
+
+                // Sort by similarity score in descending order and keep the top_k items
+                item_scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+                let top_similar_items: Vec<SerializableValue> = item_scores
+                    .iter()
+                    .take(top_k)
+                    .filter_map(|&(item_id, _)| Some(self.item_ids.get(item_id).unwrap()))
+                    .collect();
+
+                similar_items.push(top_similar_items);
+            } else {
+                // If the query item ID is None, add an empty list
+                similar_items.push(Vec::new());
+            }
+        }
+
+        similar_items
     }
 
     pub fn get_empirical_loss(&self) -> f32 {

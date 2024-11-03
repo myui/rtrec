@@ -1,6 +1,7 @@
 import numpy as np
 import logging
 
+from math import inf
 from abc import ABC, abstractmethod
 from typing import Any, List, Tuple
 
@@ -45,12 +46,8 @@ class BaseRecommender(ABC):
         if user_id is None:
             return [] # TODO: return popoular items?
 
-        if filter_interacted:
-            # Get all items the user has not interacted with
-            candidate_item_ids = self.interactions.get_all_non_interacted_items(user_id)
-        else:
-            # Get all non-negative items (non-interacted or positively interacted)
-            candidate_item_ids = self.interactions.get_all_non_negative_items(user_id)
+        # Get candidate items for recommendation
+        candidate_item_ids = self.interactions.get_all_non_interacted_items(user_id) if filter_interacted else self.interactions.get_all_non_negative_items(user_id)
 
         # Predict scores for candidate items
         scores = self._predict(user_id, candidate_item_ids)
@@ -59,7 +56,56 @@ class BaseRecommender(ABC):
         candidate_items = [self.item_ids[id] for id in candidate_item_ids]
 
         # Return top-K items with the highest scores
-        return sorted(candidate_items, key=dict(zip(candidate_items, scores)).get, reverse=True)[:top_k]
+        assert len(candidate_items) == len(scores), "Number of items and scores must match"
+        # return sorted(candidate_items, key=dict(zip(candidate_items, scores)).get, reverse=True)[:top_k]
+        return [k for k, v in sorted(zip(candidate_items, scores), key=lambda x: x[1], reverse=True)[:top_k]]
+
+    def similar_items(self, query_items: List[Any], top_k: int = 10, filter_query_items: bool = True) -> List[List[Any]]:
+        """
+        Find similar items for a list of query items.
+        :param query_items: List of query items
+        :param top_k: Number of top similar items to return
+        :param filter_interacted: Whether to filter out items in the query_items list
+        :return: List of top-K similar items for each query item
+        """
+        query_item_ids = [self.item_ids.get_id(item) for item in query_items]
+        target_item_ids = self.interactions.get_all_item_ids()
+
+        return self._similar_items(target_item_ids, query_item_ids, top_k=top_k, filter_query_items=filter_query_items)
+
+    def _similar_items(self, target_item_ids: List[int], query_item_ids: List[int], top_k: int = 10, filter_query_items: bool = True) -> List[List[int]]:
+        """
+        Find similar items for a list of query item indices.
+        :param target_item_ids: List of target item indices
+        :param query_item_ids: List of query item indices
+        :param top_k: Number of top similar items to return
+        :param filter_query_items: Whether to filter out items in the query_items list
+        :return: List of top-K similar items for each query item
+        """
+        similar_items = []
+        neg_inf = -inf
+        for query_item_id in query_item_ids:
+            if query_item_id is None:
+                similar_items.append([])
+                continue
+            similar_items.append(
+                [k for k, v in sorted([
+                    (self.item_ids[target_item_id], self._get_similarity(query_item_id, target_item_id)) for target_item_id in target_item_ids
+                    if filter_query_items is False or target_item_id != query_item_id
+                ], key=lambda x: x[1], reverse=True)[:top_k]]
+            )
+
+        return similar_items
+
+    @abstractmethod
+    def _get_similarity(self, item_id: int, target_item_id: int) -> float:
+        """
+        Get the similarity between two items.
+        :param item_id: Item index
+        :param target_item_id: Target item index
+        :return: Similarity between the two items
+        """
+        raise NotImplementedError(f"The _get_similarity method must be implemented by the subclass.")
 
     @abstractmethod
     def _predict(self, user_id: int, item_ids: List[int]) -> List[float]:

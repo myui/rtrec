@@ -1,5 +1,6 @@
 from scipy.special import expit
 from typing import Any, List, Tuple
+from math import inf
 
 from .base import ImplicitFeedbackRecommender
 from ..utils.optim import get_optimizer
@@ -19,6 +20,15 @@ class BPR_SLIM(ImplicitFeedbackRecommender):
 
         # Initialize item-to-item similarity matrix as DoK matrix
         self.W = DoKMatrix()
+
+    def _get_similarity(self, item_id: int, target_item_id: int) -> float:
+        """
+        Get the similarity between two items.
+        :param item_id: Item index
+        :param target_item_id: Target item index
+        :return: Similarity between the two items
+        """
+        return self.W.get((item_id, target_item_id), -inf)
 
     def _predict(self, user_id: int, item_ids: List[int]) -> List[float]:
         """
