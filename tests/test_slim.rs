@@ -2,6 +2,9 @@
 mod tests {
 
     use rtrec::{identifiers::SerializableValue, slim::SlimMSE};
+    use rand::prelude::SliceRandom;
+    use rand::SeedableRng;
+    use rand::rngs::StdRng;
 
     #[test]
     fn test_serializable_value_conversion() {
@@ -59,6 +62,53 @@ mod tests {
 
         // User 1 has not interacted with item 103, so it should be recommended
         assert!(recommendations.contains(&SerializableValue::Integer(103)), "Item 103 should be recommended");
+    }
+
+    #[test]
+    fn test_similar_items() {
+        // Initialize SlimMSE with sample hyperparameters
+        let mut model = SlimMSE::new(0.1, 1.0, 0.001, 0.002, -5.0, 10.0, None);
+
+        // Define current time for simplicity (using a fixed timestamp)
+        let current_time = 0.0;
+
+        // Define user interactions similar to the Python test
+        let mut user_interactions: Vec<(SerializableValue, SerializableValue, f32, f32)> = vec![
+            (SerializableValue::Text("a".to_string()), SerializableValue::Integer(1), current_time, 5.0),
+            (SerializableValue::Text("a".to_string()), SerializableValue::Integer(2), current_time, 2.0),
+            (SerializableValue::Text("a".to_string()), SerializableValue::Integer(3), current_time, 3.0),
+            (SerializableValue::Text("b".to_string()), SerializableValue::Integer(1), current_time, 4.0),
+            (SerializableValue::Text("b".to_string()), SerializableValue::Integer(3), current_time, 2.0),
+            (SerializableValue::Text("c".to_string()), SerializableValue::Integer(2), current_time, 3.0),
+            (SerializableValue::Text("c".to_string()), SerializableValue::Integer(3), current_time, 4.0),
+        ];
+
+        // Shuffle and fit interactions multiple times to simulate randomized training as in the Python test
+        let mut rng: StdRng = StdRng::seed_from_u64(43);
+        for _ in 0..10 {
+            user_interactions.shuffle(&mut rng);
+            model.fit(user_interactions.clone());
+        }
+
+        // Define query items and parameters for the similar items search
+        let query_items = vec![SerializableValue::Integer(1), SerializableValue::Integer(2)];
+        let top_k = 2;
+
+        // Get similar items
+        let similar_items = model.similar_items(query_items.clone(), top_k, true);
+
+        // Ensure similar_items has the expected length for each query item
+        assert_eq!(similar_items.len(), query_items.len(), "Each query item should have a list of similar items");
+
+        // Check that each item has the expected number of similar items (<= top_k)
+        for similar in &similar_items {
+            assert!(similar.len() <= top_k, "Each query item should return no more than top_k similar items");
+        }
+
+        // Assert similar items for specific query items, matching expected Python results
+        // Note: Adjust item IDs if expected results differ in Rust implementation
+        assert_eq!(similar_items[0], vec![SerializableValue::Integer(3), SerializableValue::Integer(2)], "Expected similar items for item 1 are 3 and 2");
+        assert_eq!(similar_items[1], vec![SerializableValue::Integer(3), SerializableValue::Integer(1)], "Expected similar items for item 2 are 3 and 1");
     }
 
 }

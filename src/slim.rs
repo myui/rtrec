@@ -1,6 +1,5 @@
 use pyo3::prelude::*;
 
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
 use std::f32::NEG_INFINITY;
@@ -21,7 +20,6 @@ use crate::identifiers::{Identifier, SerializableValue};
 pub struct SlimMSE {
     interactions: UserItemInteractions,
     ftrl: FTRL,
-    weights: HashMap<(i32, i32), f32>, // item-item similarity matrix. Direct reference to FTRL's weights.
     cumulative_loss: f32,
     steps: usize,
     user_ids: Identifier,
@@ -34,12 +32,10 @@ impl SlimMSE {
     #[pyo3(signature = (alpha = 0.5, beta = 1.0, lambda1 = 0.0002, lambda2 = 0.0001, min_value = -5.0, max_value = 10.0, decay_in_days = None))]
     pub fn new(alpha: f32, beta: f32, lambda1: f32, lambda2: f32, min_value: f32, max_value: f32, decay_in_days: Option<f32>) -> Self {
         let ftrl = FTRL::new(alpha, beta, lambda1, lambda2);
-        let weights = ftrl.get_weights().clone(); // Get the weights reference
 
         SlimMSE {
             interactions: UserItemInteractions::new(min_value, max_value, decay_in_days),
             ftrl,
-            weights,
             cumulative_loss: 0.0,
             steps: 0,
             user_ids: Identifier::new("user"),
@@ -105,10 +101,11 @@ impl SlimMSE {
             return self.interactions.get_user_item_rating(user_id, item_id, 0.0);
         }
 
+        let weights = self.ftrl.get_weights();
         user_items.iter()
             .filter(|&&ui| ui != item_id) // Skip diagonal elements
             .map(|&ui| {
-                let weight = self.weights.get(&(ui, item_id)).unwrap_or(&0.0);
+                let weight = weights.get(&(ui, item_id)).unwrap_or(&0.0);
                 let rating = self.interactions.get_user_item_rating(user_id, ui, 0.0);
                 weight * rating
             })
@@ -166,6 +163,7 @@ impl SlimMSE {
         let mut similar_items: Vec<Vec<SerializableValue>> = Vec::new();
 
         // Loop over each query item
+        let weights = self.ftrl.get_weights();
         for &query_item_id_opt in query_item_ids.iter() {
             if let Some(query_item_id) = query_item_id_opt {
                 let mut item_scores: Vec<(i32, f32)> = target_item_ids
@@ -173,9 +171,8 @@ impl SlimMSE {
                     .filter_map(|&target_item_id| {
                         if !filter_query_items || target_item_id != query_item_id {
                             // Retrieve similarity score from weights or use NEG_INFINITY as default
-                            let similarity_score: f32 = *self
-                                .weights
-                                .get(&(query_item_id, target_item_id))
+                            let similarity_score: f32 =
+                                *weights.get(&(query_item_id, target_item_id))
                                 .unwrap_or(&NEG_INFINITY);
 
                             Some((target_item_id, similarity_score))
