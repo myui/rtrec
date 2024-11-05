@@ -49,7 +49,7 @@ def load_movielens_1m() -> pd.DataFrame:
         engine="python",
         names=["user_id", "item_id", "rating", "tstamp"]
     )
-    df = df.sort_values(by="tstamp")
+    df = df.sort_values(by="tstamp", ascending=True)
     return df
 
 def load_movielens_20m() -> pd.DataFrame:
@@ -92,5 +92,5 @@ def load_movielens_20m() -> pd.DataFrame:
     # Load data into DataFrame with correct column names
     df: pd.DataFrame = pd.read_csv(ratings_file, usecols=["userId", "movieId", "rating", "timestamp"])
     df.columns = ["user_id", "item_id", "rating", "tstamp"]
-    df = df.sort_values(by="tstamp")
+    df = df.sort_values(by="tstamp", ascending=True)
     return df

@@ -36,11 +36,12 @@ class Recommender:
 
 # Datasets paths
 datasets = {
-    'movielens_20m': 'path/to/movielens_20m.csv',
-    'epinions': 'path/to/epinions.csv',
-    'yelp': 'path/to/yelp.csv',
-    'amazon_music': 'path/to/amazon_music.csv',
-    'amazon_electronics': 'path/to/amazon_electronics.csv'
+    'movielens_1m': 'datasets/movielens_1m.csv',
+    'movielens_20m': 'datasets/movielens_20m.csv',
+    'epinions': 'datasets/epinions.csv',
+    'yelp': 'datasets/yelp.csv',
+    'amazon_music': 'datasets/amazon_music.csv',
+    'amazon_electronics': 'datasets/amazon_electronics.csv'
 }
 
 # Evaluate the recommender on each dataset
