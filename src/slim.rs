@@ -10,6 +10,7 @@ use rusoto_core::Region;
 use rusoto_s3::{PutObjectRequest, GetObjectRequest, S3Client, S3};
 use tokio::runtime::Runtime;
 use tokio::io::AsyncReadExt;
+use rayon::prelude::*;
 
 use crate::ftrl::FTRL;
 use crate::interactions::UserItemInteractions;
@@ -102,7 +103,7 @@ impl SlimMSE {
         }
 
         let weights = self.ftrl.get_weights();
-        user_items.iter()
+        user_items.par_iter()
             .filter(|&&ui| ui != item_id) // Skip diagonal elements
             .map(|&ui| {
                 let weight = weights.get(&(ui, item_id)).unwrap_or(&0.0);
@@ -130,7 +131,7 @@ impl SlimMSE {
 
         // Predict scores for the candidate items
         let mut scores: Vec<(SerializableValue, f32)> = candidate_item_ids
-            .iter()
+            .par_iter()
             .map(|&item_id| {
                 let score = self._predict_rating(user_id, item_id, false);
                 let item = self.item_ids.get(item_id).unwrap();
@@ -160,42 +161,43 @@ impl SlimMSE {
         // Get all target item IDs from interactions
         let target_item_ids = self.interactions.get_all_item_ids();
 
-        let mut similar_items: Vec<Vec<SerializableValue>> = Vec::new();
-
-        // Loop over each query item
         let weights = self.ftrl.get_weights();
-        for &query_item_id_opt in query_item_ids.iter() {
-            if let Some(query_item_id) = query_item_id_opt {
-                let mut item_scores: Vec<(i32, f32)> = target_item_ids
-                    .iter()
-                    .filter_map(|&target_item_id| {
-                        if !filter_query_items || target_item_id != query_item_id {
-                            // Retrieve similarity score from weights or use NEG_INFINITY as default
-                            let similarity_score: f32 =
-                                *weights.get(&(query_item_id, target_item_id))
-                                .unwrap_or(&NEG_INFINITY);
 
-                            Some((target_item_id, similarity_score))
-                        } else {
-                            None
-                        }
-                    })
-                    .collect();
+        // Loop over each query item and find similar items
+        // Use parallel iterator for better performance
+        let similar_items: Vec<Vec<SerializableValue>> = query_item_ids
+            .par_iter()
+            .map(|&query_item_id_opt| {
+                if let Some(query_item_id) = query_item_id_opt {
+                    let mut item_scores: Vec<(i32, f32)> = target_item_ids
+                        .iter()
+                        .filter_map(|&target_item_id| {
+                            if !filter_query_items || target_item_id != query_item_id {
+                                // Retrieve similarity score from weights or use NEG_INFINITY as default
+                                let similarity_score: f32 =
+                                    *weights.get(&(query_item_id, target_item_id))
+                                    .unwrap_or(&NEG_INFINITY);
 
-                // Sort by similarity score in descending order and keep the top_k items
-                item_scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
-                let top_similar_items: Vec<SerializableValue> = item_scores
-                    .iter()
-                    .take(top_k)
-                    .filter_map(|&(item_id, _)| Some(self.item_ids.get(item_id).unwrap()))
-                    .collect();
+                                Some((target_item_id, similarity_score))
+                            } else {
+                                None
+                            }
+                        })
+                        .collect();
 
-                similar_items.push(top_similar_items);
-            } else {
-                // If the query item ID is None, add an empty list
-                similar_items.push(Vec::new());
-            }
-        }
+                    // Sort by similarity score in descending order and keep the top_k items
+                    item_scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+                    item_scores
+                        .iter()
+                        .take(top_k)
+                        .filter_map(|&(item_id, _)| self.item_ids.get(item_id).ok())
+                        .collect()
+                } else {
+                    // If the query item ID is None, add an empty list
+                    Vec::new()
+                }
+            })
+            .collect();
 
         similar_items
     }
