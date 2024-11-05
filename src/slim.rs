@@ -170,7 +170,7 @@ impl SlimMSE {
             .map(|&query_item_id_opt| {
                 if let Some(query_item_id) = query_item_id_opt {
                     let mut item_scores: Vec<(i32, f32)> = target_item_ids
-                        .iter()
+                        .par_iter()
                         .filter_map(|&target_item_id| {
                             if !filter_query_items || target_item_id != query_item_id {
                                 // Retrieve similarity score from weights or use NEG_INFINITY as default
