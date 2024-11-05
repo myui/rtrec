@@ -87,15 +87,15 @@ class BaseRecommender(ABC):
         for query_item_id in query_item_ids:
             if query_item_id is None:
                 similar_items.append([])
-                continue
-            similarity_scores = [
-                (self.item_ids[target_item_id], self._get_similarity(query_item_id, target_item_id))
-                for target_item_id in target_item_ids
-                if filter_query_items is False or target_item_id != query_item_id
-            ]
-            similar_items.append(
-                [k for k, v in sorted(similarity_scores, key=lambda x: x[1], reverse=True)[:top_k]]
-            )
+            else:
+                similarity_scores = [
+                    (self.item_ids[target_item_id], self._get_similarity(query_item_id, target_item_id))
+                    for target_item_id in target_item_ids
+                    if filter_query_items is False or target_item_id != query_item_id
+                ]
+                similar_items.append(
+                    [k for k, v in sorted(similarity_scores, key=lambda x: x[1], reverse=True)[:top_k]]
+                )
 
         return similar_items
 
