@@ -30,7 +30,7 @@ impl UserItemInteractions {
     fn _apply_decay(&self, value: f32, last_timestamp: f32) -> f32 {
         if let Some(decay_rate) = self.decay_rate {
             // Calculate elapsed time since the last interaction
-            let elapsed_secs = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs() as f32 - last_timestamp;
+            let elapsed_secs = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs_f32() - last_timestamp;
             let elapsed_days = elapsed_secs / 86400.0;
             return value * decay_rate.powf(elapsed_days); // Apply exponential decay
         }

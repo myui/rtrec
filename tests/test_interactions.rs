@@ -15,7 +15,7 @@ mod tests {
     #[test]
     fn test_add_interaction() {
         let mut interactions = UserItemInteractions::new(-5.0, 10.0, None);
-        let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs() as f32;
+        let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs_f32();
 
         interactions.add_interaction(1, 100, current_time, 3.0); // User 1, Item 100, delta 3.0
         assert_eq!(interactions.get_user_item_rating(1, 100, 0.0), 3.0);
@@ -33,7 +33,7 @@ mod tests {
     #[test]
     fn test_get_all_items_for_user() {
         let mut interactions = UserItemInteractions::new(-5.0, 10.0, None);
-        let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs() as f32;
+        let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs_f32();
 
         interactions.add_interaction(1, 100, current_time, 3.0);
         interactions.add_interaction(1, 101, current_time, 2.0);
@@ -47,7 +47,7 @@ mod tests {
     #[test]
     fn test_get_all_non_interacted_items() {
         let mut interactions = UserItemInteractions::new(-5.0, 10.0, None);
-        let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs() as f32;
+        let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs_f32();
 
         interactions.add_interaction(1, 100, current_time, 3.0);
         interactions.add_interaction(1, 101, current_time, 2.0);
@@ -68,7 +68,7 @@ mod tests {
     #[test]
     fn test_get_all_non_negative_items() {
         let mut interactions = UserItemInteractions::new(-5.0, 10.0, None);
-        let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs() as f32;
+        let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs_f32();
 
         interactions.add_interaction(1, 100, current_time, 3.0); // User 1, Item 100, delta 3.0
         interactions.add_interaction(1, 101, current_time, -5.0); // User 1, Item 101, delta -5.0 (will clamp to min_value)
@@ -83,7 +83,7 @@ mod tests {
     fn test_decay_with_decay_rate() {
         let mut interactions = UserItemInteractions::new(-5.0, 10.0, Some(7_f32)); // Decay rate of 7 days
         let decay_rate = 1.0_f32 - (E.ln() / 7_f32);
-        let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs() as f32;
+        let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs_f32();
 
         let tstamp_7_days_ago = current_time - (7_f32 * 86400_f32);
         interactions.add_interaction(1, 100, tstamp_7_days_ago, 5.0); // User 1, Item 100, delta 5.0
@@ -110,7 +110,7 @@ mod tests {
     #[test]
     fn test_decay_without_decay_rate() {
         let mut interactions = UserItemInteractions::new(-5.0, 10.0, None); // No decay rate
-        let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs() as f32;
+        let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs_f32();
 
         interactions.add_interaction(1, 100, current_time, 5.0); // User 1, Item 100, delta 5.0
         assert_eq!(interactions.get_user_item_rating(1, 100, 0.0), 5.0);
