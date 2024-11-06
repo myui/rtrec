@@ -105,6 +105,10 @@ class DoKMatrix:
     def get(self, key: Tuple[int, int], default: float = 0) -> float:
         return self.data.get(key, default)
 
+    def get_row(self, row: int) -> List[float]:
+        """Get all values for a specific row."""
+        return [self.data.get((row, col), 0) for col in range(self.max_col)]
+
     def row_sum(self, row: int) -> float:
         total = 0
         for col in range(self.max_col):
