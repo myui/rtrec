@@ -46,7 +46,7 @@ class UserItemInteractions:
 
         return value * self.decay_rate ** elapsed_days # approximated exponential decay in time e^(-ln(2)/decay_in_days * elapsed_days)
 
-    def add_interaction(self, user_id: int, item_id: int, tstamp: float, delta: float = 1.0) -> None:
+    def add_interaction(self, user_id: int, item_id: int, tstamp: float, delta: float = 1.0, upsert: bool = False) -> None:
         """
         Adds or updates an interaction count for a user-item pair.
 
@@ -54,15 +54,19 @@ class UserItemInteractions:
             user_id (int): ID of the user.
             item_id (int): ID of the item.
             delta (float): Change in interaction count (default is 1.0).
+            upsert (bool): Flag to update the interaction count if it already exists (default is False).
         """
-        current = self.get_user_item_rating(user_id, item_id, default_rating=0.0)
-        new_value = current + delta
+        if upsert:
+            self.interactions[user_id][item_id] = (delta, tstamp)
+        else:
+            current = self.get_user_item_rating(user_id, item_id, default_rating=0.0)
+            new_value = current + delta
 
-        # Clip the new value within the defined bounds
-        new_value = max(self.min_value, min(new_value, self.max_value))
+            # Clip the new value within the defined bounds
+            new_value = max(self.min_value, min(new_value, self.max_value))
 
-        # Store the updated value with the current timestamp
-        self.interactions[user_id][item_id] = (new_value, tstamp)
+            # Store the updated value with the current timestamp
+            self.interactions[user_id][item_id] = (new_value, tstamp)
         self.all_item_ids.add(item_id)
 
     def get_user_item_rating(self, user_id: int, item_id: int, default_rating: float = 0.0) -> float:

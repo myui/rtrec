@@ -125,10 +125,11 @@ class ImplicitFeedbackRecommender(BaseRecommender):
         """
         super().__init__(**kwargs)
 
-    def fit(self, user_interactions: List[Tuple[int, float, Any, Any]]) -> None:
+    def fit(self, user_interactions: List[Tuple[int, float, Any, Any]], update_interaction: bool=False) -> None:
         """
         Incrementally fit the BPRSLIM model with user interactions.
         :param user_interactions: List of (user, positive_item, negative_item) tuples
+        :param epoch: Current training epoch number (default is 0)
         """
         for user, tstamp, positive_item, negative_item in user_interactions:
             # Update user-item interactions
@@ -136,8 +137,8 @@ class ImplicitFeedbackRecommender(BaseRecommender):
                 user_id = self.user_ids.identify(user)
                 positive_item_id = self.item_ids.identify(positive_item)
                 negative_item_id = self.item_ids.identify(negative_item)
-                self.interactions.add_interaction(user_id, positive_item_id, tstamp, delta=1)
-                self.interactions.add_interaction(user_id, negative_item_id, tstamp, delta=-1)
+                self.interactions.add_interaction(user_id, positive_item_id, tstamp, delta=1, upsert=update_interaction)
+                self.interactions.add_interaction(user_id, negative_item_id, tstamp, delta=-1, upsert=update_interaction)
                 self._update(user_id, positive_item_id, negative_item_id)
             except Exception as e:
                 logging.warning(f"Error processing interaction: {e}")
@@ -164,12 +165,12 @@ class ExplictFeedbackRecommender(BaseRecommender):
         """
         super().__init__(**kwargs)
 
-    def fit(self, user_interactions: List[Tuple[Any, Any, float, float]]) -> None:
+    def fit(self, user_interactions: List[Tuple[Any, Any, float, float]], update_interaction: bool=False) -> None:
         for user, item, tstamp, rating in user_interactions:
             try:
                 user_id = self.user_ids.identify(user)
                 item_id = self.item_ids.identify(item)
-                self.interactions.add_interaction(user_id, item_id, tstamp, rating)
+                self.interactions.add_interaction(user_id, item_id, tstamp, rating, upsert=update_interaction)
                 self._update(user_id, item_id)
             except Exception as e:
                 logging.warning(f"Error processing interaction: {e}")
