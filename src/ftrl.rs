@@ -9,6 +9,7 @@ pub struct FTRL {
     lambda2: f32,
     z: HashMap<(i32, i32), f32>,
     n: HashMap<(i32, i32), f32>,
+    /// similarity matrix of (target_item_id, base_item_id) -> coefficient
     weights: HashMap<(i32, i32), f32>,
 }
 

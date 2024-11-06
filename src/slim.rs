@@ -175,7 +175,7 @@ impl SlimMSE {
                             if !filter_query_items || target_item_id != query_item_id {
                                 // Retrieve similarity score from weights or use NEG_INFINITY as default
                                 let similarity_score: f32 =
-                                    *weights.get(&(query_item_id, target_item_id))
+                                    *weights.get(&(target_item_id, query_item_id))
                                     .unwrap_or(&NEG_INFINITY);
 
                                 Some((target_item_id, similarity_score))
