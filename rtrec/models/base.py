@@ -89,7 +89,7 @@ class BaseRecommender(ABC):
                 similar_items.append([])
             else:
                 similarity_scores = [
-                    (self.item_ids[target_item_id], self._get_similarity(query_item_id, target_item_id))
+                    (self.item_ids[target_item_id], self._get_similarity(target_item_id, query_item_id))
                     for target_item_id in target_item_ids
                     if filter_query_items is False or target_item_id != query_item_id
                 ]
@@ -100,11 +100,11 @@ class BaseRecommender(ABC):
         return similar_items
 
     @abstractmethod
-    def _get_similarity(self, item_id: int, target_item_id: int) -> float:
+    def _get_similarity(self, target_item_id: int, base_item_id: int) -> float:
         """
         Get the similarity between two items.
-        :param item_id: Item index
         :param target_item_id: Target item index
+        :param base_item_id: Item index
         :return: Similarity between the two items
         """
         raise NotImplementedError(f"The _get_similarity method must be implemented by the subclass.")

@@ -21,14 +21,14 @@ class SLIM_MSE(ExplictFeedbackRecommender):
             return 0.0
         return self.cumulative_loss / self.steps
 
-    def _get_similarity(self, item_id: int, target_item_id: int) -> float:
+    def _get_similarity(self, target_item_id: int, base_item_id: int) -> float:
         """
         Get the similarity between two items.
-        :param item_id: Item index
         :param target_item_id: Target item index
+        :param base_item_id: Item index
         :return: Similarity between the two items
         """
-        return self.W.get((item_id, target_item_id), -inf)
+        return self.W.get((target_item_id, base_item_id), -inf)
 
     def _predict(self, user_id: int, item_ids: List[int]) -> List[float]:
         """
