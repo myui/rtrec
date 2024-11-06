@@ -11,7 +11,10 @@ class SLIM_MSE(ExplictFeedbackRecommender):
         super().__init__(**kwargs)
 
         self.ftrl = FTRL(**kwargs)
-        self.W = self.ftrl.W # item-item similarity matrix
+
+        # item-item similarity matrix
+        # target_item_id, base_item_id -> similarity
+        self.W = self.ftrl.W
 
         self.cumulative_loss = 0.0
         self.steps = 0
