@@ -5,6 +5,7 @@ mod tests {
     use rand::prelude::SliceRandom;
     use rand::SeedableRng;
     use rand::rngs::StdRng;
+    use approx::assert_relative_eq;
 
     #[test]
     fn test_serializable_value_conversion() {
@@ -67,7 +68,7 @@ mod tests {
     #[test]
     fn test_similar_items() {
         // Initialize SlimMSE with sample hyperparameters
-        let mut model = SlimMSE::new(0.1, 1.0, 0.001, 0.002, -5.0, 10.0, None);
+        let mut model = SlimMSE::new(0.5, 1.0, 0.0002, 0.0001, -5.0, 10.0, None);
 
         // Define current time for simplicity (using a fixed timestamp)
         let current_time = 0.0;
@@ -81,6 +82,8 @@ mod tests {
             (SerializableValue::Text("b".to_string()), SerializableValue::Integer(3), current_time, 2.0),
             (SerializableValue::Text("c".to_string()), SerializableValue::Integer(2), current_time, 3.0),
             (SerializableValue::Text("c".to_string()), SerializableValue::Integer(3), current_time, 4.0),
+            (SerializableValue::Text("d".to_string()), SerializableValue::Integer(4), current_time, 4.0),
+            (SerializableValue::Text("d".to_string()), SerializableValue::Integer(5), current_time, 5.0),
         ];
 
         // Shuffle and fit interactions multiple times to simulate randomized training as in the Python test
@@ -89,6 +92,8 @@ mod tests {
             user_interactions.shuffle(&mut rng);
             model.fit(user_interactions.clone(), Some(i > 0));
         }
+
+        assert_relative_eq!(model.predict_rating(SerializableValue::Text("d".to_string()), SerializableValue::Integer(4)), 4.0, epsilon=0.01);
 
         // Define query items and parameters for the similar items search
         let query_items = vec![SerializableValue::Integer(1), SerializableValue::Integer(2)];
