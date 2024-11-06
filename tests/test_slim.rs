@@ -29,7 +29,7 @@ mod tests {
             (SerializableValue::Integer(1), SerializableValue::Integer(3), 1620003600.0, 5.0),
         ];
 
-        slim.fit(user_interactions);
+        slim.fit(user_interactions, Some(false));
     }
 
     #[test]
@@ -47,7 +47,7 @@ mod tests {
         ];
 
         // Fit the model with the interactions
-        model.fit(user_interactions.clone());
+        model.fit(user_interactions.clone(), Some(false));
 
         // Test recommendations for User 1 with top_k = 2
         let recommendations = model.recommend(SerializableValue::Integer(1), 2, Some(true));
@@ -85,9 +85,9 @@ mod tests {
 
         // Shuffle and fit interactions multiple times to simulate randomized training as in the Python test
         let mut rng: StdRng = StdRng::seed_from_u64(43);
-        for _ in 0..10 {
+        for i in 0..10 {
             user_interactions.shuffle(&mut rng);
-            model.fit(user_interactions.clone());
+            model.fit(user_interactions.clone(), Some(i > 0));
         }
 
         // Define query items and parameters for the similar items search

@@ -44,12 +44,12 @@ impl SlimMSE {
         }
     }
 
-    pub fn fit(&mut self, user_interactions: Vec<(SerializableValue, SerializableValue, f32, f32)>) {
+    pub fn fit(&mut self, user_interactions: Vec<(SerializableValue, SerializableValue, f32, f32)>, update_interaction: Option<bool>) {
         for (user, item, tstamp, rating) in user_interactions {
             if let Err(e) = (|| -> Result<(), Box<dyn std::error::Error>> {
                 let user_id = self.identify_user(user);
                 let item_id = self.identify_item(item);
-                self.interactions.add_interaction(user_id, item_id, tstamp, rating);
+                self.interactions.add_interaction(user_id, item_id, tstamp, rating, update_interaction.unwrap_or(false));
                 self.update_weights(user_id, item_id);
                 Ok(())
             })() {

@@ -17,16 +17,16 @@ mod tests {
         let mut interactions = UserItemInteractions::new(-5.0, 10.0, None);
         let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs_f32();
 
-        interactions.add_interaction(1, 100, current_time, 3.0); // User 1, Item 100, delta 3.0
+        interactions.add_interaction(1, 100, current_time, 3.0, false); // User 1, Item 100, delta 3.0
         assert_eq!(interactions.get_user_item_rating(1, 100, 0.0), 3.0);
 
-        interactions.add_interaction(1, 100, current_time, 5.0); // Modify interaction
+        interactions.add_interaction(1, 100, current_time, 5.0, false); // Modify interaction
         assert_eq!(interactions.get_user_item_rating(1, 100, 0.0), 8.0); // Expect 8.0
 
-        interactions.add_interaction(1, 100, current_time, 5.0); // Clamping above max
+        interactions.add_interaction(1, 100, current_time, 5.0, false); // Clamping above max
         assert_eq!(interactions.get_user_item_rating(1, 100, 0.0), 10.0); // Should be clamped to max_value
 
-        interactions.add_interaction(1, 100, current_time, -100.0); // Clamping below min
+        interactions.add_interaction(1, 100, current_time, -100.0, false); // Clamping below min
         assert_eq!(interactions.get_user_item_rating(1, 100, 0.0), -5.0); // Should be clamped to min_value
     }
 
@@ -35,8 +35,8 @@ mod tests {
         let mut interactions = UserItemInteractions::new(-5.0, 10.0, None);
         let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs_f32();
 
-        interactions.add_interaction(1, 100, current_time, 3.0);
-        interactions.add_interaction(1, 101, current_time, 2.0);
+        interactions.add_interaction(1, 100, current_time, 3.0, false);
+        interactions.add_interaction(1, 101, current_time, 2.0, false);
 
         let items = interactions.get_all_items_for_user(1);
         assert_eq!(items.len(), 2);
@@ -45,20 +45,32 @@ mod tests {
     }
 
     #[test]
+    fn test_add_interaction_upsert() {
+        let mut interactions = UserItemInteractions::new(-5.0, 10.0, None);
+        let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs_f32();
+
+        interactions.add_interaction(1, 100, current_time, 3.0, true); // User 1, Item 100, delta 3.0
+        assert_eq!(interactions.get_user_item_rating(1, 100, 0.0), 3.0);
+
+        interactions.add_interaction(1, 100, current_time, -3.0, true); // User 1, Item 100, delta 3.0
+        assert_eq!(interactions.get_user_item_rating(1, 100, 0.0), -3.0);
+    }
+
+    #[test]
     fn test_get_all_non_interacted_items() {
         let mut interactions = UserItemInteractions::new(-5.0, 10.0, None);
         let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs_f32();
 
-        interactions.add_interaction(1, 100, current_time, 3.0);
-        interactions.add_interaction(1, 101, current_time, 2.0);
+        interactions.add_interaction(1, 100, current_time, 3.0, false);
+        interactions.add_interaction(1, 101, current_time, 2.0, false);
 
         let non_interacted_items = interactions.get_all_non_interacted_items(1);
         assert!(!non_interacted_items.contains(&100));
         assert!(!non_interacted_items.contains(&101));
 
         // Adding an item that the user has not interacted with
-        interactions.add_interaction(2, 200, current_time, 1.0); // User 2, Item 200
-        interactions.add_interaction(2, 101, current_time, 1.0); // User 2, Item 200
+        interactions.add_interaction(2, 200, current_time, 1.0, false); // User 2, Item 200
+        interactions.add_interaction(2, 101, current_time, 1.0, false); // User 2, Item 200
 
         let non_interacted_items_user_2 = interactions.get_all_non_interacted_items(2);
         assert!(non_interacted_items_user_2.contains(&100));
@@ -70,8 +82,8 @@ mod tests {
         let mut interactions = UserItemInteractions::new(-5.0, 10.0, None);
         let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs_f32();
 
-        interactions.add_interaction(1, 100, current_time, 3.0); // User 1, Item 100, delta 3.0
-        interactions.add_interaction(1, 101, current_time, -5.0); // User 1, Item 101, delta -5.0 (will clamp to min_value)
+        interactions.add_interaction(1, 100, current_time, 3.0, false); // User 1, Item 100, delta 3.0
+        interactions.add_interaction(1, 101, current_time, -5.0, false); // User 1, Item 101, delta -5.0 (will clamp to min_value)
 
         let non_negative_items = interactions.get_all_non_negative_items(1);
         assert_eq!(non_negative_items.len(), 1);
@@ -86,7 +98,7 @@ mod tests {
         let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs_f32();
 
         let tstamp_7_days_ago = current_time - (7_f32 * 86400_f32);
-        interactions.add_interaction(1, 100, tstamp_7_days_ago, 5.0); // User 1, Item 100, delta 5.0
+        interactions.add_interaction(1, 100, tstamp_7_days_ago, 5.0, false); // User 1, Item 100, delta 5.0
         let actual_rating = interactions.get_user_item_rating(1, 100, 0.0);
 
         let elapsed_days = 7_f32;  // 7 days
@@ -112,7 +124,7 @@ mod tests {
         let mut interactions = UserItemInteractions::new(-5.0, 10.0, None); // No decay rate
         let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs_f32();
 
-        interactions.add_interaction(1, 100, current_time, 5.0); // User 1, Item 100, delta 5.0
+        interactions.add_interaction(1, 100, current_time, 5.0, false); // User 1, Item 100, delta 5.0
         assert_eq!(interactions.get_user_item_rating(1, 100, 0.0), 5.0);
 
         // Sleep for 2 seconds, but should not affect the value since decay is not applied

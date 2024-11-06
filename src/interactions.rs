@@ -37,18 +37,25 @@ impl UserItemInteractions {
         value // Return original value if no decay rate is set
     }
 
-    pub fn add_interaction(&mut self, user_id: i32, item_id: i32, tstamp: f32, delta: f32) {
-        // Get the current rating for the user-item pair, applying decay if necessary
-        let current_value = self.get_user_item_rating(user_id, item_id, 0.0);
+    pub fn add_interaction(&mut self, user_id: i32, item_id: i32, tstamp: f32, delta: f32, upsert: bool) {
+        if upsert {
+            self.interactions
+                .entry(user_id)
+                .or_insert_with(HashMap::new)
+                .insert(item_id, (delta, tstamp)); // Update the timestamp
+        } else {
+            // Get the current rating for the user-item pair, applying decay if necessary
+            let current_value = self.get_user_item_rating(user_id, item_id, 0.0);
 
-        // Calculate the new value by adding the delta
-        let new_value = (current_value + delta).clamp(self.min_value, self.max_value);
+            // Calculate the new value by adding the delta
+            let new_value = (current_value + delta).clamp(self.min_value, self.max_value);
 
-        // Store the updated value with the current timestamp
-        self.interactions
-            .entry(user_id)
-            .or_insert_with(HashMap::new)
-            .insert(item_id, (new_value, tstamp)); // Update the timestamp
+            // Store the updated value with the current timestamp
+            self.interactions
+                .entry(user_id)
+                .or_insert_with(HashMap::new)
+                .insert(item_id, (new_value, tstamp)); // Update the timestamp
+        }
 
         // Track all unique item IDs
         self.all_item_ids.insert(item_id);
