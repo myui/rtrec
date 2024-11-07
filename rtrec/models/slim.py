@@ -91,6 +91,10 @@ class FTRL():
         :param beta: Parameter for adaptive learning rate
         :param lambda1: L1 regularization parameter
         :param lambda2: L2 regularization parameter
+
+        Ref for the FTRL algorithm:
+        - https://www.eecs.tufts.edu/~dsculley/papers/ad-click-prediction.pdf
+        - https://arxiv.org/abs/1403.3465
         """
         super().__init__()
         self.alpha = alpha

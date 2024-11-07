@@ -1,6 +1,12 @@
 use serde::{Serialize, Deserialize};
 use std::collections::HashMap;
 
+/// FTRL (Follow The Regularized Leader) optimizer implementation.
+/// This is a variant of FTRL-Proximal algorithm for online learning.
+///
+/// Reference:
+/// - https://www.eecs.tufts.edu/~dsculley/papers/ad-click-prediction.pdf
+/// - https://arxiv.org/abs/1403.3465
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct FTRL {
     alpha: f32,
