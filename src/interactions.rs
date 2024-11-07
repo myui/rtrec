@@ -27,6 +27,9 @@ impl UserItemInteractions {
         }
     }
 
+    /// Apply exponential decay to the value based on the elapsed time since the last interaction.
+    /// Half-life decay is used to calculate the decay rate.
+    /// Reference: https://dl.acm.org/doi/10.1145/1099554.1099689
     fn _apply_decay(&self, value: f32, last_timestamp: f32) -> f32 {
         if let Some(decay_rate) = self.decay_rate {
             // Calculate elapsed time since the last interaction
