@@ -28,6 +28,7 @@ def load_movielens(dataset_scale: str, sort_by_tstamp: bool=False) -> pd.DataFra
             "extracted_folder": "datasets/ml-1m",
             "ratings_file": "ml-1m/ratings.dat",
             "sep": "::",
+            "header": None, # No header in the file
             "columns": ["user_id", "item_id", "rating", "tstamp"]
         },
         "20m": {
@@ -36,6 +37,7 @@ def load_movielens(dataset_scale: str, sort_by_tstamp: bool=False) -> pd.DataFra
             "extracted_folder": "datasets/ml-20m",
             "ratings_file": "ml-20m/ratings.csv",
             "sep": ",",
+            "header": 0, # the first line is the header
             "columns": ["userId", "movieId", "rating", "timestamp"]
         },
         "25m": {
@@ -44,6 +46,7 @@ def load_movielens(dataset_scale: str, sort_by_tstamp: bool=False) -> pd.DataFra
             "extracted_folder": "datasets/ml-25m",
             "ratings_file": "ml-25m/ratings.csv",
             "sep": ",",
+            "header": 0, # the first line is the header
             "columns": ["userId", "movieId", "rating", "timestamp"]
         }
     }
@@ -78,7 +81,7 @@ def load_movielens(dataset_scale: str, sort_by_tstamp: bool=False) -> pd.DataFra
                 raise FileNotFoundError(f"{os.path.basename(info['ratings_file'])} not found in the downloaded zip file.")
 
     # Load data into DataFrame with correct column names and sort by timestamp
-    df = pd.read_csv(ratings_path, sep=info["sep"], engine="python", names=info["columns"])
+    df = pd.read_csv(ratings_path, sep=info["sep"], engine="python", names=info["columns"], header=info["header"])
     df.columns = ["user", "item", "rating", "tstamp"]
     if sort_by_tstamp:
         df = df.sort_values(by="tstamp", ascending=True)
@@ -254,3 +257,28 @@ def load_amazon_music_v2(small_subsets: bool = True, parse_image_url: bool = Fal
 
 def load_amazon_electronics_v2(small_subsets: bool = True, parse_image_url: bool = False, sort_by_tstamp: bool = False) -> pd.DataFrame:
     return load_amazon_review_v2("Electronics", small_subsets, parse_image_url, sort_by_tstamp)
+
+def load_dataset(name: str) -> pd.DataFrame:
+    """
+    Loads a dataset by name.
+
+    Args:
+        name (str): Name of the dataset to load.
+
+    Returns:
+        pd.DataFrame: The loaded dataset as a DataFrame.
+    """
+    if name == "movielens_1m":
+        return load_movielens_1m()
+    elif name == "movielens_20m":
+        return load_movielens_20m()
+    elif name == "movielens_25m":
+        return load_movielens_25m()
+    elif name == "yelp":
+        return load_yelp_ratings()
+    elif name == "amazon_music":
+        return load_amazon_music_v2()
+    elif name == "amazon_electronics":
+        return load_amazon_electronics_v2()
+    else:
+        raise ValueError(f"Dataset '{name}' not found.")
