@@ -1,59 +1,52 @@
+from typing import Dict
 import pandas as pd
-from sklearn.model_selection import train_test_split
-from sklearn.metrics import mean_squared_error, mean_absolute_error
-import numpy as np
+import argparse
 
-# Recommender class (you can replace this with your actual model)
-class Recommender:
+from .datasets import load_dataset
+from .split import leave_one_last_item, random_split, temporal_split, temporal_user_split
+from ..recommender import Recommender
+from ..models import Fast_SLIM_MSE, SLIM_MSE
 
-    def __init__(self, model):
-        self.model = model
-
-    def fit(self, train_data):
-        # Train the recommender on train_data
-        pass
-
-    def predict(self, user_id, item_id):
-        # Predict rating for user_id and item_id
-        return np.random.rand()  # Placeholder for actual prediction logic
-
-    def evaluate(self, test_data):
-        y_true = test_data['rating']
-        y_pred = test_data.apply(lambda x: self.predict(x['user_id'], x['item_id']), axis=1)
-        rmse = np.sqrt(mean_squared_error(y_true, y_pred))
-        mae = mean_absolute_error(y_true, y_pred)
-        return rmse, mae
-
-# Datasets paths
-datasets = {
-    'movielens_1m': 'datasets/movielens_1m.csv',
-    'movielens_20m': 'datasets/movielens_20m.csv',
-    'epinions': 'datasets/epinions.csv',
-    'yelp': 'datasets/yelp.csv',
-    'amazon_music': 'datasets/amazon_music.csv',
-    'amazon_electronics': 'datasets/amazon_electronics.csv'
-}
-
-# Evaluate the recommender on each dataset
-results = {}
-
-for name, path in datasets.items():
-    print(f"Evaluating recommender on {name}...")
+def run_experiment(dataset_name: str, model_name: str, split_method: str = "temporal") -> Dict[str, float]:
+    print(f"Evaluating recommender on {dataset_name}...")
     # Load and preprocess the dataset
-    data = load_dataset(path)
-    data = preprocess_data(data)
+    df = load_dataset(dataset_name)
 
     # Split into train and test sets
-    train_data, test_data = train_test_split(data, test_size=0.2, random_state=42)
+    if split_method == "temporal":
+        train_data, test_data = temporal_split(df, test_frac=0.2)
+    elif split_method == "temporal_user":
+        train_data, test_data = temporal_user_split(df, test_frac=0.2)
+    elif split_method == "leave_one_last":
+        train_data, test_data = leave_one_last_item(df)
+    elif split_method == "random":
+        train_data, test_data = random_split(df, test_frac=0.2)
+    else:
+        raise ValueError(f"Unsupported split method: {split_method}")
 
     # Initialize and train the recommender
-    recommender = Recommender()
-    recommender.fit(train_data)
+    if model_name == "fast_slim_mse":
+        model = Fast_SLIM_MSE()
+    elif model_name == "slim_mse":
+        model = SLIM_MSE()
+    else:
+        raise ValueError(f"Unsupported model: {model_name}")
+
+    recommender = Recommender(model)
+    recommender.fit(train_data, epochs=10, batch_size=1000, random_seed=43)
 
     # Evaluate the recommender
-    rmse, mae = recommender.evaluate(test_data)
-    results[name] = {'RMSE': rmse, 'MAE': mae}
+    return recommender.evaluate(test_data)
 
-# Print results
-for dataset, metrics in results.items():
-    print(f"{dataset} - RMSE: {metrics['RMSE']:.4f}, MAE: {metrics['MAE']:.4f}")
+if __name__ == "__main__":
+    # parse command line arguments
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--model", type=str, default="fast_slim_mse", help="Name of the model to use for recommendation. Options: fast_slim_mse (default), slim_mse.")
+    parser.add_argument("--dataset", type=str, default="movielens_1m", help="Name of the dataset to evaluate the recommender on. Options: movielens_[1m|20m|25m], yelp, amazon_[music|electronics].")
+    parser.add_argument("--split", type=str, default="temporal", help="Method for splitting the data into train and test sets. Options: temporal (default), temporal_user, leave_one_last, random.")
+    args = parser.parse_args()
+
+    # run the experiment
+    results = run_experiment(args.dataset, args.model, args.split)
+
+    print(f"Results: {results}")
