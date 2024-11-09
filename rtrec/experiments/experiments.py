@@ -1,5 +1,4 @@
 from typing import Dict
-import pandas as pd
 import argparse
 
 from .datasets import load_dataset
