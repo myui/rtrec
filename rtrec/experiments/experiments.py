@@ -3,16 +3,6 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 import numpy as np
 
-# Load datasets
-def load_dataset(file_path):
-    return pd.read_csv(file_path)
-
-# Preprocess data
-def preprocess_data(df):
-    # Example preprocessing: Convert ratings to a range [0, 1]
-    df['rating'] = df['rating'] / df['rating'].max()
-    return df
-
 # Recommender class (you can replace this with your actual model)
 class Recommender:
 

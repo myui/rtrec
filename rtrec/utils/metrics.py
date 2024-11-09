@@ -1,4 +1,4 @@
-from typing import List, Any, Dict, Iterable
+from typing import List, Any, Dict, Iterable, Tuple
 from math import log2
 from collections import defaultdict
 
@@ -262,14 +262,13 @@ def map_score(ranked_lists: Iterable[List[Any]], ground_truths: Iterable[List[An
     return ap_sum / len(ranked_lists) if ranked_lists else 0.0
 
 def compute_scores(
-    ranked_lists: Iterable[List[Any]], ground_truths: Iterable[List[Any]], recommend_size: int
+    evaluation_pairs: Iterable[Tuple[List[Any], List[Any]]], recommend_size: int
 ) -> Dict[str, float]:
     """
     Computes batch evaluation metrics across multiple queries.
 
     Parameters:
-        ranked_lists: List of recommended items for each query.
-        ground_truths: List of relevant items for each query.
+        evaluation_pairs: Iterable of tuples containing recommended and ground truth items for each query.
         recommend_size: Number of items to recommend.
 
     Returns:
@@ -279,7 +278,7 @@ def compute_scores(
     hit_sum = tp_sum = 0
     num_queries = 0  # Total number of queries processed
 
-    for ranked_list, ground_truth in zip(ranked_lists, ground_truths):
+    for ranked_list, ground_truth in evaluation_pairs:
         num_queries += 1
 
         # Compute individual metrics for this query
