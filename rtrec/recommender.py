@@ -85,7 +85,7 @@ class Recommender:
 
         # Use a generator to yield recommendations and ground truth for each user
         def generate_evaluation_pairs() -> Iterable[Tuple[List[Any], List[Any]]]:
-            for user, ground_truth_items in grouped_data.items():
+            for user, ground_truth_items in tqdm(grouped_data.items()):
                 recommended_items = self.recommend(user, recommend_size)
                 yield recommended_items, ground_truth_items
 
