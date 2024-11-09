@@ -19,7 +19,7 @@ class SLIM_MSE(ExplictFeedbackRecommender):
         self.cumulative_loss = 0.0
         self.steps = 0
 
-    def get_empirical_loss(self) -> float:
+    def get_empirical_error(self) -> float:
         if self.steps == 0:
             return 0.0
         return self.cumulative_loss / self.steps
@@ -53,7 +53,7 @@ class SLIM_MSE(ExplictFeedbackRecommender):
 
         # Compute the gradient (MSE)        
         dloss = self._predict_rating(user_id, item_id) - self._get_rating(user_id, item_id)
-        self.cumulative_loss += dloss**2
+        self.cumulative_loss += abs(dloss)
         self.steps += 1
 
         # update item similarity matrix

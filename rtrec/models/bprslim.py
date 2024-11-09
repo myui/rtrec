@@ -26,6 +26,13 @@ class BPR_SLIM(ImplicitFeedbackRecommender):
 
         # Initialize item-to-item similarity matrix
         self.W = SparseMatrix() # target_item_id, base_item_id -> similarity
+        self.cumulative_loss = 0.0
+        self.steps = 0
+
+    def get_empirical_error(self) -> float:
+        if self.steps == 0:
+            return 0.0
+        return self.cumulative_loss / self.steps
 
     def _get_similarity(self, target_item_id: int, base_item_id: int) -> float:
         """
@@ -55,6 +62,8 @@ class BPR_SLIM(ImplicitFeedbackRecommender):
         user_items = self._get_interacted_items(user_id)
 
         grad = self._bpr_loss(user_items, positive_item_id, negative_item_id)
+        self.cumulative_loss += abs(grad)
+        self.steps += 1
 
         # get updated gradients
         pos_grad = self.optimizer.update_gradients(positive_item_id, grad)

@@ -21,6 +21,15 @@ class BaseRecommender(ABC):
         self.user_ids = Identifier()
         self.item_ids = Identifier()
 
+    @abstractmethod
+    def get_empirical_error(self) -> float:
+        """
+        Get the empirical error of the model.
+        The empirical error is the average loss over all user-item interactions.
+        see https://en.wikipedia.org/wiki/Generalization_error
+        """
+        raise NotImplementedError("The get_empirical_loss method must be implemented by the subclass.")
+
     def _get_interacted_items(self, user_id: int) -> List[int]:
         """
         Get a list of all items a user has interacted with.

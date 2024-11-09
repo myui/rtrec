@@ -71,7 +71,7 @@ impl SlimMSE {
         let predicted = self._predict_rating(user_id, item_id, false);
         let dloss = predicted - self.interactions.get_user_item_rating(user_id, item_id, 0.0);
 
-        self.cumulative_loss += dloss.powi(2);
+        self.cumulative_loss += dloss.abs();
         self.steps += 1;
 
         for &ui in &user_items {
@@ -202,7 +202,7 @@ impl SlimMSE {
         similar_items
     }
 
-    pub fn get_empirical_loss(&self) -> f32 {
+    pub fn get_empirical_error(&self) -> f32 {
         if self.steps == 0 {
             0.0
         } else {
