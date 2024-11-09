@@ -1,7 +1,10 @@
 import pandas as pd
 from typing import Tuple, Optional
 
-def leave_one_last_item(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def leave_one_last_item(
+        df: pd.DataFrame,
+        sort_by_tstamp: bool = True
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Perform a leave-one-last-item split on the dataset.
 
@@ -22,6 +25,11 @@ def leave_one_last_item(df: pd.DataFrame) -> Tuple[pd.DataFrame, pd.DataFrame]:
     # Split the data into train and test sets
     test_df = df.loc[last_interaction_idx].reset_index(drop=True)
     train_df = df.drop(last_interaction_idx).reset_index(drop=True)
+
+    # Optionally, sort the final train and test DataFrames by timestamp
+    if sort_by_tstamp:
+        train_df = train_df.sort_values(by='tstamp').reset_index(drop=True)
+        test_df = test_df.sort_values(by='tstamp').reset_index(drop=True)
 
     return train_df, test_df
 
