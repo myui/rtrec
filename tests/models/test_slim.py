@@ -25,6 +25,20 @@ def test_fit(slim):
     # Check empirical loss is greater than 0 after fitting
     assert slim.get_empirical_loss() > 0.0
 
+def test_fit_generator(slim):
+    def user_interactions_generator():
+        yield (1, 100, 1234567890, 4.5)
+        yield (2, 101, 1234567891, 3.0)
+        yield (1, 102, 1234567892, 5.0)
+
+    interactions = user_interactions_generator()
+
+    # Fit the model with sample interactions
+    slim.fit(interactions)
+
+    # Check empirical loss is greater than 0 after fitting
+    assert slim.get_empirical_loss() > 0.0
+
 def test_predict_rating(slim):
     # Add interactions with timestamps
     current_time = time.time()

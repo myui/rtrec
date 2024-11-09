@@ -3,7 +3,7 @@ import logging
 
 from math import inf
 from abc import ABC, abstractmethod
-from typing import Any, List, Tuple
+from typing import Any, List, Tuple, Iterable
 
 from rtrec.utils.identifiers import Identifier
 from rtrec.utils.interactions import UserItemInteractions
@@ -125,7 +125,7 @@ class ImplicitFeedbackRecommender(BaseRecommender):
         """
         super().__init__(**kwargs)
 
-    def fit(self, user_interactions: List[Tuple[int, float, Any, Any]], update_interaction: bool=False) -> None:
+    def fit(self, user_interactions: Iterable[Tuple[int, float, Any, Any]], update_interaction: bool=False) -> None:
         """
         Incrementally fit the BPRSLIM model with user interactions.
         :param user_interactions: List of (user, positive_item, negative_item) tuples
@@ -165,7 +165,7 @@ class ExplictFeedbackRecommender(BaseRecommender):
         """
         super().__init__(**kwargs)
 
-    def fit(self, user_interactions: List[Tuple[Any, Any, float, float]], update_interaction: bool=False) -> None:
+    def fit(self, user_interactions: Iterable[Tuple[Any, Any, float, float]], update_interaction: bool=False) -> None:
         for user, item, tstamp, rating in user_interactions:
             try:
                 user_id = self.user_ids.identify(user)
