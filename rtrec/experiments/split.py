@@ -119,3 +119,36 @@ def temporal_user_split(
         test_df = test_df.sort_values(by='tstamp').reset_index(drop=True)
 
     return train_df, test_df
+
+def random_split(
+    df: pd.DataFrame,
+    test_frac: float = 0.2,
+    random_seed: Optional[int] = None
+) -> Tuple[pd.DataFrame, pd.DataFrame]:
+    """
+    Perform a random split on the dataset based on a specified test fraction.
+
+    Parameters:
+        df (pd.DataFrame): A pandas DataFrame with columns ['user', 'item', 'tstamp', 'rating'].
+        test_frac (float): The proportion of data to include in the test set, between 0 and 1. Default is 0.2.
+        random_seed (Optional[int]): The random seed for reproducibility.
+
+    Returns:
+        Tuple[pd.DataFrame, pd.DataFrame]: A tuple containing the training and test DataFrames.
+            - train_df: Training data with a random subset of interactions.
+            - test_df: Test data with the remaining interactions.
+    """
+    # Ensure that test_frac is a valid proportion
+    assert 0 < test_frac < 1, f"test_frac must be between 0 and 1: {test_frac}"
+
+    # Randomly shuffle the DataFrame
+    df = df.sample(frac=1, random_state=random_seed).reset_index(drop=True)
+
+    # Calculate the number of interactions for the test set
+    test_size = int(test_frac * len(df))
+
+    # Split the data into train and test sets
+    train_df = df.iloc[test_size:].reset_index(drop=True)
+    test_df = df.iloc[:test_size].reset_index(drop=True)
+
+    return train_df, test_df
