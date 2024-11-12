@@ -18,10 +18,14 @@ class SLIM_MSE(ExplicitFeedbackRecommender):
         self.cumulative_loss = 0.0
         self.steps = 0
 
-    def get_empirical_error(self) -> float:
+    def get_empirical_error(self, reset: bool=False) -> float:
         if self.steps == 0:
             return 0.0
-        return self.cumulative_loss / self.steps
+        err = self.cumulative_loss / self.steps
+        if reset:
+            self.cumulative_loss = 0.0
+            self.steps = 0
+        return err
 
     def _get_similarity(self, target_item_id: int, base_item_id: int) -> float:
         """

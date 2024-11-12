@@ -21,7 +21,7 @@ class BaseRecommender(ABC):
         self.item_ids = Identifier()
 
     @abstractmethod
-    def get_empirical_error(self) -> float:
+    def get_empirical_error(self, reset: bool=False) -> float:
         """
         Get the empirical error of the model.
         The empirical error is the average loss over all user-item interactions.
