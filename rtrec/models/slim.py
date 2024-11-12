@@ -1,12 +1,11 @@
-from collections import defaultdict
+import numpy as np
+
 from typing import Any, List
 from math import inf
 
-from .base import ExplictFeedbackRecommender
+from .base import ExplicitFeedbackRecommender
 
-import numpy as np
-
-class SLIM_MSE(ExplictFeedbackRecommender):
+class SLIM_MSE(ExplicitFeedbackRecommender):
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
 
@@ -32,15 +31,6 @@ class SLIM_MSE(ExplictFeedbackRecommender):
         :return: Similarity between the two items
         """
         return self.W.get((target_item_id, base_item_id), -inf)
-
-    def _predict(self, user_id: int, item_ids: List[int]) -> List[float]:
-        """
-        Predict scores for a list of items.
-        """
-        return [
-            self._predict_rating(user_id, item_id, bypass_prediction=False)
-            for item_id in item_ids
-        ]
 
     def _update(self, user_id: int, item_id: int) -> None:
         """

@@ -1,4 +1,3 @@
-import numpy as np
 import logging
 
 from math import inf
@@ -165,7 +164,7 @@ class ImplicitFeedbackRecommender(BaseRecommender):
         raise NotImplementedError("The _update method must be implemented by the subclass.")
     
 
-class ExplictFeedbackRecommender(BaseRecommender):
+class ExplicitFeedbackRecommender(BaseRecommender):
 
     def __init__(self, **kwargs: Any):
         """
@@ -188,6 +187,15 @@ class ExplictFeedbackRecommender(BaseRecommender):
     @abstractmethod
     def _update(self, user_id: int, item_id: int, rating: float) -> None:
         raise NotImplementedError("The _update method must be implemented by the subclass.")
+
+    def _predict(self, user_id: int, item_ids: List[int]) -> List[float]:
+        """
+        Predict scores for a list of items.
+        """
+        return [
+            self._predict_rating(user_id, item_id, bypass_prediction=False)
+            for item_id in item_ids
+        ]
 
     def predict_rating(self, user: Any, item: Any) -> float:
         user_id = self.user_ids.get_id(user)
