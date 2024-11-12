@@ -38,6 +38,7 @@ class Recommender:
             epochs (int): Number of epochs (iterations) over the dataset. Defaults to 1.
             batch_size (int): The number of interactions per mini-batch. Defaults to 1000.
         """
+        train_data = train_data[["user", "item", "tstamp", "rating"]]
         # Iterate over epochs
         for epoch in tqdm(range(epochs)):
             # Shuffle the training data at the beginning of each epoch
@@ -49,8 +50,8 @@ class Recommender:
                 self.model.fit(batch, update_interaction=epoch > 0)
             end_time = time.time()
             print(f"Epoch {epoch + 1} completed in {end_time - start_time:.2f} seconds")
-            print(f"Throughput: {len(train_data) / (end_time - start_time):.2f} samples/s")
-            print(f"Empirical loss after epoch {epoch + 1}: {self.model.get_empirical_error()}")
+            print(f"Throughput: {len(train_data) / (end_time - start_time):.2f} samples/sec")
+            print(f"Empirical loss after epoch {epoch + 1}: {self.model.get_empirical_error(reset=True)}")
 
     def predict_rating(self, user: Any, item: Any) -> float:
         """
