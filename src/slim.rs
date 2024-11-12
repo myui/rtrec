@@ -4,7 +4,8 @@ use std::fs::File;
 use std::io::{BufReader, BufWriter};
 use std::f32::NEG_INFINITY;
 use serde::{Serialize, Deserialize};
-use log::warn;
+use log::{debug, warn};
+use env_logger;
 
 use rusoto_core::Region;
 use rusoto_s3::{PutObjectRequest, GetObjectRequest, S3Client, S3};
@@ -32,6 +33,9 @@ impl SlimMSE {
     #[new]
     #[pyo3(signature = (alpha = 0.5, beta = 1.0, lambda1 = 0.0002, lambda2 = 0.0001, min_value = -5.0, max_value = 10.0, decay_in_days = None))]
     pub fn new(alpha: f32, beta: f32, lambda1: f32, lambda2: f32, min_value: f32, max_value: f32, decay_in_days: Option<f32>) -> Self {
+        // Initialize env_logger
+        env_logger::init();
+
         let ftrl = FTRL::new(alpha, beta, lambda1, lambda2);
 
         SlimMSE {
@@ -69,7 +73,14 @@ impl SlimMSE {
     fn update_weights(&mut self, user_id: i32, item_id: i32) {
         let user_items = self.interactions.get_all_items_for_user(user_id);
         let predicted = self._predict_rating(user_id, item_id, false);
-        let dloss = predicted - self.interactions.get_user_item_rating(user_id, item_id, 0.0);
+        let actual = self.interactions.get_user_item_rating(user_id, item_id, 0.0);
+        let dloss = predicted - actual;
+
+        // test if dloss is finite
+        if !dloss.is_finite() {
+            debug!("dloss is not finite for user_id: {}, item_id: {}, dloss: {}, predicted: {}, actual: {}", user_id, item_id, dloss, predicted, actual);
+            return;
+        }
 
         self.cumulative_loss += dloss.abs();
         self.steps += 1;
@@ -77,6 +88,9 @@ impl SlimMSE {
         for &ui in &user_items {
             if ui != item_id {
                 let grad = dloss * self.interactions.get_user_item_rating(user_id, ui, 0.0);
+                if grad.abs() <= 1e-6 {
+                    continue; // Skip very small gradients
+                }
                 self.ftrl.update_gradients((ui, item_id), grad);
             }
         }
@@ -202,11 +216,17 @@ impl SlimMSE {
         similar_items
     }
 
-    pub fn get_empirical_error(&self) -> f32 {
+    #[pyo3(signature = (reset = false))]
+    pub fn get_empirical_error(&mut self, reset: Option<bool>) -> f32 {
         if self.steps == 0 {
             0.0
         } else {
-            self.cumulative_loss / self.steps as f32
+            let err = self.cumulative_loss / self.steps as f32;
+            if reset.unwrap_or(false) {
+                self.cumulative_loss = 0.0;
+                self.steps = 0;
+            }
+            err
         }
     }
 
