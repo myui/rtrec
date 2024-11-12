@@ -37,7 +37,7 @@ impl UserItemInteractions {
             let elapsed_days = elapsed_secs / 86400.0;
             return value * decay_rate.powf(elapsed_days); // Apply exponential decay
         }
-        value // Return original value if no decay rate is set
+        value // Return the original value if decay rate is not set
     }
 
     pub fn add_interaction(&mut self, user_id: i32, item_id: i32, tstamp: f32, delta: f32, upsert: bool) {
