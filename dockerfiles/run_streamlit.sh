@@ -5,5 +5,8 @@ if [ -z "${OMDB_API_KEY}" ]; then
     exit 1
 fi
 
-docker run --platform=linux/amd64 -it --rm -p 8501:8501 --env OMDB_API_KEY -v /Users/myui/workspace/myui/rtrec:/home/td-user/rtrec myui/rtrec:0.1 \
-streamlit run rtrec/examples/streamlit/movielens_dashboard.py --server.port=8501 --server.address=0.0.0.0
+ARCH=$(uname -m)
+PROJECT_DIR=$(cd $(dirname $0); cd ..; pwd)
+
+docker run --platform=linux/${ARCH} -it --rm -p 8501:8501 --env OMDB_API_KEY -v ${PROJECT_DIR}:/home/td-user/rtrec myui/rtrec:${ARCH} \
+bash -c "cd rtrec && source ~/.cargo/env && ~/.rye/shims/rye sync && ~/.rye/shims/streamlit run examples/streamlit/movielens_dashboard.py --server.port=8501 --server.address=0.0.0.0"
