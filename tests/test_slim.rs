@@ -34,6 +34,27 @@ mod tests {
     }
 
     #[test]
+    fn test_fit_converges() {
+        let mut slim = SlimMSE::new(0.5, 1.0, 0.0002, 0.0001, -5.0, 10.0, None);
+
+        let user_interactions = vec![
+            (SerializableValue::Integer(1), SerializableValue::Integer(2), 1620000000.0, 4.0),
+            (SerializableValue::Integer(1), SerializableValue::Integer(3), 1620003600.0, 5.0),
+            (SerializableValue::Integer(2), SerializableValue::Integer(3), 1620003600.0, 4.0),
+        ];
+
+        for i in 0..10 {
+            slim.fit(user_interactions.clone(), Some(i > 0));
+        }
+        let err1 = slim.get_empirical_error(Some(true));
+        for _ in 0..10 {
+            slim.fit(user_interactions.clone(), Some(true));
+        }
+        let err2 = slim.get_empirical_error(Some(true));
+        assert!(err2 < err1, "Empirical error should decrease after fitting more data");
+    }
+
+    #[test]
     fn test_recommend() {
         // Initialize SlimMSE with sample hyperparameters
         let mut model = SlimMSE::new(0.1, 1.0, 0.001, 0.002, -5.0, 10.0, None);
