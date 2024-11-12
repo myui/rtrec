@@ -1,14 +1,18 @@
 import pandas as pd
-from tqdm import tqdm
+import time
 
+from tqdm import tqdm
 from typing import Dict, Generator, Iterator, Tuple, Iterable, Optional, Any, List
 
 from rtrec.utils.metrics import compute_scores
+from rtrec.models import Fast_SLIM_MSE
 
 class Recommender:
 
     def __init__(self, model):
         self.model = model
+        # Rust module do not support Python generators
+        self.use_generator = not isinstance(model, Fast_SLIM_MSE)
 
     def get_model(self):
         return self.model
@@ -23,7 +27,7 @@ class Recommender:
         self,
         train_data: pd.DataFrame,
         epochs: int = 1,
-        batch_size: int = 1000,
+        batch_size: int = 1_000,
         random_seed: Optional[int] = None
     ) -> None:
         """
@@ -36,12 +40,17 @@ class Recommender:
         """
         # Iterate over epochs
         for epoch in tqdm(range(epochs)):
+            # Shuffle the training data at the beginning of each epoch
             train_data = train_data.sample(frac=1, random_state=random_seed).reset_index(drop=True)
 
             print(f"Starting epoch {epoch + 1}/{epochs}")
-            for batch in generate_batches(train_data, batch_size):
+            start_time = time.time()
+            for batch in generate_batches(train_data, batch_size, as_generator=self.use_generator):
                 self.model.fit(batch, update_interaction=epoch > 0)
-            print(f"Empirical loss after epoch {epoch + 1}: {self.model.get_empirical_loss()}")
+            end_time = time.time()
+            print(f"Epoch {epoch + 1} completed in {end_time - start_time:.2f} seconds")
+            print(f"Throughput: {len(train_data) / (end_time - start_time):.2f} samples/s")
+            print(f"Empirical loss after epoch {epoch + 1}: {self.model.get_empirical_error()}")
 
     def predict_rating(self, user: Any, item: Any) -> float:
         """
@@ -93,9 +102,24 @@ class Recommender:
         return compute_scores(generate_evaluation_pairs(), recommend_size)
 
 @staticmethod
-def generate_batches(df: pd.DataFrame, batch_size: int = 1000) -> Iterator[Iterable[Tuple[int, int, int, float]]]:
-    """Converts a DataFrame to an iterable of mini-batches."""
+def generate_batches(df: pd.DataFrame, batch_size: int = 1_000, as_generator: bool = False) -> Iterator[Iterable[Tuple[int, int, int, float]]]:
+    """
+    Converts a DataFrame to an iterable of mini-batches.
+
+    Parameters:
+        df (pd.DataFrame): The DataFrame to convert to mini-batches.
+        batch_size (int): The number of rows per mini-batch.
+        as_generator (bool): Whether to return a generator or a list of mini-batches.
+
+    Returns:
+        Iterator[Iterable[Tuple[int, int, int, float]]]: An iterator of mini-batches.
+    """
     num_rows = len(df)
-    for start in range(0, num_rows, batch_size):
-        batch = df.iloc[start:start + batch_size]
-        yield batch.itertuples(index=False, name=None)
+    if as_generator:
+        for start in range(0, num_rows, batch_size):
+            batch = df.iloc[start:start + batch_size]
+            yield batch.itertuples(index=False, name=None)
+    else:
+        for start in range(0, num_rows, batch_size):
+            batch = df.iloc[start:start + batch_size]
+            yield list(batch.itertuples(index=False, name=None))
