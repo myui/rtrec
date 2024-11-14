@@ -73,7 +73,7 @@ impl SlimMSE {
     }
 
     fn update_weights(&mut self, user_id: i32, item_id: i32) {
-        let user_items = self.interactions.get_all_items_for_user(user_id, Some(10));
+        let user_items = self.interactions.get_user_items(user_id, Some(20));
         let predicted = self._predict_rating(user_id, item_id, false);
         let actual = self.interactions.get_user_item_rating(user_id, item_id, 0.0);
         let dloss = predicted - actual;
@@ -117,7 +117,7 @@ impl SlimMSE {
     }
 
     fn _predict_rating(&self, user_id: i32, item_id: i32, bypass_prediction: bool) -> f32 {
-        let user_items = self.interactions.get_all_items_for_user(user_id, None);
+        let user_items = self.interactions.get_user_items(user_id, None);
 
         if bypass_prediction && user_items.len() == 1 && user_items[0] == item_id {
             // Return raw rating if user has only interacted with the item

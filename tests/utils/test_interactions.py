@@ -52,14 +52,14 @@ def test_get_all_users(interactions):
     interactions.add_interaction(2, 20, tstamp, 3.0)
     assert set(interactions.get_all_users()) == {1, 2}
 
-def test_get_all_items_for_user(interactions):
+def test_get_user_items(interactions):
     tstamp = time.time()  # Use float timestamp
     interactions.add_interaction(1, 10, tstamp, 5.0)
     interactions.add_interaction(1, 20, tstamp, 3.0)
-    assert set(interactions.get_all_items_for_user(1)) == {10, 20}
+    assert set(interactions.get_user_items(1)) == {10, 20}
 
 def test_empty_user(interactions):
-    assert interactions.get_user_items(99) == interactions.empty
+    assert interactions.get_user_items(99) == []
     assert interactions.get_user_item_rating(99, 10) == 0.0
 
 def test_no_decay_rate(interactions):

@@ -33,7 +33,7 @@ class BaseRecommender(ABC):
         """
         Get a list of all items a user has interacted with.
         """
-        return self.interactions.get_all_items_for_user(user_id, n_recent=n_recent)
+        return self.interactions.get_user_items(user_id, n_recent=n_recent)
     
     def _get_rating(self, user_id: int, item_id: int) -> float:
         """

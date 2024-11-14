@@ -43,7 +43,7 @@ class SLIM_MSE(ExplicitFeedbackRecommender):
         :param item_id: Item index
         """
 
-        user_item_ids = self._get_interacted_items(user_id, n_recent=10)
+        user_item_ids = self._get_interacted_items(user_id, n_recent=20)
 
         # Compute the gradient (MSE)        
         dloss = self._predict_rating(user_id, item_id) - self._get_rating(user_id, item_id)

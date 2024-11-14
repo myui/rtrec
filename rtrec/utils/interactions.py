@@ -86,7 +86,7 @@ class UserItemInteractions:
             return default_rating  # Return default if no interaction exists
         return self._apply_decay(current, last_timestamp)
 
-    def get_user_items(self, user_id: int, n_recent: Optional[int] = None) -> dict[int, float]:
+    def get_user_items(self, user_id: int, n_recent: Optional[int] = None) -> List[int]:
         """
         Retrieves the dictionary of item IDs and their interaction counts for a given user,
         applying decay to each interaction.
@@ -96,16 +96,14 @@ class UserItemInteractions:
             n_recent (Optional[int]): Number of most recent items to consider (default is None).
 
         Returns:
-            dict[int, float]: Dictionary of item IDs and their decayed interaction values.
+            List[int]: List of item IDs that the user has interacted with.
         """
         # use top-k recent items for the user
-        if n_recent is not None:
+        if n_recent is not None and len(self.interactions) > n_recent:
             # sort by timestamp in descending order
-            sorted_items = sorted(self.interactions.get(user_id, self.empty).items(), key=lambda x: x[1][1], reverse=True)[:n_recent]
-            return {item_id: self._apply_decay(value, timestamp) for item_id, (value, timestamp) in sorted_items}
+            return [item_id for item_id, _ in sorted(self.interactions.get(user_id, self.empty).items(), key=lambda x: x[1][1], reverse=True)[:n_recent]]
         else:
-            return {item_id: self._apply_decay(value, timestamp)
-                    for item_id, (value, timestamp) in self.interactions.get(user_id, self.empty).items()}
+            return list(self.interactions.get(user_id, self.empty).keys())
 
     def get_all_item_ids(self) -> List[int]:
         """
@@ -125,19 +123,6 @@ class UserItemInteractions:
         """
         return list(self.interactions.keys())
 
-    def get_all_items_for_user(self, user_id: int, n_recent: Optional[int] = None) -> List[int]:
-        """
-        Retrieves a list of all items a user has interacted with, applying decay to each interaction.
-
-        Args:
-            user_id (int): ID of the user.
-            n_recent (Optional[int]): Number of most recent items to consider (default is None).
-
-        Returns:
-            List[int]: List of item IDs that the user has interacted with.
-        """
-        return list(self.get_user_items(user_id, n_recent=n_recent).keys())
-
     def get_all_non_interacted_items(self, user_id: int) -> List[int]:
         """
         Retrieves a list of all items a user has not interacted with.
@@ -148,7 +133,7 @@ class UserItemInteractions:
         Returns:
             List[int]: List of item IDs the user has not interacted with.
         """
-        interacted_items = set(self.get_user_items(user_id).keys())
+        interacted_items = set(self.get_user_items(user_id))
         return [item_id for item_id in self.all_item_ids if item_id not in interacted_items]
 
     def get_all_non_negative_items(self, user_id: int) -> List[int]:

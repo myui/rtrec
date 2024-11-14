@@ -73,34 +73,25 @@ impl UserItemInteractions {
         default_rating // Return default rating if no interaction exists
     }
 
-    pub fn get_user_items(&self, user_id: i32, n_recent: Option<usize>) -> HashMap<i32, f32> {
-        // Get the most recent n_recent items interacted by the user
-        // If n_recent is None, return all items interacted by the user
+    /// Return the n most recent items for the user, or all items if n_recent is None
+    pub fn get_user_items(&self, user_id: i32, n_recent: Option<usize>) -> Vec<i32> {
         if let Some(n_recent) = n_recent {
-            // Get all items, sort by timestamp, and select the n most recent ones
+            // Get all items for the user, sort by timestamp in descending order, and select the n most recent ones
             self.interactions.get(&user_id).map(|items| {
-                let mut sorted_items = items.iter().collect::<Vec<_>>();
-                // Sort by timestamp in descending order
+                let mut sorted_items: Vec<_> = items.iter().collect();
                 sorted_items.sort_by(|&(_, &(_, ts1)), &(_, &(_, ts2))| ts2.partial_cmp(&ts1).unwrap());
 
-                // Apply decay to the top n items and collect them into a HashMap
+                // Take the top n recent items and collect their keys into a Vec<i32>
                 sorted_items.iter()
                     .take(n_recent)
-                    .map(|(&item_id, &(value, timestamp))| {
-                        (item_id, self._apply_decay(value, timestamp))
-                    })
+                    .map(|(&item_id, _)| item_id)
                     .collect()
             }).unwrap_or_default()
         } else {
+            // If n_recent is None, return all item IDs for the user
             self.interactions.get(&user_id)
-            .map(|item_map| {
-                item_map.iter()
-                    .map(|(&item_id, &(value, timestamp))| {
-                        (item_id, self._apply_decay(value, timestamp))
-                    })
-                    .collect()
-            })
-            .unwrap_or_default()
+                .map(|item_map| item_map.keys().cloned().collect())
+                .unwrap_or_default()
         }
     }
 
@@ -112,12 +103,8 @@ impl UserItemInteractions {
         self.interactions.keys().cloned().collect()
     }
 
-    pub fn get_all_items_for_user(&self, user_id: i32, n_recent: Option<usize>) -> Vec<i32> {
-        self.get_user_items(user_id, n_recent).keys().cloned().collect()
-    }
-
     pub fn get_all_non_interacted_items(&self, user_id: i32) -> Vec<i32> {
-        let interacted_items: HashSet<_> = self.get_user_items(user_id, None).keys().cloned().collect();
+        let interacted_items = self.get_user_items(user_id, None).into_iter().collect::<HashSet<_>>();
         self.all_item_ids.difference(&interacted_items).cloned().collect()
     }
 
