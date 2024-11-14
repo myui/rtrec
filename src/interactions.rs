@@ -73,8 +73,26 @@ impl UserItemInteractions {
         default_rating // Return default rating if no interaction exists
     }
 
-    pub fn get_user_items(&self, user_id: i32) -> HashMap<i32, f32> {
-        self.interactions.get(&user_id)
+    pub fn get_user_items(&self, user_id: i32, n_recent: Option<usize>) -> HashMap<i32, f32> {
+        // Get the most recent n_recent items interacted by the user
+        // If n_recent is None, return all items interacted by the user
+        if let Some(n_recent) = n_recent {
+            // Get all items, sort by timestamp, and select the n most recent ones
+            self.interactions.get(&user_id).map(|items| {
+                let mut sorted_items = items.iter().collect::<Vec<_>>();
+                // Sort by timestamp in descending order
+                sorted_items.sort_by(|&(_, &(_, ts1)), &(_, &(_, ts2))| ts2.partial_cmp(&ts1).unwrap());
+
+                // Apply decay to the top n items and collect them into a HashMap
+                sorted_items.iter()
+                    .take(n_recent)
+                    .map(|(&item_id, &(value, timestamp))| {
+                        (item_id, self._apply_decay(value, timestamp))
+                    })
+                    .collect()
+            }).unwrap_or_default()
+        } else {
+            self.interactions.get(&user_id)
             .map(|item_map| {
                 item_map.iter()
                     .map(|(&item_id, &(value, timestamp))| {
@@ -83,6 +101,7 @@ impl UserItemInteractions {
                     .collect()
             })
             .unwrap_or_default()
+        }
     }
 
     pub fn get_all_item_ids(&self) -> Vec<i32> {
@@ -93,12 +112,12 @@ impl UserItemInteractions {
         self.interactions.keys().cloned().collect()
     }
 
-    pub fn get_all_items_for_user(&self, user_id: i32) -> Vec<i32> {
-        self.get_user_items(user_id).keys().cloned().collect()
+    pub fn get_all_items_for_user(&self, user_id: i32, n_recent: Option<usize>) -> Vec<i32> {
+        self.get_user_items(user_id, n_recent).keys().cloned().collect()
     }
 
     pub fn get_all_non_interacted_items(&self, user_id: i32) -> Vec<i32> {
-        let interacted_items: HashSet<_> = self.get_user_items(user_id).keys().cloned().collect();
+        let interacted_items: HashSet<_> = self.get_user_items(user_id, None).keys().cloned().collect();
         self.all_item_ids.difference(&interacted_items).cloned().collect()
     }
 

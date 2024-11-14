@@ -73,7 +73,7 @@ impl SlimMSE {
     }
 
     fn update_weights(&mut self, user_id: i32, item_id: i32) {
-        let user_items = self.interactions.get_all_items_for_user(user_id);
+        let user_items = self.interactions.get_all_items_for_user(user_id, Some(10));
         let predicted = self._predict_rating(user_id, item_id, false);
         let actual = self.interactions.get_user_item_rating(user_id, item_id, 0.0);
         let dloss = predicted - actual;
@@ -87,6 +87,12 @@ impl SlimMSE {
         self.cumulative_loss += dloss.abs();
         self.steps += 1;
 
+        // update item similarity matrix
+        // Note: Change applied to the original SLIM algorithm;only update the similarity matrix 
+        // where the user has (recently) interacted with the item.
+        //
+        // No interaction implies no update; grad = dloss * rating = 0
+        // see discussions in https://github.com/MaurizioFD/RecSys_Course_AT_PoliMi/issues/22
         for &ui in &user_items {
             if ui != item_id {
                 let grad = dloss * self.interactions.get_user_item_rating(user_id, ui, 0.0);
@@ -111,7 +117,7 @@ impl SlimMSE {
     }
 
     fn _predict_rating(&self, user_id: i32, item_id: i32, bypass_prediction: bool) -> f32 {
-        let user_items = self.interactions.get_all_items_for_user(user_id);
+        let user_items = self.interactions.get_all_items_for_user(user_id, None);
 
         if bypass_prediction && user_items.len() == 1 && user_items[0] == item_id {
             // Return raw rating if user has only interacted with the item

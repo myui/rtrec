@@ -35,13 +35,22 @@ mod tests {
         let mut interactions = UserItemInteractions::new(-5.0, 10.0, None);
         let current_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs_f32();
 
-        interactions.add_interaction(1, 100, current_time, 3.0, false);
-        interactions.add_interaction(1, 101, current_time, 2.0, false);
+        interactions.add_interaction(1, 100, current_time + 1.0, 3.0, false);
+        interactions.add_interaction(1, 101, current_time + 2.0, 2.0, false);
 
-        let items = interactions.get_all_items_for_user(1);
+        let items = interactions.get_all_items_for_user(1, None);
         assert_eq!(items.len(), 2);
         assert!(items.contains(&100));
         assert!(items.contains(&101));
+
+        let items = interactions.get_all_items_for_user(1, Some(10));
+        assert_eq!(items.len(), 2);
+        assert!(items.contains(&100));
+        assert!(items.contains(&101));
+
+        let items = interactions.get_all_items_for_user(1, Some(1));
+        assert_eq!(items.len(), 1);
+        assert!(items.contains(&100));
     }
 
     #[test]
