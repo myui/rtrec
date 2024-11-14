@@ -23,7 +23,7 @@ def test_fit(slim):
     slim.fit(interactions)
 
     # Check empirical loss is greater than 0 after fitting
-    assert slim.get_empirical_loss() > 0.0
+    assert slim.get_empirical_error() > 0.0
 
 def test_fit_generator(slim):
     def user_interactions_generator():
@@ -37,7 +37,7 @@ def test_fit_generator(slim):
     slim.fit(interactions)
 
     # Check empirical loss is greater than 0 after fitting
-    assert slim.get_empirical_loss() > 0.0
+    assert slim.get_empirical_error() > 0.0
 
 def test_predict_rating(slim):
     # Add interactions with timestamps
@@ -73,9 +73,9 @@ def test_recommend(slim):
     # Ensure the recommendations are a list of integers
     assert all(isinstance(item_id, int) for item_id in recommendations)
 
-def test_get_empirical_loss(slim):
+def test_get_empirical_error(slim):
     # Before any interaction, empirical loss should be zero
-    assert slim.get_empirical_loss() == 0.0
+    assert slim.get_empirical_error() == 0.0
 
     # Add interactions with timestamps
     current_time = time.time()
@@ -86,7 +86,7 @@ def test_get_empirical_loss(slim):
     slim.fit(interactions)
 
     # Check empirical loss is greater than 0
-    assert slim.get_empirical_loss() > 0.0
+    assert slim.get_empirical_error() > 0.0
 
 def test_predict_mean_at_single_interaction_close_to_zero(slim):
     np.random.seed(42)  # For reproducibility

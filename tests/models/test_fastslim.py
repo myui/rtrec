@@ -25,7 +25,7 @@ def test_fit(slim):
     slim.fit(interactions)
 
     # Check empirical loss is greater than 0 after fitting
-    assert slim.get_empirical_loss() > 0.0
+    assert slim.get_empirical_error() > 0.0
 
 def test_fit_generator(slim):
     def user_interactions_generator():
@@ -39,7 +39,7 @@ def test_fit_generator(slim):
     slim.fit(list(interactions))
 
     # Check empirical loss is greater than 0 after fitting
-    assert slim.get_empirical_loss() > 0.0
+    assert slim.get_empirical_error() > 0.0
 
 def test_predict_rating(slim):
     # Add interactions with timestamps
@@ -175,9 +175,9 @@ def test_similar_items(slim):
     # assert similar item for item 2
     assert similar_items[1] == [3, 1]
 
-def test_get_empirical_loss(slim):
+def test_get_empirical_error(slim):
     # Before any interaction, empirical loss should be zero
-    assert slim.get_empirical_loss() == 0.0
+    assert slim.get_empirical_error() == 0.0
 
     # Add interactions with timestamps
     current_time = time.time()
@@ -188,7 +188,7 @@ def test_get_empirical_loss(slim):
     slim.fit(interactions)
 
     # Check empirical loss is greater than 0
-    assert slim.get_empirical_loss() > 0.0
+    assert slim.get_empirical_error() > 0.0
 
 @pytest.fixture
 def sample_model():
@@ -229,7 +229,7 @@ def test_save_and_load(sample_model):
 
         # Verify that the loaded model is equal to the original model
         # Note: This assumes that the __eq__ method is implemented correctly in SlimMSE
-        assert sample_model.get_empirical_loss() == loaded_model.get_empirical_loss(), \
+        assert sample_model.get_empirical_error() == loaded_model.get_empirical_error(), \
             "Empirical loss of the loaded model does not match the original model."
         assert sample_model.recommend(1, 2) == loaded_model.recommend(1, 2), \
             "Recommendations of the loaded model do not match the original model."
@@ -285,7 +285,7 @@ def test_empty_model_load():
         loaded_model = SlimMSE.load(file_path)
 
         # Verify that the loaded empty model is equal to the original empty model
-        assert empty_model.get_empirical_loss() == loaded_model.get_empirical_loss(), \
+        assert empty_model.get_empirical_error() == loaded_model.get_empirical_error(), \
             "Empirical loss of the empty model does not match the original empty model."
     finally:
         # Clean up the temporary file after the test
@@ -301,7 +301,7 @@ def test_save_and_load_local(sample_model):
         sample_model.save(f"file://{file_path}")
         loaded_model = SlimMSE.load(f"file://{file_path}")
 
-        assert sample_model.get_empirical_loss() == loaded_model.get_empirical_loss()
+        assert sample_model.get_empirical_error() == loaded_model.get_empirical_error()
         assert sample_model.recommend(1, 2) == loaded_model.recommend(1, 2)
     finally:
         if os.path.exists(file_path):
