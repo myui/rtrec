@@ -2,7 +2,7 @@ import logging
 
 from math import inf
 from abc import ABC, abstractmethod
-from typing import Any, List, Tuple, Iterable
+from typing import Any, List, Optional, Tuple, Iterable
 
 from rtrec.utils.identifiers import Identifier
 from rtrec.utils.interactions import UserItemInteractions
@@ -29,11 +29,11 @@ class BaseRecommender(ABC):
         """
         raise NotImplementedError("The get_empirical_loss method must be implemented by the subclass.")
 
-    def _get_interacted_items(self, user_id: int) -> List[int]:
+    def _get_interacted_items(self, user_id: int, n_recent: Optional[int] = None) -> List[int]:
         """
         Get a list of all items a user has interacted with.
         """
-        return self.interactions.get_all_items_for_user(user_id)
+        return self.interactions.get_all_items_for_user(user_id, n_recent=n_recent)
     
     def _get_rating(self, user_id: int, item_id: int) -> float:
         """

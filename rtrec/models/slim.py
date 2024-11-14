@@ -43,7 +43,7 @@ class SLIM_MSE(ExplicitFeedbackRecommender):
         :param item_id: Item index
         """
 
-        user_item_ids = self._get_interacted_items(user_id)
+        user_item_ids = self._get_interacted_items(user_id, n_recent=10)
 
         # Compute the gradient (MSE)        
         dloss = self._predict_rating(user_id, item_id) - self._get_rating(user_id, item_id)
@@ -51,7 +51,9 @@ class SLIM_MSE(ExplicitFeedbackRecommender):
         self.steps += 1
 
         # update item similarity matrix
-        # Note: we only update the similarity matrix where the user has interacted with the item
+        # Note: Change applied to the original SLIM algorithm;only update the similarity matrix
+        # where the user has (recently) interacted with the item.
+        #
         # No interaction implies no update; grad = dloss * rating = 0
         # see discussions in https://github.com/MaurizioFD/RecSys_Course_AT_PoliMi/issues/22
         for user_item_id in user_item_ids:

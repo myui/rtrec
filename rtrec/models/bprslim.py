@@ -63,7 +63,7 @@ class BPR_SLIM(ImplicitFeedbackRecommender):
 
         self.eta.update()
     
-        user_items = self._get_interacted_items(user_id)
+        user_items = self._get_interacted_items(user_id, n_recent=10)
 
         grad = self._bpr_loss(user_items, positive_item_id, negative_item_id)
         self.cumulative_loss += abs(grad)
