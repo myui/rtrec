@@ -12,6 +12,19 @@ def slim():
     # Create a SlimMse instance with example hyperparameters
     return SlimMSE(alpha=0.1, beta=1.0, lambda1=0.0002, lambda2=0.0001, min_value=-np.inf, max_value=np.inf)
 
+def test_bulk_identify_valid(slim):
+    # Sample user-item interactions
+    user_item_pairs = [('user1', 'item1'), ('user2', 'item1'), ('user1', 'item2')]
+
+    # Call the bulk_identify function
+    identified_pairs = slim.bulk_identify(user_item_pairs)
+
+    # Expected output (assuming user1 -> 0, user2 -> 1, item1 -> 0, item2 -> 1)
+    expected_output = [(0, 0), (1, 0), (0, 1)]
+
+    # Assert the output is as expected
+    assert identified_pairs == expected_output, f"Expected {expected_output}, but got {identified_pairs}"
+
 def test_fit(slim):
     # Sample user interactions for fitting with timestamps
     current_time = time.time()

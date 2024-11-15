@@ -61,6 +61,28 @@ impl SlimMSE {
         }
     }
 
+    pub fn fit_identified(&mut self, user_interactions: Vec<(i32, i32, f32, f32)>, update_interaction: Option<bool>) {
+        for (user_id, item_id, tstamp, rating) in user_interactions {
+            if let Err(e) = (|| -> Result<(), Box<dyn std::error::Error>> {
+                self.interactions.add_interaction(user_id, item_id, tstamp, rating, update_interaction.unwrap_or(false));
+                self.update_weights(user_id, item_id);
+                Ok(())
+            })() {
+                warn!("Failed to fit interaction: {}", e);
+            }
+        }
+    }
+
+    /// Bulk identify users and items from the provided interactions.
+    #[inline]
+    pub fn bulk_identify(&mut self, user_interactions: Vec<(SerializableValue, SerializableValue)>) -> Vec<(i32, i32)> {
+        user_interactions.into_iter().map(|(user, item)| {
+            let user_id = self.identify_user(user);
+            let item_id = self.identify_item(item);
+            (user_id, item_id)
+        }).collect()
+    }
+
     #[inline(always)]
     fn identify_user(&mut self, user: SerializableValue) -> i32 {
         self.user_ids.identify(user).unwrap_or_else(|_| panic!("Failed to identify user")) as i32
