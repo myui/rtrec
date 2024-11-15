@@ -28,6 +28,7 @@ class Recommender:
         train_data: pd.DataFrame,
         epochs: int = 1,
         batch_size: int = 1_000,
+        bulk_identify: bool = False,
         random_seed: Optional[int] = None
     ) -> None:
         """
@@ -37,13 +38,15 @@ class Recommender:
             train_data (pd.DataFrame): The DataFrame containing interactions with columns (user, item, tstamp, rating).
             epochs (int): Number of epochs (iterations) over the dataset. Defaults to 1.
             batch_size (int): The number of interactions per mini-batch. Defaults to 1000.
+            bulk_identify (bool): Whether to bulk identify user-item pairs before fitting. Defaults to False.
+            random_seed (Optional[int]): Random seed for reproducibility. Defaults to None.
         """
         train_data = train_data[["user", "item", "tstamp", "rating"]]
 
-        user_item_pairs = train_data[['user', 'item']].apply(tuple, axis=1).tolist()
-        identified_pairs = self.model.bulk_identify(user_item_pairs)
-        train_data[['user', 'item']] = pd.DataFrame(identified_pairs, index=train_data.index)
-        del user_item_pairs, identified_pairs
+        if bulk_identify:
+            user_item_pairs = train_data[['user', 'item']].apply(tuple, axis=1).tolist()
+            identified_pairs = self.model.bulk_identify(user_item_pairs)
+            train_data[['user', 'item']] = pd.DataFrame(identified_pairs, index=train_data.index)
 
         # Iterate over epochs
         for epoch in tqdm(range(epochs)):
@@ -53,7 +56,10 @@ class Recommender:
             print(f"Starting epoch {epoch + 1}/{epochs}")
             start_time = time.time()
             for batch in generate_batches(train_data, batch_size, as_generator=self.use_generator):
-                self.model.fit_identified(batch, update_interaction=epoch > 0)
+                if bulk_identify:
+                    self.model.fit_identified(batch, update_interaction=epoch > 0)
+                else:
+                    self.model.fit(batch)
             end_time = time.time()
             print(f"Epoch {epoch + 1} completed in {end_time - start_time:.2f} seconds")
             print(f"Throughput: {len(train_data) / (end_time - start_time):.2f} samples/sec")
