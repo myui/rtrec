@@ -42,6 +42,9 @@ dev-dependencies = [
 python-source = "."
 module-name = "rtrec._lowlevel"
 
+# This ensures that Maturin uses the correct Cargo profile for releases
+cargo-extra-args = ["--release"]
+
 # "extension-module" tells pyo3 we want to build an extension module (skips linking against libpython.so)
 features = ["pyo3/extension-module"]
 
