@@ -48,7 +48,7 @@ class Recommender:
         # Iterate over epochs
         for epoch in tqdm(range(epochs)):
             # Shuffle the training data at the beginning of each epoch
-            train_data = train_data.sample(frac=1, random_state=random_seed + epoch).reset_index(drop=True)
+            train_data = train_data.sample(frac=1, random_state=random_seed).reset_index(drop=True)
 
             print(f"Starting epoch {epoch + 1}/{epochs}")
             start_time = time.time()
