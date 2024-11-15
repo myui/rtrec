@@ -39,6 +39,12 @@ class Recommender:
             batch_size (int): The number of interactions per mini-batch. Defaults to 1000.
         """
         train_data = train_data[["user", "item", "tstamp", "rating"]]
+
+        user_item_pairs = train_data[['user', 'item']].apply(tuple, axis='column').tolist()
+        identified_pairs = self.model.bulk_identify(user_item_pairs)
+        train_data[['user', 'item']] = pd.DataFrame(identified_pairs, index=train_data.index)
+        del user_item_pairs, identified_pairs
+
         # Iterate over epochs
         for epoch in tqdm(range(epochs)):
             # Shuffle the training data at the beginning of each epoch
@@ -47,7 +53,7 @@ class Recommender:
             print(f"Starting epoch {epoch + 1}/{epochs}")
             start_time = time.time()
             for batch in generate_batches(train_data, batch_size, as_generator=self.use_generator):
-                self.model.fit(batch, update_interaction=epoch > 0)
+                self.model.fit_identified(batch, update_interaction=epoch > 0)
             end_time = time.time()
             print(f"Epoch {epoch + 1} completed in {end_time - start_time:.2f} seconds")
             print(f"Throughput: {len(train_data) / (end_time - start_time):.2f} samples/sec")
