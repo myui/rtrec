@@ -2,7 +2,6 @@ use pyo3::prelude::*;
 
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
-use std::f32::NEG_INFINITY;
 use serde::{Serialize, Deserialize};
 use log::{debug, warn};
 use env_logger;
@@ -49,13 +48,13 @@ impl SlimMSE {
 
     pub fn fit(&mut self, user_interactions: Vec<(SerializableValue, SerializableValue, f32, f32)>, update_interaction: Option<bool>) {
         for (user, item, tstamp, rating) in user_interactions {
-            if let Err(e) = (|| -> Result<(), Box<dyn std::error::Error>> {
+            if let Err(e) = {
                 let user_id = self.identify_user(user);
                 let item_id = self.identify_item(item);
                 self.interactions.add_interaction(user_id, item_id, tstamp, rating, update_interaction.unwrap_or(false));
                 self.update_weights(user_id, item_id);
-                Ok(())
-            })() {
+                Ok::<(), Box<dyn std::error::Error>>(())
+            } {
                 warn!("Failed to fit interaction: {}", e);
             }
         }
@@ -63,11 +62,11 @@ impl SlimMSE {
 
     pub fn fit_identified(&mut self, user_interactions: Vec<(i32, i32, f32, f32)>, update_interaction: Option<bool>) {
         for (user_id, item_id, tstamp, rating) in user_interactions {
-            if let Err(e) = (|| -> Result<(), Box<dyn std::error::Error>> {
+            if let Err(e) = {
                 self.interactions.add_interaction(user_id, item_id, tstamp, rating, update_interaction.unwrap_or(false));
                 self.update_weights(user_id, item_id);
-                Ok(())
-            })() {
+                Ok::<(), Box<dyn std::error::Error>>(())
+            } {
                 warn!("Failed to fit interaction: {}", e);
             }
         }
@@ -85,12 +84,12 @@ impl SlimMSE {
 
     #[inline(always)]
     fn identify_user(&mut self, user: SerializableValue) -> i32 {
-        self.user_ids.identify(user).unwrap_or_else(|_| panic!("Failed to identify user")) as i32
+        self.user_ids.identify(user).unwrap_or_else(|_| panic!("Failed to identify user"))
     }
 
     #[inline(always)]
     fn identify_item(&mut self, item: SerializableValue) -> i32 {
-        self.item_ids.identify(item).unwrap_or_else(|_| panic!("Failed to identify item")) as i32
+        self.item_ids.identify(item).unwrap_or_else(|_| panic!("Failed to identify item"))
     }
 
     fn update_weights(&mut self, user_id: i32, item_id: i32) {
@@ -186,7 +185,7 @@ impl SlimMSE {
         scores.par_sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
         // Take the top-k items and return their them
-        scores.iter().take(top_k).map(|&(ref item, _)| item.clone()).collect()
+        scores.iter().take(top_k).map(|(item, _)| item.clone()).collect()
     }
 
     pub fn similar_items(
@@ -219,7 +218,7 @@ impl SlimMSE {
                                 // Retrieve similarity score from weights or use NEG_INFINITY as default
                                 let similarity_score: f32 =
                                     *weights.get(&(target_item_id, query_item_id))
-                                    .unwrap_or(&NEG_INFINITY);
+                                    .unwrap_or(&f32::NEG_INFINITY);
 
                                 Some((target_item_id, similarity_score))
                             } else {
@@ -291,8 +290,8 @@ fn save_to_file<T>(file_path: &str, object: &T) -> PyResult<()>
 where
     T: Serialize,
 {
-    let path = if file_path.starts_with("file://") {
-        &file_path[7..] // Remove "file://" prefix
+    let path = if let Some(stripped) = file_path.strip_prefix("file://") {
+        stripped
     } else {
         file_path // Use the path as is
     };
@@ -313,8 +312,8 @@ fn load_from_file<T>(file_path: &str) -> PyResult<T>
 where
     T: for<'de> Deserialize<'de>,
 {
-    let path = if file_path.starts_with("file://") {
-        &file_path[7..] // Remove "file://" prefix
+    let path = if let Some(stripped) = file_path.strip_prefix("file://") {
+        stripped
     } else {
         file_path // Use the path as is
     };

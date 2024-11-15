@@ -48,10 +48,8 @@ impl SerializableValue {
     pub fn from_any(value: &dyn Any) -> Option<Self> {
         if let Some(v) = value.downcast_ref::<i32>() {
             Some(SerializableValue::Integer(*v))
-        } else if let Some(v) = value.downcast_ref::<String>() {
-            Some(SerializableValue::Text(v.clone()))
         } else {
-            None // Unsupported type
+            value.downcast_ref::<String>().map(|v| SerializableValue::Text(v.clone()))
         }
     }
 
@@ -179,7 +177,7 @@ impl Identifier {
         default: Option<SerializableValue>,
     ) -> SerializableValue {
         if self.pass_through == Some(true) {
-            return SerializableValue::Integer(obj_id as i32);
+            return SerializableValue::Integer(obj_id);
         }
 
         self.id_to_obj.get(obj_id as usize).cloned().unwrap_or_else(|| {
