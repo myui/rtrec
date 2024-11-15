@@ -40,7 +40,7 @@ class Recommender:
         """
         train_data = train_data[["user", "item", "tstamp", "rating"]]
 
-        user_item_pairs = train_data[['user', 'item']].apply(tuple, axis='column').tolist()
+        user_item_pairs = train_data[['user', 'item']].apply(tuple, axis=1).tolist()
         identified_pairs = self.model.bulk_identify(user_item_pairs)
         train_data[['user', 'item']] = pd.DataFrame(identified_pairs, index=train_data.index)
         del user_item_pairs, identified_pairs
@@ -48,7 +48,7 @@ class Recommender:
         # Iterate over epochs
         for epoch in tqdm(range(epochs)):
             # Shuffle the training data at the beginning of each epoch
-            train_data = train_data.sample(frac=1, random_state=random_seed).reset_index(drop=True)
+            train_data = train_data.sample(frac=1, random_state=random_seed + epoch).reset_index(drop=True)
 
             print(f"Starting epoch {epoch + 1}/{epochs}")
             start_time = time.time()
