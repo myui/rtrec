@@ -30,6 +30,7 @@ impl UserItemInteractions {
     /// Apply exponential decay to the value based on the elapsed time since the last interaction.
     /// Half-life decay is used to calculate the decay rate.
     /// Reference: https://dl.acm.org/doi/10.1145/1099554.1099689
+    #[inline]
     fn _apply_decay(&self, value: f32, last_timestamp: f32) -> f32 {
         if let Some(decay_rate) = self.decay_rate {
             // Calculate elapsed time since the last interaction
@@ -41,29 +42,21 @@ impl UserItemInteractions {
     }
 
     pub fn add_interaction(&mut self, user_id: i32, item_id: i32, tstamp: f32, delta: f32, upsert: bool) {
-        if upsert {
-            self.interactions
-                .entry(user_id)
-                .or_insert_with(HashMap::new)
-                .insert(item_id, (delta, tstamp)); // Update the timestamp
+        let new_value = if upsert {
+            delta
         } else {
             // Get the current rating for the user-item pair, applying decay if necessary
             let current_value = self.get_user_item_rating(user_id, item_id, 0.0);
-
             // Calculate the new value by adding the delta
-            let new_value = (current_value + delta).clamp(self.min_value, self.max_value);
-
-            // Store the updated value with the current timestamp
-            self.interactions
-                .entry(user_id)
-                .or_insert_with(HashMap::new)
-                .insert(item_id, (new_value, tstamp)); // Update the timestamp
-        }
+            (current_value + delta).clamp(self.min_value, self.max_value)
+        };
+        self.interactions.entry(user_id).or_default().insert(item_id, (new_value, tstamp));
 
         // Track all unique item IDs
         self.all_item_ids.insert(item_id);
     }
 
+    #[inline]
     pub fn get_user_item_rating(&self, user_id: i32, item_id: i32, default_rating: f32) -> f32 {
         if let Some(item_map) = self.interactions.get(&user_id) {
             if let Some(&(current_value, last_timestamp)) = item_map.get(&item_id) {
@@ -75,39 +68,36 @@ impl UserItemInteractions {
 
     /// Return the n most recent items for the user, or all items if n_recent is None
     pub fn get_user_items(&self, user_id: i32, n_recent: Option<usize>) -> Vec<i32> {
-        if let Some(n_recent) = n_recent {
-            // Get all items for the user, sort by timestamp in descending order, and select the n most recent ones
-            self.interactions.get(&user_id).map(|items| {
-                let mut sorted_items: Vec<_> = items.iter().collect();
-                sorted_items.sort_by(|&(_, &(_, ts1)), &(_, &(_, ts2))| ts2.partial_cmp(&ts1).unwrap());
-
-                // Take the top n recent items and collect their keys into a Vec<i32>
-                sorted_items.iter()
-                    .take(n_recent)
-                    .map(|(&item_id, _)| item_id)
-                    .collect()
-            }).unwrap_or_default()
+        if let Some(item_map) = self.interactions.get(&user_id) {
+            if let Some(n) = n_recent {
+                let mut items: Vec<_> = item_map.iter().collect();
+                items.sort_unstable_by(|&(_, &(_, ts1)), &(_, &(_, ts2))| ts2.partial_cmp(&ts1).unwrap());
+                items.iter().take(n).map(|(&item_id, _)| item_id).collect()
+            } else {
+                item_map.iter().map(|(&item_id, _)| item_id).collect()
+            }
         } else {
-            // If n_recent is None, return all item IDs for the user
-            self.interactions.get(&user_id)
-                .map(|item_map| item_map.keys().cloned().collect())
-                .unwrap_or_default()
+            Vec::new()
         }
     }
 
+    #[inline]
     pub fn get_all_item_ids(&self) -> Vec<i32> {
         self.all_item_ids.iter().cloned().collect()
     }
 
+    #[inline]
     pub fn get_all_users(&self) -> Vec<i32> {
         self.interactions.keys().cloned().collect()
     }
 
+    #[inline]
     pub fn get_all_non_interacted_items(&self, user_id: i32) -> Vec<i32> {
-        let interacted_items = self.get_user_items(user_id, None).into_iter().collect::<HashSet<_>>();
+        let interacted_items: HashSet<i32> = self.get_user_items(user_id, None).into_iter().collect();
         self.all_item_ids.difference(&interacted_items).cloned().collect()
     }
 
+    #[inline]
     pub fn get_all_non_negative_items(&self, user_id: i32) -> Vec<i32> {
         self.all_item_ids.iter()
             .filter(|&&item_id| self.get_user_item_rating(user_id, item_id, 0.0) >= 0.0)

@@ -33,10 +33,7 @@ impl SlimMSE {
     #[new]
     #[pyo3(signature = (alpha = 0.5, beta = 1.0, lambda1 = 0.0002, lambda2 = 0.0001, min_value = -5.0, max_value = 10.0, decay_in_days = None))]
     pub fn new(alpha: f32, beta: f32, lambda1: f32, lambda2: f32, min_value: f32, max_value: f32, decay_in_days: Option<f32>) -> Self {
-        // Initialize env_logger
-        if let Err(e) = env_logger::try_init() {
-            eprintln!("Failed to initialize logger: {}", e);
-        }
+        env_logger::try_init().ok();
 
         let ftrl = FTRL::new(alpha, beta, lambda1, lambda2);
 
@@ -64,10 +61,12 @@ impl SlimMSE {
         }
     }
 
+    #[inline(always)]
     fn identify_user(&mut self, user: SerializableValue) -> i32 {
         self.user_ids.identify(user).unwrap_or_else(|_| panic!("Failed to identify user")) as i32
     }
 
+    #[inline(always)]
     fn identify_item(&mut self, item: SerializableValue) -> i32 {
         self.item_ids.identify(item).unwrap_or_else(|_| panic!("Failed to identify item")) as i32
     }
@@ -162,7 +161,7 @@ impl SlimMSE {
             .collect();
 
         // Sort items by score in descending order
-        scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        scores.par_sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
 
         // Take the top-k items and return their them
         scores.iter().take(top_k).map(|&(ref item, _)| item.clone()).collect()
@@ -208,7 +207,7 @@ impl SlimMSE {
                         .collect();
 
                     // Sort by similarity score in descending order and keep the top_k items
-                    item_scores.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+                    item_scores.par_sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
                     item_scores
                         .iter()
                         .take(top_k)
