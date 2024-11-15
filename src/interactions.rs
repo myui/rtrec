@@ -1,6 +1,6 @@
-use std::collections::{HashMap, HashSet};
 use std::time::SystemTime;
 use std::f32::consts::E;
+use hashbrown::{HashMap, HashSet};
 use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

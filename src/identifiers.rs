@@ -1,8 +1,9 @@
-use serde::{Serialize, Deserialize};
 use std::any::Any;
-use std::collections::HashMap;
 use std::error::Error;
 use std::fmt;
+
+use hashbrown::HashMap;
+use serde::{Serialize, Deserialize};
 
 use pyo3::types::PyString;
 use pyo3::{FromPyObject, PyAny, PyObject, PyResult, Python};

@@ -1,11 +1,11 @@
-use pyo3::prelude::*;
-
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
-use serde::{Serialize, Deserialize};
+
+use pyo3::prelude::*;
+
 use log::{debug, warn};
 use env_logger;
-
+use serde::{Serialize, Deserialize};
 use rusoto_core::Region;
 use rusoto_s3::{PutObjectRequest, GetObjectRequest, S3Client, S3};
 use tokio::runtime::Runtime;

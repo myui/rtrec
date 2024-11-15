@@ -1,5 +1,5 @@
 use serde::{Serialize, Deserialize};
-use std::collections::HashMap;
+use hashbrown::HashMap;
 
 /// FTRL (Follow The Regularized Leader) optimizer implementation.
 /// This is a variant of FTRL-Proximal algorithm for online learning.
