@@ -5,6 +5,7 @@ ENV DEBCONF_NOWARNINGS=yes
 # Enable fault handlers for the SIGSEGV, SIGFPE, SIGABRT, SIGBUS, and SIGILL signals.
 # https://docs.python.org/3/library/faulthandler.html
 ENV PYTHONFAULTHANDLER=1
+ENV NODE_MAJOR=20
 
 RUN apt-get -y update \
  && apt-get install -y git sudo wget curl \
@@ -12,6 +13,7 @@ RUN apt-get -y update \
  && apt-get install -y libopenblas-dev \
  && apt-get install -y pkg-config libssl-dev \
  && apt-get install -y libffi-dev \
+ && curl -fsSL https://deb.nodesource.com/setup_${NODE_MAJOR}.x | bash - && apt-get install -y nodejs \
  && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd -g 65432 wheel \
@@ -30,6 +32,9 @@ RUN curl -sSf https://rye.astral.sh/get | RYE_NO_AUTO_INSTALL=1 RYE_INSTALL_OPTI
  && rye install maturin \
  && rye install streamlit && rye install matplotlib \
  && rye install jupyter && rye install jupyterlab && rye install ipywidgets
+
+# Activate ipywidgets extension
+RUN $HOME/.rye/shims/jupyter-labextension install @jupyter-widgets/jupyterlab-manager
 
 #RUN mkdir -p /home/td-user/build
 #COPY --chown=td-user:wheel README.md pyproject.toml Cargo.toml requirements.lock requirements-dev.lock .python-version /home/td-user/build/
