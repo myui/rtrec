@@ -112,7 +112,7 @@ impl SlimMSE {
             // loop over user interactions and fit the model
             if epoch == 0 {
                 for (user_id, item_id, tstamp, rating) in &user_interactions {
-                    self.interactions.add_interaction(*user_id, *item_id, *tstamp, *rating, true);
+                    self.interactions.add_interaction(*user_id, *item_id, *tstamp, *rating, epoch > 0);
                     self.update_weights(*user_id, *item_id);
                 }
             } else {
