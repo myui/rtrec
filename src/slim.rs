@@ -1,8 +1,7 @@
 use std::fs::File;
-use std::io::{BufReader, BufWriter};
+use std::io::{Result, BufReader, BufWriter};
 use std::time::Instant;
 
-use kdam::tqdm;
 use itertools::izip;
 use polars::frame::DataFrame;
 use polars::prelude::*;
@@ -20,6 +19,7 @@ use rusoto_s3::{PutObjectRequest, GetObjectRequest, S3Client, S3};
 use tokio::runtime::Runtime;
 use tokio::io::AsyncReadExt;
 use rayon::prelude::*;
+use kdam::{tqdm, BarExt};
 
 use crate::ftrl::FTRL;
 use crate::interactions::UserItemInteractions;
@@ -70,7 +70,7 @@ impl SlimMSE {
     }
 
     #[pyo3(signature = (pydf, epochs = 1, random_seed = None))]
-    pub fn bulk_fit(&mut self, pydf: PyDataFrame, epochs: usize, random_seed: Option<u64>) {
+    pub fn bulk_fit(&mut self, pydf: PyDataFrame, epochs: usize, random_seed: Option<u64>) -> Result<()> {
         let df: DataFrame = pydf.into();
         let row_count = df.height();
 
@@ -105,7 +105,9 @@ impl SlimMSE {
             None => StdRng::from_entropy(),
         };
 
-        for epoch in tqdm!(0..epochs) {
+        let mut pb = tqdm!(total=epochs);
+        pb.refresh()?;
+        for epoch in 0..epochs {
             let start_time = Instant::now();
             user_interactions.shuffle(&mut rng);
 
@@ -127,7 +129,10 @@ impl SlimMSE {
             info!("Throughput: {:.2} samples/sec", row_count as f64 / duration);
             let empirical_loss = self.get_empirical_error(Some(true));
             info!("Empirical loss after epoch {}: {:.6}", epoch + 1, empirical_loss);
+            pb.update(1)?;
+            pb.refresh()?;
         }
+        Ok(())
     }
 
     pub fn fit_identified(&mut self, user_interactions: Vec<(i32, i32, f32, f32)>, add_interaction: Option<bool>, update_interaction: Option<bool>) {
