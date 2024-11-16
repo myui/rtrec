@@ -161,7 +161,7 @@ mod tests {
         // Convert DataFrame to PyDataFrame
         let py_df = PyDataFrame(df);
         // Call bulk_fit with 2 epochs
-        slim.bulk_fit(py_df, 2, Some(43));
+        slim.bulk_fit(py_df, 2, Some(43)).expect("bulk_fit failed");
 
         assert!(slim.get_empirical_error(Some(false)) < 0.1);
     }
