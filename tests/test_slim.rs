@@ -1,24 +1,32 @@
 #[cfg(test)]
 mod tests {
 
+    use pyo3_polars::PyDataFrame;
     use rtrec::{identifiers::SerializableValue, slim::SlimMSE};
     use rand::prelude::SliceRandom;
     use rand::SeedableRng;
     use rand::rngs::StdRng;
     use approx::assert_relative_eq;
+    use polars::prelude::*;
 
     #[test]
     fn test_serializable_value_conversion() {
         // Test Integer conversion
-        let int_value: Option<SerializableValue> = SerializableValue::from_any(&42);
-        assert_eq!(SerializableValue::as_any(&int_value.unwrap()).downcast_ref::<i32>(), Some(&42));
+        let int_value: SerializableValue = SerializableValue::from_any(&42);
+        assert_eq!(SerializableValue::as_any(&int_value).downcast_ref::<i32>(), Some(&42));
 
         // Test String conversion
         let string_value = SerializableValue::from_any(&"Hello".to_string());
-        assert_eq!(SerializableValue::as_any(&string_value.unwrap()).downcast_ref::<String>(), Some(&"Hello".to_string()));
+        assert_eq!(SerializableValue::as_any(&string_value).downcast_ref::<String>(), Some(&"Hello".to_string()));
+    }
 
-        let floay_value = SerializableValue::from_any(&3.14); // Float is not supported
-        assert!(floay_value.is_none());
+    #[test]
+    #[should_panic(expected = "Unsupported type for SerializableValue")]
+    fn test_from_any_with_unsupported_type() {
+        let value: f64 = 2.13;
+
+        // This should panic because f64 is not supported
+        SerializableValue::from_any(&value);
     }
 
     #[test]
@@ -135,6 +143,27 @@ mod tests {
         // Note: Adjust item IDs if expected results differ in Rust implementation
         assert_eq!(similar_items[0], vec![SerializableValue::Integer(3), SerializableValue::Integer(2)], "Expected similar items for item 1 are 3 and 2");
         assert_eq!(similar_items[1], vec![SerializableValue::Integer(3), SerializableValue::Integer(1)], "Expected similar items for item 2 are 3 and 1");
+    }
+
+    #[test]
+    fn test_bulk_fit() {
+        // Initialize a SlimMSE instance
+        let mut slim = SlimMSE::new(0.5, 1.0, 0.0002, 0.0001, -5.0, 10.0, None);
+
+        // Create a test Polars DataFrame with user-item interactions
+        let df = df![
+            "user" => [1, 1, 2, 2, 3, 3],
+            "item" => [1, 2, 2, 3, 3, 4],
+            "tstamp" => [1620000000.0, 1620003600.0, 1620000000.0, 1620003600.0, 1620000000.0, 1620003600.0],
+            "rating" => [5.0, 3.0, 4.0, 2.0, 3.0, 4.0]
+        ].unwrap();
+
+        // Convert DataFrame to PyDataFrame
+        let py_df = PyDataFrame(df);
+        // Call bulk_fit with 2 epochs
+        slim.bulk_fit(py_df, 2, Some(43));
+
+        assert!(slim.get_empirical_error(Some(false)) < 0.1);
     }
 
 }

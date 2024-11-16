@@ -9,16 +9,6 @@ name = "rtrec"  # This should match the module name
 path = "src/lib.rs"
 crate-type = ["cdylib", "lib"]
 
-[profile.release]
-# Optimize for both speed and size.
-opt-level = 2
-# Link Time Optimization (LTO) improves performance by optimizing across crates at the linking stage.
-# This can significantly reduce binary size and improve runtime performance.
-lto = true
-# This reduces the number of code generation units to 1, allowing the compiler to optimize more effectively.
-# This often results in better performance at the cost of longer compile times.
-# codegen-units = 1
-
 [dependencies]
 serde = { version = "1.0", features = ["derive"] }
 rmp-serde = "1.0" # MessagePack support for Serde
@@ -30,12 +20,14 @@ log = "0.4"
 rayon = "1.10.0"
 env_logger = "0.11.5"
 hashbrown = { version = "0.15.1", features = ["serde"] }
-
-[dependencies.pyo3]
-version = "0.19"
+polars = { version = "0.44.2", features = ["random"] }
+pyo3 = "0.21"
+pyo3-polars = "0.18.0"
+rand = "0.8.5"
+itertools = "0.13.0"
+kdam = "0.6.0"
 
 [dev-dependencies]
-rand = "0.8.5"
 rand_distr = "0.4.3"
 pretty_assertions = "1.4.1"
 approx = "0.5.1"

@@ -46,11 +46,13 @@ impl SerializableValue {
         }
     }
 
-    pub fn from_any(value: &dyn Any) -> Option<Self> {
+    pub fn from_any(value: &dyn Any) -> Self {
         if let Some(v) = value.downcast_ref::<i32>() {
-            Some(SerializableValue::Integer(*v))
+            SerializableValue::Integer(*v)
+        } else if let Some(v) = value.downcast_ref::<String>() {
+            SerializableValue::Text(v.clone())
         } else {
-            value.downcast_ref::<String>().map(|v| SerializableValue::Text(v.clone()))
+            panic!("Unsupported type for SerializableValue");
         }
     }
 
@@ -58,7 +60,7 @@ impl SerializableValue {
     pub fn into_py(self) -> PyObject {
         Python::with_gil(|py| match self {
             SerializableValue::Integer(v) => v.into_py(py),
-            SerializableValue::Text(v) => PyString::new(py, &v).into_py(py),
+            SerializableValue::Text(v) => PyString::new_bound(py, &v).into_py(py),
         })
     }
 }
@@ -82,7 +84,7 @@ impl IntoPy<PyObject> for SerializableValue {
     fn into_py(self, py: Python<'_>) -> PyObject {
         match self {
             SerializableValue::Integer(v) => v.into_py(py),
-            SerializableValue::Text(v) => PyString::new(py, &v).into_py(py),
+            SerializableValue::Text(v) => PyString::new_bound(py, &v).into_py(py),
         }
     }
 }

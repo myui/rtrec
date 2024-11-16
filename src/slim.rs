@@ -1,10 +1,19 @@
 use std::fs::File;
 use std::io::{BufReader, BufWriter};
+use std::time::Instant;
 
+use kdam::tqdm;
+use itertools::izip;
+use polars::frame::DataFrame;
+use polars::prelude::*;
+use pyo3_polars::PyDataFrame;
 use pyo3::prelude::*;
 
-use log::{debug, warn};
+use log::{debug, info, warn};
 use env_logger;
+use rand::rngs::StdRng;
+use rand::SeedableRng;
+use rand::prelude::SliceRandom;
 use serde::{Serialize, Deserialize};
 use rusoto_core::Region;
 use rusoto_s3::{PutObjectRequest, GetObjectRequest, S3Client, S3};
@@ -32,7 +41,7 @@ impl SlimMSE {
     #[new]
     #[pyo3(signature = (alpha = 0.5, beta = 1.0, lambda1 = 0.0002, lambda2 = 0.0001, min_value = -5.0, max_value = 10.0, decay_in_days = None))]
     pub fn new(alpha: f32, beta: f32, lambda1: f32, lambda2: f32, min_value: f32, max_value: f32, decay_in_days: Option<f32>) -> Self {
-        env_logger::try_init().ok();
+        env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).try_init().ok();
 
         let ftrl = FTRL::new(alpha, beta, lambda1, lambda2);
 
@@ -57,6 +66,67 @@ impl SlimMSE {
             } {
                 warn!("Failed to fit interaction: {}", e);
             }
+        }
+    }
+
+    #[pyo3(signature = (pydf, epochs = 1, random_seed = None))]
+    pub fn bulk_fit(&mut self, pydf: PyDataFrame, epochs: usize, random_seed: Option<u64>) {
+        let df: DataFrame = pydf.into();
+        let row_count = df.height();
+
+        let user_series = df.column("user").unwrap();
+        let user_ids: Vec<i32> = match user_series.dtype() {
+            DataType::String => user_series.str().unwrap().iter().map(|user| {
+                self.identify_user(SerializableValue::Text(user.unwrap().to_string()))
+            }).collect(),
+            DataType::Int32 | DataType::Int64 => user_series.cast(&DataType::Int32).unwrap().i32().unwrap().iter().map(|user| {
+                self.identify_user(SerializableValue::Integer(user.unwrap()))
+            }).collect(),
+            _ => unimplemented!("Unsupported dtype for user series: {:?}", user_series.dtype()),
+        };
+
+        let item_series = df.column("item").unwrap();
+        let item_ids: Vec<i32> = match item_series.dtype() {
+            DataType::String => item_series.str().unwrap().iter().map(|item| {
+                self.identify_item(SerializableValue::Text(item.unwrap().to_string()))
+            }).collect(),
+            DataType::Int32 | DataType::Int64 => item_series.cast(&DataType::Int32).unwrap().i32().unwrap().iter().map(|item| {
+                self.identify_item(SerializableValue::Integer(item.unwrap()))
+            }).collect(),
+            _ => unimplemented!("Unsupported dtype for item series: {:?}", item_series.dtype()),
+        };
+        let tstamps = extract_columns_as_f32(&df, "tstamp");
+        let ratings = extract_columns_as_f32(&df, "rating");
+
+        let mut user_interactions: Vec<(i32, i32, f32, f32)> = izip!(user_ids, item_ids, tstamps, ratings).collect();
+
+        let mut rng = match random_seed {
+            Some(seed) => StdRng::seed_from_u64(seed),
+            None => StdRng::from_entropy(),
+        };
+
+        for epoch in tqdm!(0..epochs) {
+            let start_time = Instant::now();
+            user_interactions.shuffle(&mut rng);
+
+            // loop over user interactions and fit the model
+            if epoch == 0 {
+                for (user_id, item_id, tstamp, rating) in &user_interactions {
+                    self.interactions.add_interaction(*user_id, *item_id, *tstamp, *rating, true);
+                    self.update_weights(*user_id, *item_id);
+                }
+            } else {
+                for (user_id, item_id, _, _) in &user_interactions {
+                    self.update_weights(*user_id, *item_id);
+                }
+            }
+
+            let end_time = Instant::now();
+            let duration = end_time.duration_since(start_time).as_secs_f64();
+            info!("Epoch {} completed in {:.2} seconds", epoch + 1, duration);
+            info!("Throughput: {:.2} samples/sec", row_count as f64 / duration);
+            let empirical_loss = self.get_empirical_error(Some(true));
+            info!("Empirical loss after epoch {}: {:.6}", epoch + 1, empirical_loss);
         }
     }
 
@@ -408,4 +478,12 @@ fn parse_s3_path(s3_path: &str) -> (&str, &str) {
     let bucket_name = split.next().expect("Invalid S3 path: No bucket name found");
     let object_key = split.next().unwrap_or(""); // If no '/' found, object_key is empty
     (bucket_name, object_key)
+}
+
+#[inline]
+fn extract_columns_as_f32(df: &DataFrame, column_name: &str) -> Vec<f32> {
+    let column = df.column(column_name).unwrap();
+    let float_column = column.cast(&DataType::Float32).unwrap();
+    let float_iter = float_column.f32().unwrap();
+    float_iter.into_no_null_iter().collect()
 }
