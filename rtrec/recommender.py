@@ -57,9 +57,9 @@ class Recommender:
             start_time = time.time()
             for batch in generate_batches(train_data, batch_size, as_generator=self.use_generator):
                 if bulk_identify:
-                    self.model.fit_identified(batch, update_interaction=epoch > 0)
+                    self.model.fit_identified(batch, add_interaction=epoch < 1, update_interaction=epoch >= 1)
                 else:
-                    self.model.fit(batch)
+                    self.model.fit(batch, update_interaction=epoch >= 1)
             end_time = time.time()
             print(f"Epoch {epoch + 1} completed in {end_time - start_time:.2f} seconds")
             print(f"Throughput: {len(train_data) / (end_time - start_time):.2f} samples/sec")

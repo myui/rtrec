@@ -130,10 +130,12 @@ impl SlimMSE {
         }
     }
 
-    pub fn fit_identified(&mut self, user_interactions: Vec<(i32, i32, f32, f32)>, update_interaction: Option<bool>) {
+    pub fn fit_identified(&mut self, user_interactions: Vec<(i32, i32, f32, f32)>, add_interaction: Option<bool>, update_interaction: Option<bool>) {
         for (user_id, item_id, tstamp, rating) in user_interactions {
             if let Err(e) = {
-                self.interactions.add_interaction(user_id, item_id, tstamp, rating, update_interaction.unwrap_or(false));
+                if add_interaction.unwrap_or(true) {
+                    self.interactions.add_interaction(user_id, item_id, tstamp, rating, update_interaction.unwrap_or(false));
+                }
                 self.update_weights(user_id, item_id);
                 Ok::<(), Box<dyn std::error::Error>>(())
             } {
