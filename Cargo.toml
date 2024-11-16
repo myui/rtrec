@@ -21,11 +21,13 @@ rayon = "1.10.0"
 env_logger = "0.11.5"
 hashbrown = { version = "0.15.1", features = ["serde"] }
 polars = { version = "0.44.2", features = ["random"] }
+# pyo3-polars is locked to pyo3 0.21.x
 pyo3 = "0.21"
 pyo3-polars = "0.18.0"
 rand = "0.8.5"
 itertools = "0.13.0"
-kdam = "0.6.0"
+# kdam 0.6.0 depends on pyo 0.22
+kdam = { version = "0.5.2", features = ["notebook"] }
 
 [dev-dependencies]
 rand_distr = "0.4.3"
