@@ -185,20 +185,25 @@ impl SlimMSE {
         self.steps += 1;
 
         // update item similarity matrix
-        // Note: Change applied to the original SLIM algorithm;only update the similarity matrix 
+        // Note: Change applied to the original SLIM algorithm; only update the similarity matrix
         // where the user has (recently) interacted with the item.
         //
         // No interaction implies no update; grad = dloss * rating = 0
         // see discussions in https://github.com/MaurizioFD/RecSys_Course_AT_PoliMi/issues/22
-        for &ui in &user_items {
-            if ui != item_id {
-                let grad = dloss * self.interactions.get_user_item_rating(user_id, ui, 0.0);
-                if grad.abs() <= 1e-6 {
-                    continue; // Skip very small gradients
-                }
-                self.ftrl.update_gradients((ui, item_id), grad);
-            }
-        }
+        //
+        // Vectorized updates for better performance.
+        let updates: Vec<_> = user_items
+            .iter()
+            .filter(|&&ui| ui != item_id) // Exclude the target item_id
+            .map(|&ui| {
+                let rating = self.interactions.get_user_item_rating(user_id, ui, 0.0);
+                let grad = dloss * rating;
+                (ui, grad)
+            })
+            .filter(|(_, grad)| grad.abs() > 1e-6) // Skip very small gradients
+            .collect();
+
+        self.ftrl.vectorized_update_gradients(item_id, &updates);
     }
 
     pub fn predict_rating(&self, user: SerializableValue, item: SerializableValue) -> f32 {
