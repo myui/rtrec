@@ -83,25 +83,25 @@ impl UserItemInteractions {
 
     #[inline]
     pub fn get_all_item_ids(&self) -> Vec<i32> {
-        self.all_item_ids.iter().cloned().collect()
+        self.all_item_ids.iter().copied().collect()
     }
 
     #[inline]
     pub fn get_all_users(&self) -> Vec<i32> {
-        self.interactions.keys().cloned().collect()
+        self.interactions.keys().copied().collect()
     }
 
     #[inline]
     pub fn get_all_non_interacted_items(&self, user_id: i32) -> Vec<i32> {
         let interacted_items: HashSet<i32> = self.get_user_items(user_id, None).into_iter().collect();
-        self.all_item_ids.difference(&interacted_items).cloned().collect()
+        self.all_item_ids.difference(&interacted_items).copied().collect()
     }
 
     #[inline]
     pub fn get_all_non_negative_items(&self, user_id: i32) -> Vec<i32> {
         self.all_item_ids.iter()
             .filter(|&&item_id| self.get_user_item_rating(user_id, item_id, 0.0) >= 0.0)
-            .cloned()
+            .copied()
             .collect()
     }
 }

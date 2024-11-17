@@ -39,12 +39,12 @@ impl FTRL {
 
     #[deprecated(note = "Use `vectorized_update_gradients` instead")]
     pub fn update_gradients(&mut self, key: (i32, i32), grad: f32) -> f32 {
-        let z_val = self.z.get(&key).cloned().unwrap_or_default();
-        let n_val = self.n.get(&key).cloned().unwrap_or_default();
+        let z_val = self.z.get(&key).copied().unwrap_or_default();
+        let n_val = self.n.get(&key).copied().unwrap_or_default();
 
         let n_new = n_val + grad.powi(2);
         let sigma = (n_new.sqrt() - n_val.sqrt()) / self.alpha;
-        let z_new = z_val + grad - sigma * self.weights.get(&key).cloned().unwrap_or_default();
+        let z_new = z_val + grad - sigma * self.weights.get(&key).copied().unwrap_or_default();
 
         if z_new.abs() <= self.lambda1 {
             self.weights.remove(&key);
