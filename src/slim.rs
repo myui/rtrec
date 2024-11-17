@@ -193,7 +193,7 @@ impl SlimMSE {
         //
         // Vectorized updates for better performance.
         let updates: Vec<_> = user_items
-            .iter()
+            .par_iter()
             .filter(|&&ui| ui != item_id) // Exclude the target item_id
             .map(|&ui| {
                 let rating = self.interactions.get_user_item_rating(user_id, ui, 0.0);
