@@ -203,7 +203,7 @@ impl SlimMSE {
             .filter(|(_, grad)| grad.abs() > 1e-6) // Skip very small gradients
             .collect();
 
-        self.ftrl.vectorized_update_gradients(item_id, &updates);
+        self.ftrl.par_update_gradients(item_id, &updates);
     }
 
     pub fn predict_rating(&self, user: SerializableValue, item: SerializableValue) -> f32 {
