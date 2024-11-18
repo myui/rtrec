@@ -27,9 +27,9 @@ impl FTRL {
             beta,
             lambda1,
             lambda2,
-            z: HashMap::new(),
-            n: HashMap::new(),
-            weights: HashMap::new(),
+            z: HashMap::with_capacity(8192),
+            n: HashMap::with_capacity(8192),
+            weights: HashMap::with_capacity(8192),
         }
     }
 

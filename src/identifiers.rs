@@ -104,8 +104,8 @@ impl Identifier {
         Self {
             name: name.to_string(),
             pass_through: None,
-            obj_to_id: HashMap::new(),
-            id_to_obj: Vec::new(),
+            obj_to_id: HashMap::with_capacity(8192),
+            id_to_obj: Vec::with_capacity(8192),
         }
     }
 

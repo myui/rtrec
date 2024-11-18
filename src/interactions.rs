@@ -19,8 +19,8 @@ impl UserItemInteractions {
         let decay_rate = decay_in_days.map(|days| 1.0 - (E.ln() / days));
 
         UserItemInteractions {
-            interactions: HashMap::new(),
-            all_item_ids: HashSet::new(),
+            interactions: HashMap::with_capacity(8192),
+            all_item_ids: HashSet::with_capacity(8192),
             min_value,
             max_value,
             decay_rate,
