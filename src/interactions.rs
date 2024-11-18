@@ -1,6 +1,7 @@
 use std::time::SystemTime;
 use std::f32::consts::E;
 use hashbrown::{HashMap, HashSet};
+use rayon::slice::ParallelSliceMut;
 use serde::{Serialize, Deserialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -70,10 +71,17 @@ impl UserItemInteractions {
     pub fn get_user_items(&self, user_id: i32, n_recent: Option<usize>) -> Vec<i32> {
         if let Some(item_map) = self.interactions.get(&user_id) {
             if let Some(n) = n_recent {
-                let mut items: Vec<_> = Vec::with_capacity(item_map.len());
+                let capacity = item_map.len();
+                let mut items: Vec<_> = Vec::with_capacity(capacity);
                 items.extend(item_map.iter());
-                items.sort_unstable_by(|&(_, &(_, ts1)), &(_, &(_, ts2))| ts2.partial_cmp(&ts1).unwrap());
-                items.iter().take(n).map(|(&item_id, _)| item_id).collect()
+                if capacity > 20 {
+                    items.par_sort_unstable_by(|&(_, &(_, ts1)), &(_, &(_, ts2))| ts2.partial_cmp(&ts1).unwrap());
+                    items.truncate(n);
+                    items.iter().map(|(&item_id, _)| item_id).collect()
+                } else {
+                    items.sort_unstable_by(|&(_, &(_, ts1)), &(_, &(_, ts2))| ts2.partial_cmp(&ts1).unwrap());
+                    items.iter().take(n).map(|(&item_id, _)| item_id).collect()
+                }
             } else {
                 item_map.keys().copied().collect()
             }

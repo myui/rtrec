@@ -227,14 +227,29 @@ impl SlimMSE {
         }
 
         let weights = self.ftrl.get_weights();
-        user_items.par_iter()
-            .filter(|&&ui| ui != item_id) // Skip diagonal elements
-            .map(|&ui| {
-                let weight = weights.get(&(ui, item_id)).unwrap_or(&0.0);
-                let rating = self.interactions.get_user_item_rating(user_id, ui, 0.0);
-                weight * rating
-            })
-            .sum()
+        if user_items.len() > 20 {
+            user_items.par_chunks(20)
+                .map(|chunk| {
+                    chunk.iter()
+                        .filter(|&&ui| ui != item_id) // Skip diagonal elements
+                        .map(|&ui| {
+                            let weight = weights.get(&(ui, item_id)).unwrap_or(&0.0);
+                            let rating = self.interactions.get_user_item_rating(user_id, ui, 0.0);
+                            weight * rating
+                        })
+                        .sum::<f32>()
+                })
+                .sum()
+        } else {
+            user_items.iter()
+                .filter(|&&ui| ui != item_id) // Skip diagonal elements
+                .map(|&ui| {
+                    let weight = weights.get(&(ui, item_id)).unwrap_or(&0.0);
+                    let rating = self.interactions.get_user_item_rating(user_id, ui, 0.0);
+                    weight * rating
+                })
+                .sum()
+        }
     }
 
     pub fn recommend(&self, user: SerializableValue, top_k: usize, filter_interacted: Option<bool>) -> Vec<SerializableValue> {
