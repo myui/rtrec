@@ -252,6 +252,11 @@ impl SlimMSE {
         }
     }
 
+    pub fn recommend_batch(&self, users: Vec<SerializableValue>, top_k: usize, filter_interacted: Option<bool>) -> Vec<Vec<SerializableValue>> {
+        // avoid nested parallelism (into_par_iter) for CPU cache locality
+        users.into_iter().map(|user| self.recommend(user, top_k, filter_interacted)).collect()
+    }
+
     pub fn recommend(&self, user: SerializableValue, top_k: usize, filter_interacted: Option<bool>) -> Vec<SerializableValue> {
         let user_id = match self.user_ids.get_id(&user).unwrap() {
             Some(id) => id,
@@ -269,15 +274,16 @@ impl SlimMSE {
         };
 
         // Predict scores for the candidate items
-        let mut scores: Vec<(SerializableValue, f32)> = Vec::with_capacity(candidate_item_ids.len());
-        candidate_item_ids
-            .par_iter()
-            .map(|&item_id| {
-                let score = self._predict_rating(user_id, item_id, false);
-                let item = self.item_ids.get(item_id).unwrap();
-                (item, score)
+        let mut scores: Vec<(SerializableValue, f32)> = candidate_item_ids
+            .par_chunks(1024)
+            .flat_map(|chunk| {
+                chunk.iter().map(|&item_id| {
+                    let score = self._predict_rating(user_id, item_id, false);
+                    let item = self.item_ids.get(item_id).unwrap();
+                    (item, score)
+                }).collect::<Vec<_>>()
             })
-            .collect_into_vec(&mut scores);
+            .collect();
 
         // Sort items by score in descending order
         scores.par_sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
@@ -305,9 +311,8 @@ impl SlimMSE {
 
         // Loop over each query item and find similar items
         // Use parallel iterator for better performance
-        let mut similar_items: Vec<Vec<SerializableValue>> = Vec::with_capacity(query_item_ids.len());
-        query_item_ids
-            .par_iter()
+        let similar_items = query_item_ids
+            .iter() // Do not use par_iter() here to avoid nested parallelism for CPU cache locality
             .map(|&query_item_id_opt| {
                 if let Some(query_item_id) = query_item_id_opt {
                     let mut item_scores: Vec<(i32, f32)> = target_item_ids
@@ -338,7 +343,7 @@ impl SlimMSE {
                     Vec::new()
                 }
             })
-            .collect_into_vec(&mut similar_items);
+            .collect();
         similar_items
     }
 

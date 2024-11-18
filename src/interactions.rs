@@ -76,12 +76,10 @@ impl UserItemInteractions {
                 items.extend(item_map.iter());
                 if capacity > 20 {
                     items.par_sort_unstable_by(|&(_, &(_, ts1)), &(_, &(_, ts2))| ts2.partial_cmp(&ts1).unwrap());
-                    items.truncate(n);
-                    items.iter().map(|(&item_id, _)| item_id).collect()
                 } else {
                     items.sort_unstable_by(|&(_, &(_, ts1)), &(_, &(_, ts2))| ts2.partial_cmp(&ts1).unwrap());
-                    items.iter().take(n).map(|(&item_id, _)| item_id).collect()
                 }
+                items.iter().take(n).map(|(&item_id, _)| item_id).collect()
             } else {
                 item_map.keys().copied().collect()
             }
