@@ -134,7 +134,9 @@ impl Identifier {
         }
 
         let new_id = self.id_to_obj.len() as i32;
-        self.obj_to_id.insert(obj.clone(), new_id);
+        unsafe {
+            self.obj_to_id.insert_unique_unchecked(obj.clone(), new_id)
+        };
         self.id_to_obj.push(obj);
         self.pass_through = Some(false);
         Ok(new_id)
