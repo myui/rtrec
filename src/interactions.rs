@@ -70,11 +70,12 @@ impl UserItemInteractions {
     pub fn get_user_items(&self, user_id: i32, n_recent: Option<usize>) -> Vec<i32> {
         if let Some(item_map) = self.interactions.get(&user_id) {
             if let Some(n) = n_recent {
-                let mut items: Vec<_> = item_map.iter().collect();
+                let mut items: Vec<_> = Vec::with_capacity(item_map.len());
+                items.extend(item_map.iter());
                 items.sort_unstable_by(|&(_, &(_, ts1)), &(_, &(_, ts2))| ts2.partial_cmp(&ts1).unwrap());
                 items.iter().take(n).map(|(&item_id, _)| item_id).collect()
             } else {
-                item_map.iter().map(|(&item_id, _)| item_id).collect()
+                item_map.keys().copied().collect()
             }
         } else {
             Vec::new()

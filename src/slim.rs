@@ -254,14 +254,15 @@ impl SlimMSE {
         };
 
         // Predict scores for the candidate items
-        let mut scores: Vec<(SerializableValue, f32)> = candidate_item_ids
+        let mut scores: Vec<(SerializableValue, f32)> = Vec::with_capacity(candidate_item_ids.len());
+        candidate_item_ids
             .par_iter()
             .map(|&item_id| {
                 let score = self._predict_rating(user_id, item_id, false);
                 let item = self.item_ids.get(item_id).unwrap();
                 (item, score)
             })
-            .collect();
+            .collect_into_vec(&mut scores);
 
         // Sort items by score in descending order
         scores.par_sort_unstable_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
@@ -289,7 +290,8 @@ impl SlimMSE {
 
         // Loop over each query item and find similar items
         // Use parallel iterator for better performance
-        let similar_items: Vec<Vec<SerializableValue>> = query_item_ids
+        let mut similar_items: Vec<Vec<SerializableValue>> = Vec::with_capacity(query_item_ids.len());
+        query_item_ids
             .par_iter()
             .map(|&query_item_id_opt| {
                 if let Some(query_item_id) = query_item_id_opt {
@@ -321,8 +323,7 @@ impl SlimMSE {
                     Vec::new()
                 }
             })
-            .collect();
-
+            .collect_into_vec(&mut similar_items);
         similar_items
     }
 
