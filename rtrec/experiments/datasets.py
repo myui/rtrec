@@ -5,7 +5,6 @@ import zipfile
 import urllib.request
 import os
 
-from typing import Tuple
 from datetime import datetime
 
 def load_movielens(dataset_scale: str, sort_by_tstamp: bool=False) -> pd.DataFrame:
