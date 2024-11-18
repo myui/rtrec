@@ -81,6 +81,16 @@ class Recommender:
         """
         return self.model.recommend(user, top_k, filter_interacted)
 
+    def recommend_batch(self, users: List[Any], top_k: int = 10, filter_interacted: bool = True) -> List[List[Any]]:
+        """
+        Recommend top-K items for a list of users.
+        :param users: List of user indices
+        :param top_k: Number of top items to recommend
+        :param filter_interacted: Whether to filter out items the user has already interacted with
+        :return: List of top-K item indices recommended for each user
+        """
+        return self.model.recommend_batch(users, top_k, filter_interacted)
+
     def similar_items(self, query_items: List[Any], top_k: int = 10, filter_query_items: bool = True) -> List[List[Any]]:
         """
         Find similar items for a list of query items.
@@ -91,7 +101,7 @@ class Recommender:
         """
         return self.model.similar_items(query_items, top_k, filter_query_items)
 
-    def evaluate(self, test_data: pd.DataFrame, recommend_size: int = 10) -> Dict[str, float]:
+    def evaluate(self, test_data: pd.DataFrame, recommend_size: int = 10, batch_size=100) -> Dict[str, float]:
         """
         Evaluates the model using batch evaluation metrics on the test data.
 
@@ -107,9 +117,18 @@ class Recommender:
 
         # Use a generator to yield recommendations and ground truth for each user
         def generate_evaluation_pairs() -> Iterable[Tuple[List[Any], List[Any]]]:
-            for user, ground_truth_items in tqdm(grouped_data.items()):
-                recommended_items = self.recommend(user, recommend_size)
-                yield recommended_items, ground_truth_items
+            # Split the grouped data into batches of users
+            users = list(grouped_data.keys())
+
+            for i in tqdm(range(0, len(users), batch_size)):
+                batch_users = users[i:i + batch_size]
+                # Get recommended items for the batch of users
+                batch_results = self.recommend_batch(batch_users, recommend_size)
+
+                # Yield recommendations and ground truth for each user in the batch
+                for user, recommended_items in zip(batch_users, batch_results):
+                    ground_truth_items = grouped_data[user]
+                    yield recommended_items, ground_truth_items
 
         # Compute and return the evaluation metrics using the generator
         return compute_scores(generate_evaluation_pairs(), recommend_size)

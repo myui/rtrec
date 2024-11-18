@@ -41,6 +41,16 @@ class BaseRecommender(ABC):
         """
         return self.interactions.get_user_item_rating(user_id, item_id, default_rating=0.0)
 
+    def recommend_batch(self, users: List[Any], top_k: int = 10, filter_interacted: bool = True) -> List[List[Any]]:
+        """
+        Recommend top-K items for a list of users.
+        :param users: List of user indices
+        :param top_k: Number of top items to recommend
+        :param filter_interacted: Whether to filter out items the user has already interacted with
+        :return: List of top-K item indices recommended for each user
+        """
+        return [self.recommend(user, top_k, filter_interacted) for user in users]
+
     def recommend(self, user: Any, top_k: int = 10, filter_interacted: bool = True) -> List[Any]:
         """
         Recommend top-K items for a given user.
