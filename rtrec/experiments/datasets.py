@@ -31,6 +31,15 @@ def load_movielens(dataset_scale: str, sort_by_tstamp: bool=False) -> pd.DataFra
             "header": None, # No header in the file
             "columns": ["user_id", "item_id", "rating", "tstamp"]
         },
+        "10m": {
+            "url": "https://files.grouplens.org/datasets/movielens/ml-10m.zip",
+            "zip_path": "datasets/ml-10m.zip",
+            "extracted_folder": "datasets/ml-10m",
+            "ratings_file": "ml-10M100K/ratings.dat",
+            "sep": "::",
+            "header": None, # No header in the file
+            "columns": ["user_id", "item_id", "rating", "tstamp"]
+        },
         "20m": {
             "url": "https://files.grouplens.org/datasets/movielens/ml-20m.zip",
             "zip_path": "datasets/ml-20m.zip",
@@ -90,6 +99,9 @@ def load_movielens(dataset_scale: str, sort_by_tstamp: bool=False) -> pd.DataFra
 # Specific functions for loading each dataset version
 def load_movielens_1m() -> pd.DataFrame:
     return load_movielens("1m")
+
+def load_movielens_10m() -> pd.DataFrame:
+    return load_movielens("10m")
 
 def load_movielens_20m() -> pd.DataFrame:
     return load_movielens("20m")
@@ -268,17 +280,20 @@ def load_dataset(name: str) -> pd.DataFrame:
     Returns:
         pd.DataFrame: The loaded dataset as a DataFrame.
     """
-    if name == "movielens_1m":
-        return load_movielens_1m()
-    elif name == "movielens_20m":
-        return load_movielens_20m()
-    elif name == "movielens_25m":
-        return load_movielens_25m()
-    elif name == "yelp":
-        return load_yelp_ratings()
-    elif name == "amazon_music":
-        return load_amazon_music_v2()
-    elif name == "amazon_electronics":
-        return load_amazon_electronics_v2()
-    else:
-        raise ValueError(f"Dataset '{name}' not found.")
+    match name:
+        case "movielens_1m":
+            return load_movielens_1m()
+        case "movielens_10m":
+            return load_movielens_10m()
+        case "movielens_20m":
+            return load_movielens_20m()
+        case "movielens_25m":
+            return load_movielens_25m()
+        case "yelp":
+            return load_yelp_ratings()
+        case "amazon_music":
+            return load_amazon_music_v2()
+        case "amazon_electronics":
+            return load_amazon_electronics_v2()
+        case _:
+            raise ValueError(f"Dataset '{name}' not found.")
