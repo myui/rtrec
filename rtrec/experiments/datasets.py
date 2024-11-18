@@ -22,6 +22,15 @@ def load_movielens(dataset_scale: str, sort_by_tstamp: bool=False) -> pd.DataFra
     """
     # Mapping version to URL and file details
     dataset_info = {
+        "100k": {
+            "url": "https://files.grouplens.org/datasets/movielens/ml-100k.zip",
+            "zip_path": "datasets/ml-100k.zip",
+            "extracted_folder": "datasets/ml-100k",
+            "ratings_file": "ml-100k/u.data",
+            "sep": "\t",
+            "header": None, # No header in the file
+            "columns": ["user_id", "item_id", "rating", "tstamp"]
+        },
         "1m": {
             "url": "https://files.grouplens.org/datasets/movielens/ml-1m.zip",
             "zip_path": "datasets/ml-1m.zip",
@@ -97,6 +106,10 @@ def load_movielens(dataset_scale: str, sort_by_tstamp: bool=False) -> pd.DataFra
     return df
 
 # Specific functions for loading each dataset version
+
+def load_movielens_100k() -> pd.DataFrame:
+    return load_movielens("100k")
+
 def load_movielens_1m() -> pd.DataFrame:
     return load_movielens("1m")
 
@@ -281,6 +294,8 @@ def load_dataset(name: str) -> pd.DataFrame:
         pd.DataFrame: The loaded dataset as a DataFrame.
     """
     match name:
+        case "movielens_100k":
+            return load_movielens_100k()
         case "movielens_1m":
             return load_movielens_1m()
         case "movielens_10m":
