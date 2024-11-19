@@ -30,6 +30,7 @@ def load_movielens(dataset_scale: str, sort_by_tstamp: bool=False) -> pd.DataFra
             "header": None, # No header in the file
             "columns": ["user_id", "item_id", "rating", "tstamp"]
         },
+        # 1,000,209 rating of 3,900 movies from 6,040 users
         "1m": {
             "url": "https://files.grouplens.org/datasets/movielens/ml-1m.zip",
             "zip_path": "datasets/ml-1m.zip",
