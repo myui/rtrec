@@ -101,13 +101,15 @@ class Recommender:
         """
         return self.model.similar_items(query_items, top_k, filter_query_items)
 
-    def evaluate(self, test_data: pd.DataFrame, recommend_size: int = 10, batch_size=100) -> Dict[str, float]:
+    def evaluate(self, test_data: pd.DataFrame, recommend_size: int = 10, batch_size=100, filter_interacted: bool = True) -> Dict[str, float]:
         """
         Evaluates the model using batch evaluation metrics on the test data.
 
         Parameters:
             test_data (pd.DataFrame): DataFrame with columns ['user', 'item'] containing ground truth interactions.
             recommend_size (int): Number of items to recommend per user for evaluation.
+            batch_size (int): Number of users to evaluate in each batch.
+            filter_interacted (bool): Whether to filter out items the user has already interacted with during evaluation.
 
         Returns:
             Dict[str, float]: Dictionary with averaged evaluation metrics across all users.
@@ -123,7 +125,7 @@ class Recommender:
             for i in tqdm(range(0, len(users), batch_size)):
                 batch_users = users[i:i + batch_size]
                 # Get recommended items for the batch of users
-                batch_results = self.recommend_batch(batch_users, recommend_size)
+                batch_results = self.recommend_batch(batch_users, recommend_size, filter_interacted)
 
                 # Yield recommendations and ground truth for each user in the batch
                 for user, recommended_items in zip(batch_users, batch_results):
