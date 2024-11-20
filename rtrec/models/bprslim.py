@@ -1,6 +1,5 @@
-from scipy.special import expit
 from typing import Any, List, Tuple
-from math import inf
+from math import inf, exp
 
 from .base import ImplicitFeedbackRecommender
 from ..utils.optim import get_optimizer
@@ -121,4 +120,4 @@ class BPR_SLIM(ImplicitFeedbackRecommender):
         diff = sum(self.W[positive_item_id, uid] - self.W[negative_item_id, uid] for uid in user_item_ids)
 
         # minus in order for the exponent of the exponential to be positive
-        return expit(-diff) # a.k.a. logistic sigmoid function
+        return 1.0/(1.0+exp(-diff))         # logistic sigmoid function
