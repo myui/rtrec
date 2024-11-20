@@ -34,7 +34,7 @@ RUN curl -sSf https://rye.astral.sh/get | RYE_NO_AUTO_INSTALL=1 RYE_INSTALL_OPTI
  && rye install jupyter && rye install jupyterlab && rye install ipywidgets
 
 # Activate ipywidgets extension
-RUN $HOME/.rye/shims/jupyter-labextension install @jupyter-widgets/jupyterlab-manager
+#RUN $HOME/.rye/shims/jupyter-labextension install @jupyter-widgets/jupyterlab-manager
 
 #RUN mkdir -p /home/td-user/build
 #COPY --chown=td-user:wheel README.md pyproject.toml Cargo.toml requirements.lock requirements-dev.lock .python-version /home/td-user/build/
