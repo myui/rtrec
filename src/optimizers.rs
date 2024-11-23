@@ -65,7 +65,7 @@ impl Optimizer for SGD {
         let key = compound_key(ui, item_id);
         let eta = invoscaling_eta(self.alpha, _step, self.power_t);
         let new_weight = self.weights.entry(key).and_modify(|e| *e -= eta * grad).or_insert(-eta * grad);
-        if new_weight.abs() <= self.lambda1 {
+        if new_weight.abs() <= 1e-7 {
             self.weights.remove(&key);
         } else {
             let l1_penalty = self.lambda1 * new_weight.signum();
@@ -119,7 +119,7 @@ impl Optimizer for AdaGrad {
         let eta = self.alpha / (1.0 + sum_gg.sqrt());
         let delta = eta * grad;
         let new_weight = self.weights.entry(key).and_modify(|e| *e -= delta).or_insert(-delta);
-        if new_weight.abs() <= self.lambda1 {
+        if new_weight.abs() <= 1e-7 {
             self.weights.remove(&key);
         } else {
             let l1_penalty = self.lambda1 * new_weight.signum();
@@ -241,7 +241,7 @@ impl FTRL {
 
                 let weight_update = -(z_new - z_new.signum() * self.lambda1)
                     / ((self.beta + n_new.sqrt()) / self.alpha + self.lambda2);
-                if weight_update.abs() >= 1e-8 {
+                if weight_update.abs() >= 1e-7 {
                     weight_updates.push((key, weight_update));
                 } else {
                     debug!("Weight update is too small at ui:item_id is ({}:{}) => {}", ui, item_id, weight_update);
@@ -297,7 +297,7 @@ impl Optimizer for FTRL {
 
         let weight_update = -(z_new - z_new.signum() * self.lambda1) / ((self.beta + n_new.sqrt()) / self.alpha + self.lambda2);
 
-        if weight_update.abs() < 1e-8 {
+        if weight_update.abs() < 1e-7 {
             self.weights.remove(&key);
             return;
         }

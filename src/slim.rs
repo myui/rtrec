@@ -31,7 +31,7 @@ pub struct SlimMSE {
 #[pymethods]
 impl SlimMSE {
     #[new]
-    #[pyo3(signature = (optimizer = "adagrad", alpha = 0.01, lambda1 = 0.0002, lambda2 = 0.0001, rating_range = (-5.0, 10.0), decay_in_days = None, n_recent = None))]
+    #[pyo3(signature = (optimizer = "adagrad_rda", alpha = 0.001, lambda1 = 0.0002, lambda2 = 0.0001, rating_range = (-5.0, 10.0), decay_in_days = None, n_recent = 50))]
     pub fn new(optimizer: &str, alpha: f32, lambda1: f32, lambda2: f32, rating_range: (f32, f32), decay_in_days: Option<f32>, n_recent: Option<usize>) -> Self {
         env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).try_init().ok();
 
@@ -122,7 +122,7 @@ impl SlimMSE {
             .for_each(|&ui| {
                 let rating = self.interactions.get_user_item_rating(user_id, ui, 0.0);
                 let grad = dloss * rating;
-                if grad.abs() < 1e-6 {
+                if grad.abs() < 1e-7 { // Skip very small gradients
                     return;
                 }
                 optimizer.update_gradients(ui, item_id, grad, self.steps);
