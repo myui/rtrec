@@ -1,5 +1,6 @@
 # datasets.py
 
+import tarfile
 import pandas as pd
 import zipfile
 import urllib.request
@@ -283,6 +284,43 @@ def load_amazon_music_v2(small_subsets: bool = True, parse_image_url: bool = Fal
 def load_amazon_electronics_v2(small_subsets: bool = True, parse_image_url: bool = False, sort_by_tstamp: bool = False) -> pd.DataFrame:
     return load_amazon_review_v2("Electronics", small_subsets, parse_image_url, sort_by_tstamp)
 
+def load_lastfm_360k():
+    """
+    Load the Last.fm 360k dataset containing user interactions with artists.
+    17,559,530 (18m) interactions from 359,347 (36k) users.
+
+    Reference:
+    - https://zenodo.org/records/6090214
+    - https://www.upf.edu/web/mtg/lastfm360k
+    """
+    # Define the URL for the dataset
+    url = "https://zenodo.org/records/6090214/files/lastfm-dataset-360K.tar.gz"
+#   url = "http://mtg.upf.edu/static/datasets/last.fm/lastfm-dataset-360K.tar.gz"
+    data_dir = "datasets/lastfm-360k"
+    file_path = os.path.join(data_dir, "usersha1-artmbid-artname-plays.tsv")
+
+    # Check if the dataset directory exists
+    if not os.path.exists(data_dir):
+        os.makedirs(data_dir)
+
+    if not os.path.exists(file_path):
+        # Download the dataset if not already downloaded
+        tar_file = os.path.join(data_dir, "lastfm-dataset-360K.tar.gz")
+        if not os.path.exists(tar_file):
+            print("Downloading Last.fm 360k dataset (569.2 MB) ...")
+            urllib.request.urlretrieve(url, tar_file)
+            print("Download complete.")
+
+        # Extract the tar.gz file
+        print("Extracting dataset...")
+        with tarfile.open(tar_file, "r:gz") as tar:
+            tar.extract("lastfm-dataset-360K/usersha1-artmbid-artname-plays.tsv", path=data_dir)
+        print("Extraction complete.")
+
+    # Load the dataset into a DataFrame
+    df = pd.read_csv(file_path, sep="\t", names=["user", "artist_id", "artist_name", "plays"])
+    return df
+
 def load_dataset(name: str) -> pd.DataFrame:
     """
     Loads a dataset by name.
@@ -310,5 +348,7 @@ def load_dataset(name: str) -> pd.DataFrame:
             return load_amazon_music_v2()
         case "amazon_electronics":
             return load_amazon_electronics_v2()
+        case "lastfm_360k":
+            return load_lastfm_360k()
         case _:
             raise ValueError(f"Dataset '{name}' not found.")
