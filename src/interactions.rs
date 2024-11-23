@@ -1,6 +1,8 @@
 use std::time::SystemTime;
 use std::f32::consts::E;
+use chrono::{TimeZone, Utc};
 use hashbrown::{HashMap, HashSet};
+use log::warn;
 use rayon::slice::ParallelSliceMut;
 use serde::{Serialize, Deserialize};
 
@@ -11,6 +13,7 @@ pub struct UserItemInteractions {
     min_value: f32,
     max_value: f32,
     decay_rate: Option<f32>, // Optional decay rate
+    max_timestamp: f32,
 }
 
 impl UserItemInteractions {
@@ -25,7 +28,16 @@ impl UserItemInteractions {
             min_value,
             max_value,
             decay_rate,
+            max_timestamp: 0.0,
         }
+    }
+
+    pub fn get_decay_rate(&self) -> Option<f32> {
+        self.decay_rate
+    }
+
+    pub fn set_decay_rate(&mut self, decay_rate: Option<f32>) {
+        self.decay_rate = decay_rate;
     }
 
     /// Apply exponential decay to the value based on the elapsed time since the last interaction.
@@ -35,7 +47,7 @@ impl UserItemInteractions {
     fn _apply_decay(&self, value: f32, last_timestamp: f32) -> f32 {
         if let Some(decay_rate) = self.decay_rate {
             // Calculate elapsed time since the last interaction
-            let elapsed_secs = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs_f32() - last_timestamp;
+            let elapsed_secs = self.max_timestamp - last_timestamp;
             let elapsed_days = elapsed_secs / 86400.0;
             return value * decay_rate.powf(elapsed_days); // Apply exponential decay
         }
@@ -43,6 +55,12 @@ impl UserItemInteractions {
     }
 
     pub fn add_interaction(&mut self, user_id: i32, item_id: i32, tstamp: f32, delta: f32, upsert: bool) {
+        let current_unix_time = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH).unwrap().as_secs_f32();
+        if tstamp > current_unix_time + 180.0 {
+            // add some buffer (180 secs) as system clock may not be in sync with the server
+            warn!("Timestamp {} is in the future. Current time is {}", fmt_unix_time(tstamp), fmt_unix_time(current_unix_time));
+        }
+        self.max_timestamp = self.max_timestamp.max(tstamp + 1.0); // Add 1 second to avoid timestamp conflicts
         let new_value = if upsert {
             delta
         } else {
@@ -110,5 +128,21 @@ impl UserItemInteractions {
             .filter(|&&item_id| self.get_user_item_rating(user_id, item_id, 0.0) >= 0.0)
             .copied()
             .collect()
+    }
+}
+
+#[inline]
+fn fmt_unix_time(timestamp: f32) -> String {
+    // Convert to integer and fractional seconds
+    let secs = timestamp as i64;
+    let nanos = ((timestamp - secs as f32) * 1_000_000_000.0) as u32;
+
+    // Create DateTime from seconds and nanoseconds
+    if let Some(datetime) = Utc.timestamp_opt(secs, nanos).single() {
+        // Return the formatted datetime string
+        datetime.to_rfc3339()
+    } else {
+        // Handle invalid timestamp
+        "Invalid timestamp".to_string()
     }
 }

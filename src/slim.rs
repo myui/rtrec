@@ -3,7 +3,7 @@ use std::io::{BufReader, BufWriter};
 
 use pyo3::prelude::*;
 
-use log::{debug, warn};
+use log::{debug, info, warn};
 use env_logger;
 use serde::{Serialize, Deserialize};
 use rusoto_core::Region;
@@ -31,9 +31,12 @@ pub struct SlimMSE {
 #[pymethods]
 impl SlimMSE {
     #[new]
-    #[pyo3(signature = (optimizer = "adagrad_rda", alpha = 0.001, lambda1 = 0.0002, lambda2 = 0.0001, rating_range = (-5.0, 10.0), decay_in_days = None, n_recent = 50))]
+    #[pyo3(signature = (optimizer = "adagrad_rda", alpha = 0.001, lambda1 = 0.0002, lambda2 = 0.0001, rating_range = (-5.0, 10.0), decay_in_days = 180.0, n_recent = 50))]
     pub fn new(optimizer: &str, alpha: f32, lambda1: f32, lambda2: f32, rating_range: (f32, f32), decay_in_days: Option<f32>, n_recent: Option<usize>) -> Self {
         env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).try_init().ok();
+
+        info!("Creating SlimMSE model with optimizer: {}, alpha: {}, lambda1: {}, lambda2: {}, rating_range: {:?}, decay_in_days: {}, n_recent: {}",
+              optimizer, alpha, lambda1, lambda2, rating_range, fmt_option(&decay_in_days), fmt_option(&n_recent));
 
         let optim = create_optimizer(optimizer, alpha, lambda1, lambda2);
         SlimMSE {
@@ -47,11 +50,25 @@ impl SlimMSE {
         }
     }
 
+    #[getter]
+    pub fn get_decay_rate(&self) -> Option<f32> {
+        self.interactions.get_decay_rate()
+    }
+
+    #[setter]
+    pub fn set_decay_rate(&mut self, decay_rate: Option<f32>) {
+        self.interactions.set_decay_rate(decay_rate);
+    }
+
     pub fn fit(&mut self, user_interactions: Vec<(SerializableValue, SerializableValue, f32, f32)>, update_interaction: Option<bool>) {
         for (user, item, tstamp, rating) in user_interactions {
             if let Err(e) = {
                 let user_id = self.identify_user(user);
                 let item_id = self.identify_item(item);
+                if tstamp < 0.0 {
+                    warn!("Negative timestamp: {} for user_id: {}, item_id: {}. Ignore the interaction", tstamp, user_id, item_id);
+                    continue;
+                }
                 self.interactions.add_interaction(user_id, item_id, tstamp, rating, update_interaction.unwrap_or(false));
                 self.update_weights(user_id, item_id);
                 Ok::<(), Box<dyn std::error::Error>>(())
@@ -65,6 +82,10 @@ impl SlimMSE {
         for (user_id, item_id, tstamp, rating) in user_interactions {
             if let Err(e) = {
                 if add_interaction.unwrap_or(true) {
+                    if tstamp < 0.0 {
+                        warn!("Negative timestamp: {} for user_id: {}, item_id: {}. Ignore the interaction", tstamp, user_id, item_id);
+                        continue;
+                    }
                     self.interactions.add_interaction(user_id, item_id, tstamp, rating, update_interaction.unwrap_or(false));
                 }
                 self.update_weights(user_id, item_id);
@@ -440,4 +461,11 @@ fn parse_s3_path(s3_path: &str) -> (&str, &str) {
     let bucket_name = split.next().expect("Invalid S3 path: No bucket name found");
     let object_key = split.next().unwrap_or(""); // If no '/' found, object_key is empty
     (bucket_name, object_key)
+}
+
+fn fmt_option<T: std::fmt::Display>(opt: &Option<T>) -> String {
+    match opt {
+        Some(val) => val.to_string(),
+        None => "None".to_string(),
+    }
 }

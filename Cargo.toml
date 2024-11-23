@@ -24,6 +24,7 @@ pyo3 = "0.21"
 rand = "0.8.5"
 erased-serde = "0.4.5"
 serde_flexitos = "0.2.2"
+chrono = "0.4.38"
 
 [dev-dependencies]
 rand_distr = "0.4.3"
