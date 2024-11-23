@@ -28,6 +28,8 @@ rand = "0.8.5"
 itertools = "0.13.0"
 # kdam 0.6.0 depends on pyo 0.22
 kdam = { version = "0.5.2", features = ["notebook"] }
+erased-serde = "0.4.5"
+serde_flexitos = "0.2.2"
 
 [dev-dependencies]
 rand_distr = "0.4.3"

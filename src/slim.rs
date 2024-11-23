@@ -21,37 +21,38 @@ use tokio::io::AsyncReadExt;
 use rayon::prelude::*;
 use kdam::{tqdm, BarExt};
 
-use crate::ftrl::FTRL;
+use crate::optimizers::{compound_key, create_optimizer, OptimizerObject};
 use crate::interactions::UserItemInteractions;
 use crate::identifiers::{Identifier, SerializableValue};
 
 #[pyclass]
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct SlimMSE {
     interactions: UserItemInteractions,
-    ftrl: FTRL,
+    optim: OptimizerObject,
     cumulative_loss: f32,
-    steps: usize,
+    steps: u32,
     user_ids: Identifier,
     item_ids: Identifier,
+    n_recent: Option<usize>,
 }
 
 #[pymethods]
 impl SlimMSE {
     #[new]
-    #[pyo3(signature = (alpha = 0.5, beta = 1.0, lambda1 = 0.0002, lambda2 = 0.0001, min_value = -5.0, max_value = 10.0, decay_in_days = None))]
-    pub fn new(alpha: f32, beta: f32, lambda1: f32, lambda2: f32, min_value: f32, max_value: f32, decay_in_days: Option<f32>) -> Self {
+    #[pyo3(signature = (optimizer = "adagrad", alpha = 0.01, lambda1 = 0.0002, lambda2 = 0.0001, rating_range = (-5.0, 10.0), decay_in_days = None, n_recent = None))]
+    pub fn new(optimizer: &str, alpha: f32, lambda1: f32, lambda2: f32, rating_range: (f32, f32), decay_in_days: Option<f32>, n_recent: Option<usize>) -> Self {
         env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).try_init().ok();
 
-        let ftrl = FTRL::new(alpha, beta, lambda1, lambda2);
-
+        let optim = create_optimizer(optimizer, alpha, lambda1, lambda2);
         SlimMSE {
-            interactions: UserItemInteractions::new(min_value, max_value, decay_in_days),
-            ftrl,
+            interactions: UserItemInteractions::new(rating_range.0, rating_range.1, decay_in_days),
+            optim,
             cumulative_loss: 0.0,
             steps: 0,
             user_ids: Identifier::new("user"),
             item_ids: Identifier::new("item"),
+            n_recent,
         }
     }
 
@@ -141,7 +142,7 @@ impl SlimMSE {
             let duration = end_time.duration_since(start_time).as_secs_f64();
             info!("Epoch {} completed in {:.2} seconds", epoch + 1, duration);
             info!("Throughput: {:.2} samples/sec", row_count as f64 / duration);
-            let empirical_loss = self.get_empirical_error(Some(true));
+            let empirical_loss = self.get_empirical_error();
             info!("Empirical loss after epoch {}: {:.6}", epoch + 1, empirical_loss);
             pb.update(1)?;
             pb.refresh()?;
@@ -170,8 +171,8 @@ impl SlimMSE {
     }
 
     fn update_weights(&mut self, user_id: i32, item_id: i32) {
-        let user_items = self.interactions.get_user_items(user_id, Some(20));
-        let predicted = self._predict_rating(user_id, item_id, false);
+        let n_recent = self.n_recent;
+        let predicted = self._predict_rating(user_id, item_id, false, n_recent);
         let actual = self.interactions.get_user_item_rating(user_id, item_id, 0.0);
         let dloss = predicted - actual;
 
@@ -182,28 +183,39 @@ impl SlimMSE {
         }
 
         self.cumulative_loss += dloss.abs();
-        self.steps += 1;
+        self.steps = self.steps.saturating_add(1);
 
         // update item similarity matrix
         // Note: Change applied to the original SLIM algorithm; only update the similarity matrix
         // where the user has (recently) interacted with the item.
         //
         // No interaction implies no update; grad = dloss * rating = 0
-        // see discussions in https://github.com/MaurizioFD/RecSys_Course_AT_PoliMi/issues/22
-        //
-        // Vectorized updates for better performance.
-        let updates: Vec<_> = user_items
-            .iter()
-            .filter(|&&ui| ui != item_id) // Exclude the target item_id
-            .map(|&ui| {
+        let optimizer = &mut self.optim.instance;
+        let user_items = self.interactions.get_user_items(user_id, n_recent);
+        user_items.iter()
+            .filter(|&&ui| ui != item_id) // Skip diagonal elements
+            .for_each(|&ui| {
                 let rating = self.interactions.get_user_item_rating(user_id, ui, 0.0);
                 let grad = dloss * rating;
-                (ui, grad)
-            })
-            .filter(|(_, grad)| grad.abs() > 1e-6) // Skip very small gradients
-            .collect();
+                if grad.abs() < 1e-6 {
+                    return;
+                }
+                optimizer.update_gradients(ui, item_id, grad, self.steps);
+            });
+    }
 
-        self.ftrl.vectorized_update_gradients(item_id, &updates);
+    pub fn predict_rating_batch(&self, users: Vec<SerializableValue>, items: Vec<SerializableValue>) -> Vec<f32> {
+        users.iter().zip(items.iter()).map(|(user, item)| {
+            let user_id = match self.user_ids.get_id(user).unwrap() {
+                Some(id) => id,
+                None => return 0.0, // Return 0 if user ID not found
+            };
+            let item_id = match self.item_ids.get_id(item).unwrap() {
+                Some(id) => id,
+                None => return 0.0, // Return 0 if item ID not found
+            };
+            self._predict_rating(user_id, item_id, true, None)
+        }).collect()
     }
 
     pub fn predict_rating(&self, user: SerializableValue, item: SerializableValue) -> f32 {
@@ -215,25 +227,25 @@ impl SlimMSE {
             Some(id) => id,
             None => return 0.0, // Return 0 if item ID not found
         };
-        self._predict_rating(user_id, item_id, true)
+        self._predict_rating(user_id, item_id, true, None)
     }
 
-    fn _predict_rating(&self, user_id: i32, item_id: i32, bypass_prediction: bool) -> f32 {
-        let user_items = self.interactions.get_user_items(user_id, None);
+    fn _predict_rating(&self, user_id: i32, item_id: i32, bypass_prediction: bool, n_recent: Option<usize>) -> f32 {
+        let user_items = self.interactions.get_user_items(user_id, n_recent);
 
         if bypass_prediction && user_items.len() == 1 && user_items[0] == item_id {
             // Return raw rating if user has only interacted with the item
             return self.interactions.get_user_item_rating(user_id, item_id, 0.0);
         }
 
-        let weights = self.ftrl.get_weights();
+        let weights = self.optim.instance.get_weights();
         if user_items.len() > 20 {
             user_items.par_chunks(20)
                 .map(|chunk| {
                     chunk.iter()
                         .filter(|&&ui| ui != item_id) // Skip diagonal elements
                         .map(|&ui| {
-                            let weight = weights.get(&(ui, item_id)).unwrap_or(&0.0);
+                            let weight = weights.get(&compound_key(ui, item_id)).unwrap_or(&0.0);
                             let rating = self.interactions.get_user_item_rating(user_id, ui, 0.0);
                             weight * rating
                         })
@@ -244,7 +256,7 @@ impl SlimMSE {
             user_items.iter()
                 .filter(|&&ui| ui != item_id) // Skip diagonal elements
                 .map(|&ui| {
-                    let weight = weights.get(&(ui, item_id)).unwrap_or(&0.0);
+                    let weight = weights.get(&compound_key(ui, item_id)).unwrap_or(&0.0);
                     let rating = self.interactions.get_user_item_rating(user_id, ui, 0.0);
                     weight * rating
                 })
@@ -252,22 +264,21 @@ impl SlimMSE {
         }
     }
 
+    #[pyo3(signature = (users, top_k = 10, filter_interacted = true))]
     pub fn recommend_batch(&self, users: Vec<SerializableValue>, top_k: usize, filter_interacted: Option<bool>) -> Vec<Vec<SerializableValue>> {
         // avoid nested parallelism (into_par_iter) for CPU cache locality
         users.into_iter().map(|user| self.recommend(user, top_k, filter_interacted)).collect()
     }
 
+    #[pyo3(signature = (user, top_k = 10, filter_interacted = true))]
     pub fn recommend(&self, user: SerializableValue, top_k: usize, filter_interacted: Option<bool>) -> Vec<SerializableValue> {
         let user_id = match self.user_ids.get_id(&user).unwrap() {
             Some(id) => id,
             None => return vec![], // TODO: Return empty list if user ID not found
         };
 
-        // Use `unwrap_or` to set `filter_interacted` to `true` by default
-        let filter_interacted = filter_interacted.unwrap_or(true);
-
         // Get the candidate items based on the filtering condition
-        let candidate_item_ids = if filter_interacted {
+        let candidate_item_ids = if filter_interacted.unwrap_or(true) {
             self.interactions.get_all_non_interacted_items(user_id)
         } else {
             self.interactions.get_all_non_negative_items(user_id)
@@ -278,7 +289,7 @@ impl SlimMSE {
             .par_chunks(1024)
             .flat_map(|chunk| {
                 chunk.iter().map(|&item_id| {
-                    let score = self._predict_rating(user_id, item_id, false);
+                    let score = self._predict_rating(user_id, item_id, false, None);
                     let item = self.item_ids.get(item_id).unwrap();
                     (item, score)
                 }).collect::<Vec<_>>()
@@ -307,7 +318,7 @@ impl SlimMSE {
         // Get all target item IDs from interactions
         let target_item_ids = self.interactions.get_all_item_ids();
 
-        let weights = self.ftrl.get_weights();
+        let weights = self.optim.instance.get_weights();
 
         // Loop over each query item and find similar items
         // Use parallel iterator for better performance
@@ -321,7 +332,7 @@ impl SlimMSE {
                             if !filter_query_items || target_item_id != query_item_id {
                                 // Retrieve similarity score from weights or use NEG_INFINITY as default
                                 let similarity_score: f32 =
-                                    *weights.get(&(target_item_id, query_item_id))
+                                    *weights.get(&compound_key(target_item_id, query_item_id))
                                     .unwrap_or(&f32::NEG_INFINITY);
 
                                 Some((target_item_id, similarity_score))
@@ -347,18 +358,11 @@ impl SlimMSE {
         similar_items
     }
 
-    #[pyo3(signature = (reset = false))]
-    pub fn get_empirical_error(&mut self, reset: Option<bool>) -> f32 {
+    pub fn get_empirical_error(&mut self) -> f32 {
         if self.steps == 0 {
-            0.0
-        } else {
-            let err = self.cumulative_loss / self.steps as f32;
-            if reset.unwrap_or(false) {
-                self.cumulative_loss = 0.0;
-                self.steps = 0;
-            }
-            err
+            return 0.0; // Avoid division by zero
         }
+        self.cumulative_loss / self.steps as f32
     }
 
     /// Save the SlimMSE model to a specified path using MessagePack.

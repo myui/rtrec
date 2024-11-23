@@ -1,6 +1,6 @@
 pub mod slim;
 pub mod interactions;
-pub mod ftrl;
+pub mod optimizers;
 pub mod identifiers;
 
 use slim::SlimMSE;
