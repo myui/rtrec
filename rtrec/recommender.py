@@ -48,6 +48,10 @@ class Recommender:
             identified_pairs = self.model.bulk_identify(user_item_pairs)
             train_data[['user', 'item']] = pd.DataFrame(identified_pairs, index=train_data.index)
 
+        # Set decay rate to None to disable decay during iterative fitting
+        # orig_decay_rate = self.model.get_decay_rate()
+        # self.model.set_decay_rate(None)
+
         # Iterate over epochs
         for epoch in tqdm(range(epochs)):
             # Shuffle the training data at the beginning of each epoch
@@ -64,6 +68,9 @@ class Recommender:
             print(f"Epoch {epoch + 1} completed in {end_time - start_time:.2f} seconds")
             print(f"Throughput: {len(train_data) / (end_time - start_time):.2f} samples/sec")
             print(f"Empirical loss after epoch {epoch + 1}: {self.model.get_empirical_error()}")
+
+        # Reset the decay rate to its original value
+        # self.model.set_decay_rate(orig_decay_rate)
 
     def predict_rating(self, user: Any, item: Any) -> float:
         """

@@ -27,6 +27,24 @@ class UserItemInteractions:
             # https://dl.acm.org/doi/10.1145/1099554.1099689
             self.decay_rate = 1.0 - (math.log(2) / decay_in_days)
 
+    def get_decay_rate(self) -> Optional[float]:
+        """
+        Retrieves the decay rate for interactions.
+
+        Returns:
+            Optional[float]: The decay rate for interactions.
+        """
+        return self.decay_rate
+
+    def set_decay_rate(self, decay_rate: Optional[float]) -> None:
+        """
+        Sets the decay rate for interactions.
+
+        Args:
+            decay_rate (Optional[float]): The decay rate for interactions.
+        """
+        self.decay_rate = decay_rate
+
     def _apply_decay(self, value: float, last_timestamp: float) -> float:
         """
         Applies decay to a given value based on the elapsed time since the last interaction.

@@ -29,6 +29,18 @@ class BaseRecommender(ABC):
         """
         raise NotImplementedError("The get_empirical_loss method must be implemented by the subclass.")
 
+    def get_decay_rate(self) -> Optional[float]:
+        """
+        Retrieves the decay rate for interactions.
+        """
+        return self.interactions.get_decay_rate()
+
+    def set_decay_rate(self, decay_rate: Optional[float]) -> None:
+        """
+        Sets the decay rate for interactions.
+        """
+        self.interactions.set_decay_rate(decay_rate)
+
     def _get_interacted_items(self, user_id: int, n_recent: Optional[int] = None) -> List[int]:
         """
         Get a list of all items a user has interacted with.
