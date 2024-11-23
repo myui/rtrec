@@ -21,7 +21,7 @@ class BaseRecommender(ABC):
         self.item_ids = Identifier()
 
     @abstractmethod
-    def get_empirical_error(self, reset: bool=False) -> float:
+    def get_empirical_error(self) -> float:
         """
         Get the empirical error of the model.
         The empirical error is the average loss over all user-item interactions.
@@ -205,6 +205,21 @@ class ExplicitFeedbackRecommender(BaseRecommender):
         return [
             self._predict_rating(user_id, item_id, bypass_prediction=False)
             for item_id in item_ids
+        ]
+
+    def predict_rating_batch(self, users: List[Any], items: List[Any]) -> List[float]:
+        """
+        Predict ratings for a list of user-item pairs.
+        :param users: List of user indices
+        :param items: List of item indices
+        :return: List of predicted ratings for each user-item pair
+        """
+        user_ids = [self.user_ids.get_id(user) for user in users]
+        item_ids = [self.item_ids.get_id(item) for item in items]
+
+        return [
+            self._predict_rating(user_id, item_id, bypass_prediction=False) if user_id is not None and item_id is not None else 0.0
+            for user_id, item_id in zip(user_ids, item_ids)
         ]
 
     def predict_rating(self, user: Any, item: Any) -> float:

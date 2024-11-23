@@ -1,8 +1,6 @@
 import numpy as np
 from typing import Dict, Any, Iterable, Tuple, List
 
-from rtrec.models.optimizers import FTRL
-
 from .base import ExplicitFeedbackRecommender
 
 class FactorizationMachines(ExplicitFeedbackRecommender):

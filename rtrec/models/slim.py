@@ -1,6 +1,6 @@
 import numpy as np
 
-from typing import Any, List
+from typing import Any, List, Optional
 from math import inf
 
 from .base import ExplicitFeedbackRecommender
@@ -11,6 +11,8 @@ class SLIM_MSE(ExplicitFeedbackRecommender):
 
         self.ftrl = FTRL(**kwargs)
 
+        self.n_recent = kwargs.get('n_recent', 100)
+
         # item-item similarity matrix
         # target_item_id, base_item_id -> similarity
         self.W = self.ftrl.W
@@ -18,14 +20,10 @@ class SLIM_MSE(ExplicitFeedbackRecommender):
         self.cumulative_loss = 0.0
         self.steps = 0
 
-    def get_empirical_error(self, reset: bool=False) -> float:
+    def get_empirical_error(self) -> float:
         if self.steps == 0:
             return 0.0
-        err = self.cumulative_loss / self.steps
-        if reset:
-            self.cumulative_loss = 0.0
-            self.steps = 0
-        return err
+        return self.cumulative_loss / self.steps
 
     def _get_similarity(self, target_item_id: int, base_item_id: int) -> float:
         """
@@ -42,11 +40,8 @@ class SLIM_MSE(ExplicitFeedbackRecommender):
         :param user: User index
         :param item_id: Item index
         """
-
-        user_item_ids = self._get_interacted_items(user_id, n_recent=20)
-
-        # Compute the gradient (MSE)        
-        dloss = self._predict_rating(user_id, item_id) - self._get_rating(user_id, item_id)
+        # Compute the gradient (MSE)
+        dloss = self._predict_rating(user_id, item_id, self.n_recent) - self._get_rating(user_id, item_id)
         self.cumulative_loss += abs(dloss)
         self.steps += 1
 
@@ -56,6 +51,7 @@ class SLIM_MSE(ExplicitFeedbackRecommender):
         #
         # No interaction implies no update; grad = dloss * rating = 0
         # see discussions in https://github.com/MaurizioFD/RecSys_Course_AT_PoliMi/issues/22
+        user_item_ids = self._get_interacted_items(user_id, n_recent=self.n_recent)
         for user_item_id in user_item_ids:
             # Note diagonal elements are not updated for item-item similarity matrix
             if user_item_id == item_id:
@@ -64,8 +60,8 @@ class SLIM_MSE(ExplicitFeedbackRecommender):
             grad = dloss * self._get_rating(user_id, user_item_id)
             self.ftrl.update_gradients((user_item_id, item_id), grad)
 
-    def _predict_rating(self, user_id: int, item_id: int, bypass_prediction: bool=False) -> float:
-        user_item_ids = self._get_interacted_items(user_id)
+    def _predict_rating(self, user_id: int, item_id: int, bypass_prediction: bool=False, n_recent: Optional[int] = None) -> float:
+        user_item_ids = self._get_interacted_items(user_id, n_recent=n_recent)
         if bypass_prediction:
             if len(user_item_ids) == 1 and user_item_ids[0] == item_id:
                 # return raw rating if user has only interacted with the item
@@ -80,11 +76,11 @@ class SLIM_MSE(ExplicitFeedbackRecommender):
         return predicted
 
 class FTRL():
-    def __init__(self, alpha: float = 0.5, beta: float = 1.0, lambda1: float = 0.0002, lambda2: float = 0.0001, **kwargs: Any):
+    def __init__(self, alpha: float = 0.01, beta: float = 1.0, lambda1: float = 0.0002, lambda2: float = 0.0001, **kwargs: Any):
         """
         FTRL Constructor
         :param alpha: Learning rate
-        :param beta: Parameter for adaptive learning rate
+        :param beta: A kind of smoothing parameter of AdaGrad (denominator)
         :param lambda1: L1 regularization parameter
         :param lambda2: L2 regularization parameter
 

@@ -28,14 +28,10 @@ class BPR_SLIM(ImplicitFeedbackRecommender):
         self.cumulative_loss = 0.0
         self.steps = 0
 
-    def get_empirical_error(self, reset: bool=False) -> float:
+    def get_empirical_error(self) -> float:
         if self.steps == 0:
             return 0.0
-        err = self.cumulative_loss / self.steps
-        if reset:
-            self.cumulative_loss = 0.0
-            self.steps = 0
-        return err
+        return self.cumulative_loss / self.steps
 
     def _get_similarity(self, target_item_id: int, base_item_id: int) -> float:
         """

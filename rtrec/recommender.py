@@ -63,7 +63,7 @@ class Recommender:
             end_time = time.time()
             print(f"Epoch {epoch + 1} completed in {end_time - start_time:.2f} seconds")
             print(f"Throughput: {len(train_data) / (end_time - start_time):.2f} samples/sec")
-            print(f"Empirical loss after epoch {epoch + 1}: {self.model.get_empirical_error(reset=True)}")
+            print(f"Empirical loss after epoch {epoch + 1}: {self.model.get_empirical_error()}")
 
     def predict_rating(self, user: Any, item: Any) -> float:
         """
