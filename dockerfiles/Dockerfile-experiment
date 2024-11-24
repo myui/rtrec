@@ -1,0 +1,62 @@
+#
+# Build:
+#   $ docker buildx build --platform=linux/arm64 -f ./Dockerfile-experiment --load -t myui/rtrec_expr:arm64 .
+# 
+# Run notebook:
+#   $ docker run --platform=linux/arm64 -it --rm -p 8888:8888 -p 6006:6006 -v $HOME/workspace/myui/rtrec/notebooks:/home/td-user/rtrec/notebooks myui/rtrec_expr:arm64 jupyter notebook --ip=0.0.0.0 --no-browser --notebook-dir=/home/td-user/rtrec/notebooks
+#
+FROM python:3.12-slim-bookworm
+
+ENV DEBCONF_NOWARNINGS=yes
+ENV PATH="/home/td-user/.local/bin:$PATH"
+ENV PYTHONPATH="/home/td-user/.local/lib/python3.12/site-packages"
+
+# Enable fault handlers for the SIGSEGV, SIGFPE, SIGABRT, SIGBUS, and SIGILL signals.
+# https://docs.python.org/3/library/faulthandler.html
+ENV PYTHONFAULTHANDLER=1
+RUN apt-get -y update && \
+    # dpkg-query -W -f='${Installed-Size}\t${Package}\n' | sort -nr
+    # to list size of apt-installed packages
+    apt-get remove --auto-remove adwaita-icon-theme libgtk2.0-common && \
+    apt-get install --no-install-recommends -y git sudo curl wget time unzip && \
+    apt-get install --no-install-recommends -y build-essential ca-certificates && \
+    apt-get install --no-install-recommends -y libopenblas-dev && \
+    # For Jupyter notebook
+    # required for pygraphviz
+    # see https://github.com/pygraphviz/pygraphviz/issues/155
+    apt-get install --no-install-recommends -y graphviz libgraphviz-dev && \
+    # This is a workaround for https://github.com/debuerreotype/debuerreotype/issues/10
+    mkdir -p /usr/share/man/man1 && \
+    apt-get upgrade -y && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN groupadd -g 65432 wheel && \
+    useradd -u 65432 -g wheel --create-home -s /sbin/nologin td-user && \
+    echo '%wheel ALL=NOPASSWD: /usr/local/bin/pip' >> /etc/sudoers && \
+    echo '%wheel ALL=NOPASSWD: /usr/bin/apt-get' >> /etc/sudoers
+
+USER td-user
+WORKDIR /home/td-user
+
+RUN mkdir -p /home/td-user/.local/lib/python3.12/site-packages && \
+    mkdir -p /home/td-user/.local/bin && \
+    mkdir -p /home/td-user/.local/share && \
+    mkdir -p /home/td-user/.ssh
+
+RUN git clone https://github.com/myui/rtrec.git rtrec
+
+RUN pip install --user --no-cache-dir --upgrade pip && \
+    pip install --user --no-cache-dir numpy scipy scikit-learn pandas \
+        # workaround for ModuleNotFoundError: No module named 'notebook.base' when installing nbextensions
+        # see https://stackoverflow.com/questions/76893872/modulenotfounderror-no-module-named-notebook-base-when-installing-nbextension
+        notebook==6.5.4 ipywidgets>=8.0.6 traitlets==5.9.0 \
+        widgetsnbextension pygraphviz black jupyter_contrib_nbextensions \
+        matplotlib plotly tqdm memory_profiler \
+        daisyrec rectools implicit
+
+# Activate ipywidgets extension in the environment that runs the notebook server
+RUN jupyter contrib nbextension install --user && \
+    jupyter nbextensions_configurator enable --user && \
+    jupyter nbextension enable --py widgetsnbextension --user
+
+CMD ["python3"]
