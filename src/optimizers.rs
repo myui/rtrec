@@ -64,16 +64,15 @@ impl Optimizer for SGD {
     fn update_gradients(&mut self, ui: i32, item_id: i32, grad: f32, _step: u32) {
         let key = compound_key(ui, item_id);
         let eta = invoscaling_eta(self.alpha, _step, self.power_t);
-        let new_weight = self.weights.entry(key).and_modify(|e| *e -= eta * grad).or_insert(-eta * grad);
+
+        let new_weight = self.weights.entry(key).or_insert(0.0);
+        let l1_penalty = self.lambda1 * new_weight.signum();
+        let l2_penalty = self.lambda2 * *new_weight;
+        *new_weight -= eta * (grad + l1_penalty + l2_penalty);
         if new_weight.abs() <= 1e-7 {
             self.weights.remove(&key);
-        } else {
-            let l1_penalty = self.lambda1 * new_weight.signum();
-            let l2_penalty = self.lambda2 * *new_weight;
-            *new_weight -= self.alpha * (l1_penalty + l2_penalty);
         }
     }
-
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -117,14 +116,13 @@ impl Optimizer for AdaGrad {
         let sum_gg =* self.sum_sq_grad.entry(key).and_modify(|e| *e += gg).or_insert(gg);
 
         let eta = self.alpha / (1.0 + sum_gg.sqrt());
-        let delta = eta * grad;
-        let new_weight = self.weights.entry(key).and_modify(|e| *e -= delta).or_insert(-delta);
+
+        let new_weight = self.weights.entry(key).or_insert(0.0);
+        let l1_penalty = self.lambda1 * new_weight.signum();
+        let l2_penalty = self.lambda2 * *new_weight;
+        *new_weight -= eta * (grad + l1_penalty + l2_penalty);
         if new_weight.abs() <= 1e-7 {
             self.weights.remove(&key);
-        } else {
-            let l1_penalty = self.lambda1 * new_weight.signum();
-            let l2_penalty = self.lambda2 * *new_weight;
-            *new_weight -= eta * (l1_penalty + l2_penalty);
         }
     }
 }
