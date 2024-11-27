@@ -250,3 +250,6 @@ class ExplicitFeedbackRecommender(BaseRecommender):
         :param bypass_prediction: Flag to bypass prediction if user has only interacted with the item (default: False)
         """
         raise NotImplementedError("The _predict_rating method must be implemented by the subclass.")
+
+def inv_scaling(alpha: float, step: int, power_t: float) -> float:
+    return alpha / pow(step, power_t)
