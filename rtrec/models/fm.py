@@ -13,6 +13,7 @@ class FactorizationMachines(ExplicitFeedbackRecommender):
         # Initialize parameters
         self.alpha = kwargs.get('alpha', 0.01)  # Learning rate
         self.power_t = kwargs.get('power_t', 0.1)  # Power for inv-scaling learning rate
+        self.lambda2 = kwargs.get('lambda2', 0.0001)  # L2 regularization for factors
 
         self.n_factors: int = n_factors  # Number of latent factors
         self.feature_map: Dict[str, int] = {}  # Maps feature keys to indices
@@ -88,18 +89,19 @@ class FactorizationMachines(ExplicitFeedbackRecommender):
 
         adjusted_learning_rate = inv_scaling(self.alpha, self.steps, self.power_t)
         self.w[0] -= adjusted_learning_rate * grad  # Update global bias
-        self.w[user_idx + 1] -= adjusted_learning_rate * grad  # Update user bias
-        self.w[item_idx + 1] -= adjusted_learning_rate * grad  # Update item bias
+        self.w[user_idx + 1] -= adjusted_learning_rate * (grad + self.lambda2 * self.w[user_idx + 1])  # Update user bias
+        self.w[item_idx + 1] -= adjusted_learning_rate * (grad + self.lambda2 * self.w[item_idx + 1])  # Update item bias
 
         # Update interaction factors (latent factors for user-item pair)
         for f in range(self.n_factors):
             sum_vx = self.V[user_idx][f] + self.V[item_idx][f]
             for idx in [user_idx, item_idx]:
                 v_if = self.V[idx][f]
-                gradient = dloss * (sum_vx - v_if)
+                gradient = dloss * (sum_vx - self.V[idx][f])
                 if abs(gradient) <= 1e-6:
                     continue
-                self.ftrl.update(idx, f, gradient, self.V)
+                # self.ftrl.update(idx, f, gradient, self.V)
+                self.V[idx][f] -= adjusted_learning_rate * (gradient + self.lambda2 * v_if)
 
     def _get_similarity(self, target_item_id: int, base_item_id: int) -> float:
         """Compute the cosine similarity between two items."""
