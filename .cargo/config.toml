@@ -13,6 +13,9 @@ pipelining = true                        # rustc pipelining
 opt-level = 2
 lto = true
 codegen-units = 1
+# https://doc.rust-lang.org/cargo/reference/profiles.html#strip
+# see https://github.com/rust-lang/rust/issues/110536#issuecomment-1514658609
+strip = false
 
 [profile.dev]
 opt-level = 1
