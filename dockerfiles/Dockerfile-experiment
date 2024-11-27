@@ -45,14 +45,17 @@ RUN mkdir -p /home/td-user/.local/lib/python3.12/site-packages && \
 
 RUN git clone https://github.com/myui/rtrec.git rtrec
 
-RUN pip install --user --no-cache-dir --upgrade pip && \
-    pip install --user --no-cache-dir numpy scipy scikit-learn pandas \
+RUN pip install --user --no-cache-dir --upgrade pip setuptools wheel && \
+    pip install --user --no-cache-dir \
+        numpy scipy scikit-learn pandas \
         # workaround for ModuleNotFoundError: No module named 'notebook.base' when installing nbextensions
         # see https://stackoverflow.com/questions/76893872/modulenotfounderror-no-module-named-notebook-base-when-installing-nbextension
         notebook==6.5.4 ipywidgets>=8.0.6 traitlets==5.9.0 \
         widgetsnbextension pygraphviz black jupyter_contrib_nbextensions \
         matplotlib plotly tqdm memory_profiler \
-        daisyrec rectools implicit
+        daisyrec rectools[lightfm] implicit \
+        # see https://github.com/lyst/lightfm/issues/709
+        git+https://github.com/daviddavo/lightfm
 
 # Activate ipywidgets extension in the environment that runs the notebook server
 RUN jupyter contrib nbextension install --user && \
