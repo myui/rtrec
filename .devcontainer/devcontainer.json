@@ -2,8 +2,8 @@
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.231.6/containers/docker-existing-dockerfile
 {
 	"name": "rtrec",
-	"image": "myui/rtrec:0.1",
-	"runArgs": ["--platform=linux/amd64"],
+	"image": "myui/rtrec:arm64",
+	"runArgs": ["--platform=linux/arm64"],
 	"containerEnv": {
 		// To enable integrated terminal
 		"SHELL": "/bin/bash",
