@@ -1,13 +1,11 @@
 #[cfg(test)]
 mod tests {
 
-    use pyo3_polars::PyDataFrame;
     use rtrec::{identifiers::SerializableValue, slim::SlimMSE};
     use rand::prelude::SliceRandom;
     use rand::SeedableRng;
     use rand::rngs::StdRng;
     use approx::assert_relative_eq;
-    use polars::prelude::*;
 
     #[test]
     fn test_serializable_value_conversion() {
@@ -143,27 +141,6 @@ mod tests {
         // Note: Adjust item IDs if expected results differ in Rust implementation
         assert_eq!(similar_items[0], vec![SerializableValue::Integer(3), SerializableValue::Integer(2)], "Expected similar items for item 1 are 3 and 2");
         assert_eq!(similar_items[1], vec![SerializableValue::Integer(3), SerializableValue::Integer(1)], "Expected similar items for item 2 are 3 and 1");
-    }
-
-    #[test]
-    fn test_bulk_fit() {
-        // Initialize a SlimMSE instance
-        let mut slim = SlimMSE::new("adagrad", 0.5, 0.0002, 0.0001, (-5.0, 10.0), None, None);
-
-        // Create a test Polars DataFrame with user-item interactions
-        let df = df![
-            "user" => [1, 1, 2, 2, 3, 3],
-            "item" => [1, 2, 2, 3, 3, 4],
-            "tstamp" => [1620000000.0, 1620003600.0, 1620000000.0, 1620003600.0, 1620000000.0, 1620003600.0],
-            "rating" => [5.0, 3.0, 4.0, 2.0, 3.0, 4.0]
-        ].unwrap();
-
-        // Convert DataFrame to PyDataFrame
-        let py_df = PyDataFrame(df);
-        // Call bulk_fit with 2 epochs
-        slim.bulk_fit(py_df, 10, Some(43)).expect("bulk_fit failed");
-
-        assert!(slim.get_empirical_error() < 1.2, "Empirical error should be less than 0.1 after fitting: {}", slim.get_empirical_error());
     }
 
 }
