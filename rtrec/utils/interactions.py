@@ -2,6 +2,8 @@ from collections import defaultdict
 from typing import List, Optional, Any
 import time, math
 
+from scipy import csr_matrix
+
 class UserItemInteractions:
     def __init__(self, min_value: int = -5, max_value: int = 10, decay_in_days: Optional[int] = None, **kwargs: Any) -> None:
         """
@@ -167,3 +169,18 @@ class UserItemInteractions:
         # Return all items with non-negative interaction counts after applying decay
         return [item_id for item_id in self.all_item_ids
                 if self.get_user_item_rating(user_id, item_id, default_rating=0.0) >= 0.0]
+
+    def to_csr(self) -> csr_matrix:
+        rows, cols, data = [], [], []
+        max_row, max_col = 0, 0
+
+        for row, inner_dict in self.interactions.items():
+            for col, (value, tstamp) in inner_dict.items():
+                rows.append(row)
+                cols.append(col)
+                data.append(self._apply_decay(value, tstamp))
+                max_row = max(max_row, row)
+                max_col = max(max_col, col)
+
+        # Create the csr_matrix
+        return csr_matrix((data, (rows, cols)), shape=(max_row, max_col))
