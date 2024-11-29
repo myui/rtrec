@@ -6,6 +6,7 @@ from sklearn.linear_model import ElasticNet, SGDRegressor
 import warnings
 from sklearn.exceptions import ConvergenceWarning
 from tqdm import tqdm
+from scipy.sparse.linalg import cg
 
 class ColumnarView:
     def __init__(self, csr_matrix: sp.csr_matrix):
@@ -59,7 +60,7 @@ class FeatureSelectionWrapper:
         self.n_neighbors = n_neighbors
         self.coef_ = None
 
-    def fit(self, X: sp.csr_matrix, y: ArrayLike):
+    def fit(self, X: sp.csr_matrix, y: np.ndarray):
          # Compute dot products between items and the target
         feature_scores = X.T.dot(y).flatten()
         # Select the top-k similar items to the target item by sorting the dot products
@@ -90,7 +91,8 @@ class SLIMElastic:
             l1_ratio (float): The ratio between L1 and L2 regularization.
             positive_only (bool): Whether to enforce positive coefficients.
         """
-        self.model_name = config.get("model_name", "CD")
+        self.model_name = config.get("model_name", "cd")
+        self.eta0 = config.get("eta0", 0.001)
         self.alpha = config.get("alpha", 0.001)
         self.l1_ratio = config.get("l1_ratio", 0.5)
         self.positive_only = config.get("positive_only", True)
@@ -101,6 +103,34 @@ class SLIMElastic:
 
         # Initialize an empty item similarity matrix (will be computed during fit)
         self.item_similarity = None
+
+    def get_model(self):
+        if self.model_name == "cd" or self.model_name == "coordinate_descent":
+            return ElasticNet(
+                    alpha=self.alpha, # Regularization strength
+                    l1_ratio=self.l1_ratio,
+                    positive=self.positive_only, # Enforce positive coefficients
+                    fit_intercept=False,
+                    copy_X=False, # Avoid copying the input matrix
+                    precompute=True, # Precompute Gram matrix for faster computation
+                    max_iter=self.max_iter,
+                    tol=self.tol,
+                    selection='random', # Randomize the order of features
+                    random_state=self.random_state,
+                )
+        elif self.model_name == "sgd":
+            return SGDRegressor(
+                    penalty='elasticnet',
+                    eta0 = self.eta0,
+                    alpha=self.alpha,
+                    l1_ratio=self.l1_ratio,
+                    fit_intercept=False,
+                    max_iter=self.max_iter,
+                    tol=self.tol,
+                    random_state=self.random_state,
+                )
+        else:
+            raise ValueError(f"Invalid model name: {self.model_name}")
 
     def fit(self, interaction_matrix: sp.csr_matrix):
         """
@@ -117,18 +147,7 @@ class SLIMElastic:
 
         self.item_similarity = np.zeros((num_items, num_items))  # Initialize similarity matrix
         
-        model = ElasticNet(
-                    alpha=self.alpha, # Regularization strength
-                    l1_ratio=self.l1_ratio,
-                    positive=self.positive_only, # Enforce positive coefficients
-                    fit_intercept=False,
-                    copy_X=False, # Avoid copying the input matrix
-                    precompute=True, # Precompute Gram matrix for faster computation
-                    max_iter=self.max_iter,
-                    tol=self.tol,
-                    selection='random', # Randomize the order of features
-                    random_state=self.random_state,
-                )
+        model = self.get_model()
 
         if self.nn_feature_selection is not None:
             model = FeatureSelectionWrapper(model, n_neighbors=int(self.nn_feature_selection))
@@ -182,18 +201,7 @@ class SLIMElastic:
 
         X = ColumnarView(interaction_matrix)
 
-        model = ElasticNet(
-                    alpha=self.alpha, # Regularization strength
-                    l1_ratio=self.l1_ratio,
-                    positive=self.positive_only, # Enforce positive coefficients
-                    fit_intercept=False,
-                    copy_X=False, # Avoid copying the input matrix
-                    precompute=True, # Precompute Gram matrix for faster computation
-                    max_iter=self.max_iter,
-                    tol=self.tol,
-                    selection='random', # Randomize the order of features
-                    random_state=self.random_state,
-                )
+        model = self.get_model()
 
         if self.nn_feature_selection is not None:
             model = FeatureSelectionWrapper(model, n_neighbors=int(self.nn_feature_selection))
