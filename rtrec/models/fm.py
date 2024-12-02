@@ -8,8 +8,6 @@ class FactorizationMachines(ExplicitFeedbackRecommender):
     def __init__(self, n_factors: int, **kwargs: Any) -> None:
         super().__init__(**kwargs)
 
-        self.ftrl = AdaGrad(**kwargs)
-
         # Initialize parameters
         self.alpha = kwargs.get('alpha', 0.01)  # Learning rate
         self.power_t = kwargs.get('power_t', 0.1)  # Power for inv-scaling learning rate
@@ -100,7 +98,6 @@ class FactorizationMachines(ExplicitFeedbackRecommender):
                 gradient = dloss * (sum_vx - self.V[idx][f])
                 if abs(gradient) <= 1e-6:
                     continue
-                # self.ftrl.update(idx, f, gradient, self.V)
                 self.V[idx][f] -= adjusted_learning_rate * (gradient + self.lambda2 * v_if)
 
     def _get_similarity(self, target_item_id: int, base_item_id: int) -> float:
@@ -118,6 +115,7 @@ class FactorizationMachines(ExplicitFeedbackRecommender):
         # Avoid division by zero
         return dot_product / (target_norm * base_norm + 1e-6) # cosine similarity
 
+@DeprecationWarning
 class AdaGrad:
 
     def __init__(self, alpha: float = 0.01, lambda1 = 0.0002, lambda2 = 0.0001, epsilon: float = 1e-6, **kwargs: Any) -> None:
