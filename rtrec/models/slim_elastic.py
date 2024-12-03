@@ -92,9 +92,9 @@ class SLIMElastic:
             positive_only (bool): Whether to enforce positive coefficients.
         """
         self.model_name = config.get("model_name", "cd")
-        self.eta0 = config.get("eta0", 0.001)
-        self.alpha = config.get("alpha", 0.001)
-        self.l1_ratio = config.get("l1_ratio", 0.5)
+        self.eta0 = config.get("eta0", 0.001) # Learning rate used only for SGD
+        self.alpha = config.get("alpha", 0.1) # Regularization strength
+        self.l1_ratio = config.get("l1_ratio", 0.1) # mostly for L2 regularization for SLIM
         self.positive_only = config.get("positive_only", True)
         self.max_iter = config.get("max_iter", 30)
         self.tol = config.get("tol", 1e-4)
