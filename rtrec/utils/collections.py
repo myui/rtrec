@@ -1,3 +1,5 @@
+
+from bisect import bisect_left
 from typing import Iterable, Optional, Iterator, List, Set, TypeVar
 
 T = TypeVar("T")  # A generic type for elements in the SortedSet
@@ -15,21 +17,11 @@ class SortedSet:
         Adds an item to the sorted set if it's not already present and returns its index.
         If the item is already present, returns its existing index.
         """
-        def find_insert_index(item: T) -> int:
-            """Finds the index where the item should be inserted to maintain sorted order."""
-            left, right = 0, len(self._list)
-            while left < right:
-                mid = (left + right) // 2
-                if self._list[mid] < item:
-                    left = mid + 1
-                else:
-                    right = mid
-            return left
 
         if item in self._set:
             return self.index(item)  # Return the existing index
         else:
-            index = find_insert_index(item)
+            index = bisect_left(item)
             self._set.add(item)
             self._list.insert(index, item)
             return index  # Return the inserted index
