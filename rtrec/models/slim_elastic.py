@@ -271,6 +271,27 @@ class SLIMElastic:
         # and the item similarity matrix
         return interaction_matrix.dot(self.item_similarity)
 
+    def similar_items(self, item_id: int, top_k: int=10):
+        """
+        Get the top-K most similar items to a given item.
+
+        Args:
+            item_id (int): The item ID (column index in the interaction matrix).
+            top_k (int): Number of similar items to retrieve.
+
+        Returns:
+            List of similar item indices.
+        """
+        if self.item_similarity is None:
+            raise RuntimeError("Model must be fitted before calling similar_items.")
+
+        # Get the item similarity vector for the given item
+        item_similarity = self.item_similarity[item_id]
+
+        # Get the top-K similar items by sorting the similarity scores in descending order
+        similar_items = np.argsort(item_similarity)[-1:-1-top_k:-1]
+        return similar_items
+
     def recommend(self, user_id: int, interaction_matrix: sp.csr_matrix, top_k: int=10, exclude_seen: bool=True) -> List[int]:
         """
         Recommend top-K items for a given user.
