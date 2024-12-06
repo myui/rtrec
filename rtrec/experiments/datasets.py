@@ -8,17 +8,19 @@ import os
 
 from datetime import datetime
 
-def load_movielens(dataset_scale: str, sort_by_tstamp: bool=False) -> pd.DataFrame:
+def load_movielens(dataset_scale: str, sort_by_tstamp: bool = False, load_user_attributes: bool = False, load_item_attributes: bool = False) -> pd.DataFrame:
     """
     Downloads and loads the specified MovieLens dataset version into a DataFrame with columns
-    user_id, item_id, rating, and tstamp. Supported versions are '1m', '20m', and '25m'.
+    user_id, item_id, rating, and tstamp. Optionally loads user and item attributes.
 
     Args:
-        dataset_scale (str): The version of the MovieLens dataset to load ('1m', '20m', or '25m').
+        dataset_scale (str): The version of the MovieLens dataset to load ('100k', '1m', '10m', '20m', or '25m').
         sort_by_tstamp (bool): Whether to sort the DataFrame by timestamp. Defaults to False.
+        load_user_attributes (bool): Whether to load user attributes. Defaults to False.
+        load_item_attributes (bool): Whether to load item attributes. Defaults to False.
 
     Returns:
-        pd.DataFrame: A DataFrame containing user_id, item_id, rating, and tstamp.
+        pd.DataFrame: A DataFrame containing user_id, item_id, rating, and tstamp, with optional attributes.
     """
     # Mapping version to URL and file details
     dataset_info = {
@@ -27,57 +29,93 @@ def load_movielens(dataset_scale: str, sort_by_tstamp: bool=False) -> pd.DataFra
             "zip_path": "datasets/ml-100k.zip",
             "extracted_folder": "datasets/ml-100k",
             "ratings_file": "ml-100k/u.data",
-            "sep": "\t",
-            "header": None, # No header in the file
-            "columns": ["user_id", "item_id", "rating", "tstamp"]
+            "user_file": "ml-100k/u.user",
+            "item_file": "ml-100k/u.item",
+            "ratings_sep": "\t",
+            "user_sep": "|",
+            "item_sep": "|",
+            "genre_sep": "|",
+            "header": None,
+            "columns": ["user_id", "item_id", "rating", "tstamp"],
+            "user_columns": ["user_id", "age", "gender", "occupation", "zip_code"],
+            "item_columns": ["movie_id", "title", "release_date", "video_release_date", "IMDb_URL", "unknown", "Action", "Adventure", "Animation", "Children", "Comedy", "Crime", "Documentary", "Drama", "Fantasy", "Film-Noir", "Horror", "Musical", "Mystery", "Romance", "Sci-Fi", "Thriller", "War", "Western"],
+            "encoding": "latin1"
         },
-        # 1,000,209 rating of 3,900 movies from 6,040 users
         "1m": {
             "url": "https://files.grouplens.org/datasets/movielens/ml-1m.zip",
             "zip_path": "datasets/ml-1m.zip",
             "extracted_folder": "datasets/ml-1m",
             "ratings_file": "ml-1m/ratings.dat",
-            "sep": "::",
-            "header": None, # No header in the file
-            "columns": ["user_id", "item_id", "rating", "tstamp"]
+            "user_file": "ml-1m/users.dat",
+            "item_file": "ml-1m/movies.dat",
+            "ratings_sep": "::",
+            "user_sep": "::",
+            "item_sep": "::",
+            "header": None,
+            "columns": ["user_id", "item_id", "rating", "tstamp"],
+            "user_columns": ["user_id", "gender", "age", "occupation", "zip_code"],
+            "item_columns": ["movie_id", "title", "genres"],
+            "encoding": "latin1"
         },
         "10m": {
             "url": "https://files.grouplens.org/datasets/movielens/ml-10m.zip",
             "zip_path": "datasets/ml-10m.zip",
-            "extracted_folder": "datasets/ml-10m",
+            "extracted_folder": "datasets/ml-10M100K",
             "ratings_file": "ml-10M100K/ratings.dat",
-            "sep": "::",
-            "header": None, # No header in the file
-            "columns": ["user_id", "item_id", "rating", "tstamp"]
+            "user_file": "ml-10M100K/users.dat",
+            "item_file": "ml-10M100K/movies.dat",
+            "ratings_sep": "::",
+            "user_sep": "::",
+            "item_sep": "::",
+            "header": None,
+            "columns": ["user_id", "item_id", "rating", "tstamp"],
+            "user_columns": ["user_id", "gender", "age", "occupation", "zip_code"],
+            "item_columns": ["item_id", "title", "genres"],
+            "encoding": "utf-8"
         },
         "20m": {
             "url": "https://files.grouplens.org/datasets/movielens/ml-20m.zip",
             "zip_path": "datasets/ml-20m.zip",
             "extracted_folder": "datasets/ml-20m",
             "ratings_file": "ml-20m/ratings.csv",
-            "sep": ",",
-            "header": 0, # the first line is the header
-            "columns": ["userId", "movieId", "rating", "timestamp"]
+            "user_file": "ml-20m/users.csv",
+            "item_file": "ml-20m/movies.csv",
+            "ratings_sep": ",",
+            "user_sep": ",",
+            "item_sep": ",",
+            "header": 0,
+            "columns": ["userId", "movieId", "rating", "timestamp"],
+            "user_columns": ["userId", "gender", "age", "occupation", "zip_code"],
+            "item_columns": ["movieId", "title", "genres"],
+            "encoding": "utf-8"
         },
         "25m": {
             "url": "https://files.grouplens.org/datasets/movielens/ml-25m.zip",
             "zip_path": "datasets/ml-25m.zip",
             "extracted_folder": "datasets/ml-25m",
             "ratings_file": "ml-25m/ratings.csv",
-            "sep": ",",
-            "header": 0, # the first line is the header
-            "columns": ["userId", "movieId", "rating", "timestamp"]
+            "user_file": "ml-25m/users.csv",
+            "item_file": "ml-25m/movies.csv",
+            "ratings_sep": ",",
+            "user_sep": ",",
+            "item_sep": ",",
+            "header": 0,
+            "columns": ["userId", "movieId", "rating", "timestamp"],
+            "user_columns": ["userId", "gender", "age", "occupation", "zip_code"],
+            "item_columns": ["movieId", "title", "genres"],
+            "encoding": "utf-8"
         }
     }
-
     # Validate dataset version
     if dataset_scale not in dataset_info:
-        raise ValueError("Invalid dataset version. Supported versions are '1m', '20m', and '25m'.")
+        raise ValueError("Invalid dataset version. Supported versions are '100k', '1m', '10m', '20m', and '25m'.")
 
     info = dataset_info[dataset_scale]
     ratings_path = os.path.join(info["extracted_folder"], os.path.basename(info["ratings_file"]))
+    user_path = os.path.join(info["extracted_folder"], os.path.basename(info["user_file"])) if load_user_attributes else None
+    item_path = os.path.join(info["extracted_folder"], os.path.basename(info["item_file"])) if load_item_attributes else None
 
-    # Check if the file already exists
+    # Check if the ratings file already exists
     if os.path.exists(ratings_path):
         print(f"Using existing {os.path.basename(ratings_path)} file.")
     else:
@@ -90,20 +128,42 @@ def load_movielens(dataset_scale: str, sort_by_tstamp: bool=False) -> pd.DataFra
             urllib.request.urlretrieve(info["url"], info["zip_path"])
             print("Download complete.")
 
-        # Extract only the ratings file
+        # Extract the necessary files
         with zipfile.ZipFile(info["zip_path"], "r") as zip_ref:
-            if info["ratings_file"] in zip_ref.namelist():
-                print(f"Extracting {os.path.basename(info['ratings_file'])} file...")
-                zip_ref.extract(info["ratings_file"], "datasets")
-                print("Extraction complete.")
-            else:
-                raise FileNotFoundError(f"{os.path.basename(info['ratings_file'])} not found in the downloaded zip file.")
+            for file_name in [info["ratings_file"], info.get("user_file", ""), info.get("item_file", "")]:
+                if file_name and file_name in zip_ref.namelist():
+                    print(f"Extracting {os.path.basename(file_name)} file...")
+                    zip_ref.extract(file_name, "datasets")
+                    print("Extraction complete.")
+                elif file_name:
+                    raise FileNotFoundError(f"{os.path.basename(file_name)} not found in the downloaded zip file.")
 
-    # Load data into DataFrame with correct column names and sort by timestamp
-    df = pd.read_csv(ratings_path, sep=info["sep"], engine="python", names=info["columns"], header=info["header"])
+    # Load ratings data
+    df = pd.read_csv(ratings_path, sep=info["ratings_sep"], engine="python", names=info["columns"], header=info["header"], encoding=info["encoding"])
     df.columns = ["user", "item", "rating", "tstamp"]
+
+    # Optionally load user attributes
+    if load_user_attributes and user_path:
+        user_df = pd.read_csv(user_path, sep=info["user_sep"], engine="python", header=info["header"], names=info["user_columns"], encoding=info["encoding"])
+        user_df.columns = ["user"] + list(user_df.columns[1:])
+        df = df.merge(user_df, on="user", how="left")
+
+    # Optionally load item attributes
+    if load_item_attributes and item_path:
+        item_df = pd.read_csv(item_path, sep=info["item_sep"], engine="python", header=info["header"], names=info["item_columns"], encoding=info["encoding"])
+        item_df.columns = ["item"] + list(item_df.columns[1:])
+
+        # Combine the last 19 genre columns into a single 'genres' column
+        if dataset_scale == "100k":
+            genre_columns = item_df.columns[-19:]  # Get the last 19 columns (genres)
+            item_df["genres"] = item_df[genre_columns].apply(lambda row: info["genre_sep"].join([col for col, val in row.items() if val == 1]), axis=1)
+
+        # Merge item attributes with the ratings DataFrame
+        df = df.merge(item_df[["item", "title", "genres"]], on="item", how="left")
+
     if sort_by_tstamp:
         df = df.sort_values(by="tstamp", ascending=True)
+
     return df
 
 # Specific functions for loading each dataset version
