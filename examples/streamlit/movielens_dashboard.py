@@ -2,7 +2,8 @@ import os
 import streamlit as st
 import pandas as pd
 import requests
-from datetime import datetime, timedelta
+import re
+import urllib.parse
 
 OMDB_API_KEY = os.getenv("OMDB_API_KEY")
 
@@ -11,9 +12,10 @@ DATASET_URL = "http://files.grouplens.org/datasets/movielens/ml-100k/"
 RATINGS_FILE = DATASET_URL + "u.data"
 ITEMS_FILE = DATASET_URL + "u.item"
 
-# Load ratings and item data
+# Caching functions
 @st.cache_data
 def load_movielens_100k():
+    """Load the MovieLens 100K dataset and merge ratings with movie details."""
     col_rat = ['user_id', 'movie_id', 'rating', 'unix_timestamp']
     ratings_df = pd.read_csv(RATINGS_FILE, sep='\t', names=col_rat)
 
@@ -26,71 +28,82 @@ def load_movielens_100k():
     ]
     items_df = pd.read_csv(ITEMS_FILE, sep='|', names=col_items, encoding='latin-1')
 
-    # Convert unix timestamps to datetime
     ratings_df['timestamp'] = pd.to_datetime(ratings_df['unix_timestamp'], unit='s')
-
-    # Merge ratings and item data on movie_id
     merged_df = pd.merge(ratings_df, items_df[['movie_id', 'movie_title']], on='movie_id', how='left')
 
     return ratings_df, items_df, merged_df
 
 @st.cache_data
 def load_movie_posters():
-    # see https://github.com/babu-thomas/movielens-posters
+    """Load movie posters from an external source."""
     poster_url = "https://raw.githubusercontent.com/babu-thomas/movielens-posters/refs/heads/master/movie_poster.csv"
     poster_df = pd.read_csv(poster_url, header=None, names=['movie_id', 'url'])
-    
-    # Create a dictionary to store movie_id as key and poster_url as value
-    poster_dict = {}
-    for _, row in poster_df.iterrows():
-        poster_dict[row['movie_id']] = row['url']
-    return poster_dict
+    return dict(zip(poster_df['movie_id'], poster_df['url']))
 
 def fetch_movie_details(title):
+    """Fetch movie poster and plot from OMDB API."""
     def extract_title_year(movie_str):
-        # Use regex to find the title and year
-        import re
         match = re.match(r'^(.*)\s\((\d{4})\)$', movie_str)
         if match:
-            title = match.group(1).strip()
-            year = match.group(2)
-            return title, year
-        return title, None
+            return match.group(1).strip(), match.group(2)
+        return movie_str, None
 
     title, year = extract_title_year(title)
-    import urllib.parse
-    title = urllib.parse.quote_plus(title)
+    query = urllib.parse.quote_plus(title)
+    url = f"http://www.omdbapi.com/?t={query}&apikey={OMDB_API_KEY}"
     if year:
-        url = f"http://www.omdbapi.com/?t={title}&y={year}&apikey={OMDB_API_KEY}"
-    else:
-        url = f"http://www.omdbapi.com/?t={title}&apikey={OMDB_API_KEY}"
-    response = requests.get(url)
-    
-    if response.status_code == 200:
-        data = response.json()
-        if data.get("Response") == "True":
-            return data.get("Poster"), data.get("Plot")
-        else:
-            # OMDb returns a reason in 'Error' field if 'Response' is 'False'
-            error_message = data.get("Error", "Unknown error")
-            print(f"Error from OMDb API: {error_message}")
-            return None, "No description available."
-    else:
-        # Handle HTTP errors
-        print(f"HTTP Error: {response.status_code} - {response.reason}")
-        return None, "No description available."
+        url += f"&y={year}"
 
-# Recommend movies for a given user
-def recommend(user_id, merged_df, feedback, top_n=5, cutoff_days=180):
-    recent_date = datetime.now() - timedelta(days=cutoff_days)
-    recent_data = merged_df[merged_df["timestamp"] >= recent_date]
+    try:
+        response = requests.get(url)
+        if response.status_code == 200:
+            data = response.json()
+            if data.get("Response") == "True":
+                return data.get("Poster"), data.get("Plot")
+            return None, data.get("Error", "No description available.")
+    except requests.RequestException:
+        return None, "Error fetching movie details."
 
-    # Exclude movies the user has already seen
-    seen_movies = recent_data[recent_data["user_id"] == user_id]["movie_id"].unique()
-    recommendations = merged_df[~merged_df["movie_id"].isin(seen_movies)].drop_duplicates("movie_id")
+    return None, "No description available."
 
-    # Randomly select recommendations for simplicity
+def recommend_movies(user_id, df, feedback, top_n=5):
+    """Generate movie recommendations excluding already seen movies."""
+    seen_movies = df[df["user_id"] == user_id]["movie_id"].unique()
+    recommendations = df[~df["movie_id"].isin(seen_movies)].drop_duplicates("movie_id")
     return recommendations.sample(n=top_n)
+
+def display_movie(title, movie_id, poster_dict):
+    """Display movie details including poster and plot with like/dislike feedback."""
+    poster, plot = fetch_movie_details(title)
+    if poster is None:
+        poster = poster_dict.get(movie_id)
+
+    st.write(f"**{title}**")
+    col1, col2 = st.columns([1, 3])
+
+    with col1:
+        if poster is not None and poster != "N/A":
+            st.image(poster, width=100)
+        else:
+            st.write("No image available.")
+
+    with col2:
+        st.write(plot)
+
+    # Add movie to feedback only if it is newly liked/disliked
+    liked_key = f"like_{movie_id}"
+    disliked_key = f"dislike_{movie_id}"
+
+    feedback_id = f"feedback_{movie_id}"
+    feedback_options = ["👍 Like", "👎 Dislike"]
+    def handle_feedback():
+        selected_index = feedback_options.index(st.session_state[feedback_id])
+        if selected_index == 0:
+            st.session_state.feedback["liked"].append(title)
+        elif selected_index == 1 and title not in st.session_state.feedback["disliked"]:
+            st.session_state.feedback["disliked"].append(title)
+
+    st.radio("Feedback", options=feedback_options, key=feedback_id, index=None, horizontal=True, on_change=handle_feedback)
 
 # Streamlit UI
 st.title("MovieLens 100K Recommender System")
@@ -98,59 +111,61 @@ st.sidebar.header("User Input")
 
 # Load data
 ratings_df, items_df, merged_df = load_movielens_100k()
-
-# Load movie poster data from the CSV file
 poster_dict = load_movie_posters()
 
-# User input and recommendation configuration
+# User input
 user_id = st.sidebar.number_input("Enter User ID", min_value=1, value=1)
 top_n = st.sidebar.slider("Number of Recommendations", min_value=1, max_value=10, value=5)
-cutoff_days = st.sidebar.slider("Recent Interactions (days)", min_value=30, max_value=365, value=180)
+recent_feedback_n = st.sidebar.slider("Recent Feedback Items (N)", min_value=1, max_value=20, value=5)
 
+# Initialize session state
 if "feedback" not in st.session_state:
     st.session_state.feedback = {"liked": [], "disliked": []}
 
-if st.button("Get Recommendations"):
-    recommendations = recommend(user_id, merged_df, st.session_state.feedback, top_n, cutoff_days)
+# Tabs for navigation
+tab1, tab2, tab3 = st.tabs(["Recommendations", "Recently Feedbacked Movies", "Search Movies"])
 
+with tab1:
+    # Get recommendations
+    recommendations = recommend_movies(user_id, merged_df, st.session_state.feedback, top_n)
     st.write(f"Top {top_n} recommendations for User {user_id}:")
 
     for _, row in recommendations.iterrows():
-        title = row["movie_title"]
-        movie_id = row["movie_id"]
+        display_movie(row["movie_title"], row["movie_id"], poster_dict)
 
-        poster, plot = fetch_movie_details(title)
-        if poster is None:
-            poster = poster_dict.get(movie_id)
+with tab2:
+    st.write("### Recently Feedbacked Movies")
+    liked_movies = st.session_state.feedback["liked"][-recent_feedback_n:]
+    disliked_movies = st.session_state.feedback["disliked"][-recent_feedback_n:]
 
-        st.write(f"**{title}**")
-        col1, col2 = st.columns([1, 3])
+    if liked_movies or disliked_movies:
+        if liked_movies:
+            st.write("#### Liked Movies")
+            for movie in liked_movies:
+                st.write(f"👍 {movie}")
 
-        with col1:
-            if poster:
-                st.image(poster, width=100)
-            else:
-                st.write("No image available.")
+        if disliked_movies:
+            st.write("#### Disliked Movies")
+            for movie in disliked_movies:
+                st.write(f"👎 {movie}")
+    else:
+        st.write("No feedback given yet.")
 
-        with col2:
-            st.write(plot)
+with tab3:
+    st.header("Search Movies by Title")
+    search_query = st.text_input("Enter part of the movie title", "")
 
-        liked = st.checkbox(f"👍 Like {title}", key=f"like_{row['movie_id']}")
-        disliked = st.checkbox(f"👎 Dislike {title}", key=f"dislike_{row['movie_id']}")
+    if search_query:
+        matching_movies = items_df[items_df["movie_title"].str.contains(search_query, case=False, na=False)]
 
-        if liked:
-            st.session_state.feedback["liked"].append(title)
-        elif disliked:
-            st.session_state.feedback["disliked"].append(title)
+        if not matching_movies.empty:
+            st.write(f"Found {len(matching_movies)} matching movies:")
+            for _, row in matching_movies.iterrows():
+                display_movie(row["movie_title"], row["movie_id"], poster_dict)
+        else:
+            st.write("No movies found.")
 
-    if st.session_state.feedback:
-        st.write("Updating recommendations based on your feedback...")
-        new_recommendations = recommend(user_id, merged_df, st.session_state.feedback, top_n, cutoff_days)
-        st.write("Updated Recommendations:")
-        for _, row in new_recommendations.iterrows():
-            st.write(f"- {row['movie_title']}")
-
-# Display raw data (optional)
+# Display raw data
 if st.sidebar.checkbox("Show Raw Data"):
     st.write("Ratings Data", ratings_df.head())
     st.write("Items Data", items_df.head())
