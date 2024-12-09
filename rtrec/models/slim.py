@@ -3,9 +3,9 @@ import numpy as np
 from typing import Any, List, Optional
 from math import inf
 
-from .base import ExplicitFeedbackRecommender
+from .base import BaseRecommender
 
-class SLIM_MSE(ExplicitFeedbackRecommender):
+class SLIM_MSE(BaseRecommender):
     def __init__(self, **kwargs: Any):
         super().__init__(**kwargs)
 

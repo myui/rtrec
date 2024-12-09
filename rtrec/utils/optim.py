@@ -109,6 +109,9 @@ class FTRL(Optimizer):
 
         return weight_update
 
+def inv_scaling(alpha: float, step: int, power_t: float) -> float:
+    return alpha / pow(step, power_t)
+
 def get_optimizer(name: str, **kwargs: Any) -> Optimizer:
     """
     Create an instance of an Optimizer based on the provided name and keyword arguments.
