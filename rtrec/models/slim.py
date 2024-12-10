@@ -26,7 +26,6 @@ class SLIM(BaseModel):
         interaction_matrix = self.interactions.to_csc(item_ids)
         self.model.partial_fit_items(interaction_matrix, item_ids)
 
-    @override
     def _bulk_fit(self, interaction_matrix: csc_matrix) -> None:
         """
         Fit the recommender model on the given interaction matrix.
@@ -44,6 +43,9 @@ class SLIM(BaseModel):
         :return: List of top-K item indices recommended for the user
         """
         interaction_matrix = self.interactions.to_csr(select_users=[user_id])
+        return self.model.recommend(user_id, interaction_matrix, candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted)
+
+    def _recommend_batch(self, user_id, interaction_matrix, candidate_item_ids = None, top_k = 10, filter_interacted = True):
         return self.model.recommend(user_id, interaction_matrix, candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted)
 
     def _similar_items(self, query_item_id: int, top_k: int = 10) -> List[int]:
