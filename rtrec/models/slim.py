@@ -9,7 +9,7 @@ class SLIM(BaseModel):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.model = SLIMElastic(**kwargs)
+        self.model = SLIMElastic(kwargs)
 
     @override
     def fit(self, user_interactions: Iterable[Tuple[Any, Any, float, float]], update_interaction: bool=False) -> None:
