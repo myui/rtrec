@@ -192,13 +192,13 @@ class UserItemInteractions:
 
         for user, inner_dict in self.interactions.items():
             for item, (rating, tstamp) in inner_dict.items():
+                max_row = max(max_row, user)
+                max_col = max(max_col, item)
                 if item not in select_items:
                     continue
                 rows.append(user)
                 cols.append(item)
                 data.append(self._apply_decay(rating, tstamp))
-                max_row = max(max_row, user)
-                max_col = max(max_col, item)
 
         # Create the csc_matrix
         return csc_matrix((data, (rows, cols)), shape=(max_row + 1, max_col + 1))

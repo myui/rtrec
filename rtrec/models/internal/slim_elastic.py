@@ -241,7 +241,7 @@ class SLIMElastic:
         else:
             # ensure the item similarity matrix is large enough to accommodate the new items
             old_size = self.item_similarity.shape[1]
-            new_size = max(updated_items) + 1
+            new_size = X.shape[1]
             if new_size > old_size:
                 # Expand both rows and columns symmetrically
                 expanded_similarity = np.zeros((new_size, new_size))
