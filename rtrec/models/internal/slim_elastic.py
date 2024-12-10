@@ -96,7 +96,9 @@ class CSCMatrixWrapper:
         values : ArrayLike
             The new values for the column.
         """
-        self.csc_matrix[:, j] = values
+        start, end = self.csc_matrix.indptr[j], self.csc_matrix.indptr[j+1]
+        assert len(values) == end - start, f"Values must have the same length as the column: {len(values)} != {end - start}"
+        self.csc_matrix.data[start:end] = values
 
 class FeatureSelectionWrapper:
 
