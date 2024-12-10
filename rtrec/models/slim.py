@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Iterable, List, Tuple, override
+from typing import Any, Iterable, List, Optional, Tuple, override
 from scipy.sparse import csc_matrix
 
 from ..models.internal.slim_elastic import SLIMElastic
@@ -43,9 +43,18 @@ class SLIM(BaseModel):
         :return: List of top-K item indices recommended for the user
         """
         interaction_matrix = self.interactions.to_csr(select_users=[user_id])
-        return self.model.recommend(user_id, interaction_matrix, candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted)
+        return self.model.recommend(user_id, interaction_matrix, top_k=top_k, filter_interacted=filter_interacted)
 
-    def _recommend_batch(self, user_id, interaction_matrix, candidate_item_ids = None, top_k = 10, filter_interacted = True):
+    def _recommend_batch(self, user_id: int, interaction_matrix: csc_matrix, candidate_item_ids: Optional[List[int]]=None, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
+        """
+        Recommend top-K items for a list of users.
+        :param user_id: User index
+        :param interaction_matrix: Sparse user-item interaction matrix
+        :param candidate_item_ids: List of candidate item indices
+        :param top_k: Number of top items to recommend
+        :param filter_interacted: Whether to filter out items the user has already interacted with
+        :return: List of top-K item indices recommended for each user
+        """
         return self.model.recommend(user_id, interaction_matrix, candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted)
 
     def _similar_items(self, query_item_id: int, top_k: int = 10) -> List[int]:
