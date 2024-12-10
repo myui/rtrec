@@ -92,7 +92,8 @@ class Recommender:
         :param filter_interacted: Whether to filter out items the user has already interacted with
         :return: List of top-K item indices recommended for each user
         """
-        return self.model.recommend_batch(users, top_k, filter_interacted)
+        return [self.model.recommend(user, top_k, filter_interacted) for user in tqdm(users)]
+        #return self.model.recommend_batch(users, top_k, filter_interacted)
 
     def similar_items(self, query_items: List[Any], top_k: int = 10) -> List[List[Any]]:
         """
