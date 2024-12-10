@@ -1,17 +1,17 @@
 import numpy as np
 import pytest
 from scipy.sparse import csr_matrix
-from rtrec.utils.features import Features
+from rtrec.utils.features import FeatureStore
 
 # Test adding user features
 def test_put_user_feature():
-    features = Features()
+    features = FeatureStore()
     features.put_user_feature(1, ["tag1", "tag2"])
     assert 1 in features.user_feature_map
     assert set(features.user_feature_map[1]) == {0, 1}  # Assuming tag IDs start at 0
 
 def test_put_user_feature_replacement():
-    features = Features()
+    features = FeatureStore()
     features.put_user_feature(1, ["tag1", "tag2"])
     features.put_user_feature(1, ["tag3", "tag4"])
     assert 1 in features.user_feature_map
@@ -19,13 +19,13 @@ def test_put_user_feature_replacement():
 
 # Test adding item features
 def test_put_item_feature():
-    features = Features()
+    features = FeatureStore()
     features.put_item_feature(1, ["item_tag1", "item_tag2"])
     assert 1 in features.item_feature_map
     assert set(features.item_feature_map[1]) == {0, 1}
 
 def test_put_item_feature_replacement():
-    features = Features()
+    features = FeatureStore()
     features.put_item_feature(1, ["item_tag1", "item_tag2"])
     features.put_item_feature(1, ["item_tag3", "item_tag4"])
     assert 1 in features.item_feature_map
@@ -33,14 +33,14 @@ def test_put_item_feature_replacement():
 
 # Test getting user feature representation
 def test_get_user_feature_repr():
-    features = Features()
+    features = FeatureStore()
     features.put_user_feature(1, ["tag1", "tag2"])
     user_repr = features.get_user_feature_repr(["tag1", "tag2"])
     expected_matrix = csr_matrix(([1, 1], ([0, 0], [0, 1])), shape=(1, 2))
     assert (user_repr != expected_matrix).nnz == 0  # Check equality
 
 def test_get_user_feature_repr_non_existent_tag():
-    features = Features()
+    features = FeatureStore()
     features.put_user_feature(1, ["tag1", "tag2"])
     user_repr = features.get_user_feature_repr(["tag3"])
     expected_matrix = csr_matrix(([], ([], [])), shape=(1, 2))
@@ -48,14 +48,14 @@ def test_get_user_feature_repr_non_existent_tag():
 
 # Test getting item feature representation
 def test_get_item_feature_repr():
-    features = Features()
+    features = FeatureStore()
     features.put_item_feature(1, ["item_tag1", "item_tag2"])
     item_repr = features.get_item_feature_repr(["item_tag1", "item_tag2"])
     expected_matrix = csr_matrix(([1, 1], ([0, 0], [0, 1])), shape=(1, 2))
     assert (item_repr != expected_matrix).nnz == 0
 
 def test_get_item_feature_repr_non_existent_tag():
-    features = Features()
+    features = FeatureStore()
     features.put_item_feature(1, ["item_tag1", "item_tag2"])
     item_repr = features.get_item_feature_repr(["item_tag3"])
     expected_matrix = csr_matrix(([], ([], [])), shape=(1, 2))
@@ -63,7 +63,7 @@ def test_get_item_feature_repr_non_existent_tag():
 
 # Test building user features matrix
 def test_build_user_features_matrix():
-    features = Features()
+    features = FeatureStore()
     features.put_user_feature(0, ["tag1", "tag2"])
     features.put_user_feature(1, ["tag2", "tag3"])
     user_matrix = features.build_user_features_matrix()
@@ -72,7 +72,7 @@ def test_build_user_features_matrix():
 
 # Test building item features matrix
 def test_build_item_features_matrix():
-    features = Features()
+    features = FeatureStore()
     features.put_item_feature(0, ["item_tag1", "item_tag2"])
     features.put_item_feature(1, ["item_tag2", "item_tag3"])
     item_matrix = features.build_item_features_matrix()

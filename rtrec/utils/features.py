@@ -3,7 +3,7 @@ from scipy.sparse import csr_matrix
 import numpy as np
 from .collections import SortedSet
 
-class Features:
+class FeatureStore:
 
     def __init__(self):
         self.user_features: SortedSet[str] = SortedSet()
