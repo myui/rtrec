@@ -2,7 +2,7 @@ import pandas as pd
 import time
 
 from tqdm import tqdm
-from typing import Dict, Generator, Iterator, Tuple, Iterable, Optional, Any, List
+from typing import Dict, Iterator, Tuple, Iterable, Optional, Any, List
 
 from rtrec.utils.metrics import compute_scores
 from rtrec.models import Fast_SLIM_MSE
@@ -28,8 +28,8 @@ class Recommender:
         train_data: pd.DataFrame,
         epochs: int = 1,
         batch_size: int = 1_000,
-        bulk_identify: bool = False,
-        random_seed: Optional[int] = None
+        random_seed: Optional[int] = None,
+        no_shuffle: bool = False,
     ) -> None:
         """
         Fit the recommender model on the given DataFrame of interactions.
@@ -38,45 +38,24 @@ class Recommender:
             train_data (pd.DataFrame): The DataFrame containing interactions with columns (user, item, tstamp, rating).
             epochs (int): Number of epochs (iterations) over the dataset. Defaults to 1.
             batch_size (int): The number of interactions per mini-batch. Defaults to 1000.
-            bulk_identify (bool): Whether to bulk identify user-item pairs before fitting. Defaults to False.
             random_seed (Optional[int]): Random seed for reproducibility. Defaults to None.
+            no_shuffle (bool): Whether to disable shuffling of the training data between epochs. Defaults to False.
         """
         train_data = train_data[["user", "item", "tstamp", "rating"]]
 
-        if bulk_identify:
-            user_item_pairs = train_data[['user', 'item']].apply(tuple, axis=1).tolist()
-            identified_pairs = self.model.bulk_identify(user_item_pairs)
-            train_data[['user', 'item']] = pd.DataFrame(identified_pairs, index=train_data.index)
-
-        # Set decay rate to None to disable decay during iterative fitting
-        # orig_decay_rate = self.model.get_decay_rate()
-        # self.model.set_decay_rate(None)
-
         # Iterate over epochs
         for epoch in tqdm(range(epochs)):
-            # Shuffle the training data at the beginning of each epoch
-            train_data = train_data.sample(frac=1, random_state=random_seed).reset_index(drop=True)
+            if not no_shuffle:
+                # Shuffle the training data at the beginning of each epoch
+                train_data = train_data.sample(frac=1, random_state=random_seed).reset_index(drop=True)
 
             print(f"Starting epoch {epoch + 1}/{epochs}")
             start_time = time.time()
             for batch in generate_batches(train_data, batch_size, as_generator=self.use_generator):
-                if bulk_identify:
-                    self.model.fit_identified(batch, add_interaction=epoch < 1, update_interaction=epoch >= 1)
-                else:
-                    self.model.fit(batch, update_interaction=epoch >= 1)
+                self.model.fit(batch, update_interaction=epoch >= 1)
             end_time = time.time()
             print(f"Epoch {epoch + 1} completed in {end_time - start_time:.2f} seconds")
             print(f"Throughput: {len(train_data) / (end_time - start_time):.2f} samples/sec")
-            print(f"Empirical loss after epoch {epoch + 1}: {self.model.get_empirical_error()}")
-
-        # Reset the decay rate to its original value
-        # self.model.set_decay_rate(orig_decay_rate)
-
-    def predict_rating(self, user: Any, item: Any) -> float:
-        """
-        Predict the rating for a given user-item pair.
-        """
-        return self.model.predict_rating(user, item)
 
     def recommend(self, user: Any, top_k: int = 10, filter_interacted: bool = True) -> List[Any]:
         """
@@ -96,17 +75,16 @@ class Recommender:
         :param filter_interacted: Whether to filter out items the user has already interacted with
         :return: List of top-K item indices recommended for each user
         """
-        return self.model.recommend_batch(users, top_k, filter_interacted)
+        return [self.recommend(user, top_k, filter_interacted) for user in users]
 
-    def similar_items(self, query_items: List[Any], top_k: int = 10, filter_query_items: bool = True) -> List[List[Any]]:
+    def similar_items(self, query_items: List[Any], top_k: int = 10) -> List[List[Any]]:
         """
         Find similar items for a list of query items.
         :param query_items: List of query items
         :param top_k: Number of top similar items to return
-        :param filter_interacted: Whether to filter out items in the query_items list
         :return: List of top-K similar items for each query item
         """
-        return self.model.similar_items(query_items, top_k, filter_query_items)
+        return [self.model.similar_items(item, top_k) for item in query_items]
 
     def evaluate(self, test_data: pd.DataFrame, recommend_size: int = 10, batch_size=100, filter_interacted: bool = True) -> Dict[str, float]:
         """
