@@ -68,7 +68,7 @@ class Recommender:
 
         start_time = time.time()
         for batch in tqdm(generate_batches(train_data, batch_size, as_generator=self.use_generator)):
-            self.model.fit(batch, update_interaction=epoch >= 1)
+            self.model.fit(batch, update_interaction=False)
         end_time = time.time()
         print(f"Fit completed in {end_time - start_time:.2f} seconds")
         print(f"Throughput: {len(train_data) / (end_time - start_time):.2f} samples/sec")
