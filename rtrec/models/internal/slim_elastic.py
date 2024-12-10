@@ -221,7 +221,7 @@ class SLIMElastic:
         """        
         user_items = set()
         for user_id in user_ids:
-            user_items.update(interaction_matrix[user_id].indices.tolist())
+            user_items.update(interaction_matrix[user_id, :].indices.tolist())
         self.partial_fit_items(interaction_matrix, list(user_items), progress_bar)
 
     def partial_fit_items(self, interaction_matrix: sp.csc_matrix | sp.csr_matrix, updated_items: List[int], progress_bar: bool=False):
@@ -292,7 +292,7 @@ class SLIMElastic:
 
         # Compute the predicted scores by performing dot product between the user interaction vector
         # and the item similarity matrix
-        return interaction_matrix[user_id].dot(self.item_similarity)
+        return interaction_matrix[user_id, :].dot(self.item_similarity)
 
     def predict_selected(self, user_id: int, item_ids: List[int], interaction_matrix: sp.csr_matrix):
         """
@@ -311,7 +311,7 @@ class SLIMElastic:
 
         # Compute the predicted scores for the selected items by performing dot product between the user interaction vector
         # and the item similarity matrix
-        return interaction_matrix[user_id, item_ids].dot(self.item_similarity[item_ids])
+        return interaction_matrix[user_id, item_ids].dot(self.item_similarity[item_ids, :])
 
     def predict_all(self, interaction_matrix: sp.csr_matrix):
         """
@@ -352,7 +352,7 @@ class SLIMElastic:
 
         # Exclude items that the user has already interacted with
         if filter_interacted:
-            interacted_items = interaction_matrix[user_id].indices
+            interacted_items = interaction_matrix[user_id, :].indices
             user_scores[interacted_items] = -np.inf  # Exclude interacted items by setting scores to -inf
 
         # Get the top-K items by sorting the predicted scores in descending order
