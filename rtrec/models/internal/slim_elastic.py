@@ -322,7 +322,7 @@ class SLIMElastic:
         # and the item similarity matrix
         return interaction_matrix.dot(self.item_similarity)
 
-    def recommend(self, user_id: int, interaction_matrix: sp.csr_matrix, candidate_item_ids: Optional[List[int]]=None, top_k: int=10, exclude_seen: bool=True) -> List[int]:
+    def recommend(self, user_id: int, interaction_matrix: sp.csr_matrix, candidate_item_ids: Optional[List[int]]=None, top_k: int=10, filter_interacted: bool=True) -> List[int]:
         """
         Recommend top-K items for a given user.
 
@@ -331,7 +331,7 @@ class SLIMElastic:
             interaction_matrix (csr_matrix): User-item interaction matrix (sparse).
             candidate_item_ids (List[int]): List of candidate item indices to recommend from. If None, recommend from all items.
             top_k (int): Number of recommendations to return.
-            exclude_seen (bool): Whether to exclude items the user has already interacted with.
+            filter_interacted (bool): Whether to exclude items the user has already interacted with.
 
         Returns:
             List of recommended item indices.
@@ -343,9 +343,9 @@ class SLIMElastic:
             user_scores = self.predict_selected(user_id, candidate_item_ids, interaction_matrix).ravel()
 
         # Exclude items that the user has already interacted with
-        if exclude_seen:
-            seen_items = interaction_matrix[user_id].indices
-            user_scores[seen_items] = -np.inf  # Exclude seen items by setting scores to -inf
+        if filter_interacted:
+            interacted_items = interaction_matrix[user_id].indices
+            user_scores[interacted_items] = -np.inf  # Exclude interacted items by setting scores to -inf
 
         # Get the top-K items by sorting the predicted scores in descending order
         # [::-1] reverses the order to get the items with the highest scores first
