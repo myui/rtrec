@@ -57,6 +57,22 @@ class Recommender:
             print(f"Epoch {epoch + 1} completed in {end_time - start_time:.2f} seconds")
             print(f"Throughput: {len(train_data) / (end_time - start_time):.2f} samples/sec")
 
+    def fit_single_batch(self, train_data: pd.DataFrame, batch_size: int = 10_000) -> None:
+        """
+        Fit the recommender model on the given DataFrame of interactions in a single batch.
+
+        Parameters:
+            train_data (pd.DataFrame): The DataFrame containing interactions with columns (user, item, tstamp, rating).
+        """
+        train_data = train_data[["user", "item", "tstamp", "rating"]]
+
+        start_time = time.time()
+        for batch in tqdm(generate_batches(train_data, batch_size, as_generator=self.use_generator)):
+            self.model.fit(batch, update_interaction=epoch >= 1)
+        end_time = time.time()
+        print(f"Fit completed in {end_time - start_time:.2f} seconds")
+        print(f"Throughput: {len(train_data) / (end_time - start_time):.2f} samples/sec")
+
     def recommend(self, user: Any, top_k: int = 10, filter_interacted: bool = True) -> List[Any]:
         """
         Recommend top-K items for a given user.
