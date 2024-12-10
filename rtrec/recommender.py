@@ -27,7 +27,7 @@ class Recommender:
         self,
         train_data: pd.DataFrame,
         epochs: int = 1,
-        batch_size: int = 1_000,
+        batch_size: int = 10_000,
         random_seed: Optional[int] = None,
         no_shuffle: bool = False,
     ) -> None:
@@ -92,7 +92,7 @@ class Recommender:
         :param filter_interacted: Whether to filter out items the user has already interacted with
         :return: List of top-K item indices recommended for each user
         """
-        return [self.model.recommend(user, top_k, filter_interacted) for user in tqdm(users)]
+        return [self.model.recommend(user, top_k, filter_interacted) for user in users]
         #return self.model.recommend_batch(users, top_k, filter_interacted)
 
     def similar_items(self, query_items: List[Any], top_k: int = 10) -> List[List[Any]]:
