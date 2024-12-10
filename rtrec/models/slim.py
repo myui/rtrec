@@ -22,8 +22,8 @@ class SLIM(BaseModel):
             except Exception as e:
                 logging.warning(f"Error processing interaction: {e}")
                 continue
-        interaction_matirx = self.interactions.to_csc()
-        self.model.partial_fit_items(interaction_matirx, item_ids)
+        interaction_matrix = self.interactions.to_csc()
+        self.model.partial_fit_items(interaction_matrix[:,item_ids], item_ids)
 
     def _recommend(self, user_id: int, candidate_item_ids: List[int], top_k: int = 10, filter_interacted: bool = True) -> List[int]:
         """
