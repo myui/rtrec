@@ -1,5 +1,6 @@
 import logging
 from typing import Any, Iterable, List, Tuple, override
+from scipy.sparse import csc_matrix
 
 from ..models.internal.slim_elastic import SLIMElastic
 from .base import BaseModel
@@ -24,6 +25,14 @@ class SLIM(BaseModel):
                 continue
         interaction_matrix = self.interactions.to_csc(item_ids)
         self.model.partial_fit_items(interaction_matrix, item_ids)
+
+    @override
+    def _bulk_fit(self, interaction_matrix: csc_matrix) -> None:
+        """
+        Fit the recommender model on the given interaction matrix.
+        :param interaction_matrix: Sparse interaction matrix
+        """
+        self.model.fit(interaction_matrix, progress_bar=True)
 
     def _recommend(self, user_id: int, candidate_item_ids: List[int], top_k: int = 10, filter_interacted: bool = True) -> List[int]:
         """

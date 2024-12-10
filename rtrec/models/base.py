@@ -3,6 +3,7 @@ import logging
 from math import inf
 from abc import ABC, abstractmethod
 from typing import Any, List, Optional, Tuple, Iterable
+from scipy.sparse import csc_matrix
 
 from rtrec.utils.features import FeatureStore
 from rtrec.utils.identifiers import Identifier
@@ -44,6 +45,35 @@ class BaseModel(ABC):
         item_id = self.item_ids.identify(item_id)
         self.feature_store.put_item_feature(item_id, item_tags)
         return item_id
+
+    def add_interactions(self, user_interactions: Iterable[Tuple[Any, Any, float, float]]) -> None:
+        """
+        Add user-item interactions to the model.
+        :param user_interactions: List of user-item interactions
+        """
+        for user, item, tstamp, rating in user_interactions:
+            try:
+                user_id = self.user_ids.identify(user)
+                item_id = self.item_ids.identify(item)
+                self.interactions.add_interaction(user_id, item_id, tstamp, rating)
+            except Exception as e:
+                logging.warning(f"Error processing interaction: {e}")
+                continue
+
+    def bulk_fit(self) -> None:
+        """
+        Fit the recommender model on the given interaction matrix.
+        """
+        interaction_matrix = self.interactions.to_csc()
+        self._bulk_fit(interaction_matrix)
+
+    @abstractmethod
+    def _bulk_fit(self, interaction_matrix: csc_matrix) -> None:
+        """
+        Fit the recommender model on the given interaction matrix.
+        :param interaction_matrix: Sparse interaction matrix
+        """
+        raise NotImplementedError("_bulk_fit method must be implemented in the derived class")
 
     def fit(self, user_interactions: Iterable[Tuple[Any, Any, float, float]], update_interaction: bool=False) -> None: 
         user_ids, item_ids = [], []

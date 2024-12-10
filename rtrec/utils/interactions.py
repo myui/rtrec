@@ -186,7 +186,7 @@ class UserItemInteractions:
         # Create the csr_matrix
         return csr_matrix((data, (rows, cols)), shape=(max_row + 1, max_col + 1))
 
-    def to_csc(self, select_items: List[int]) -> csc_matrix:
+    def to_csc(self, select_items: List[int] = None) -> csc_matrix:
         rows, cols, data = [], [], []
         max_row, max_col = 0, 0
 
@@ -194,7 +194,7 @@ class UserItemInteractions:
             for item, (rating, tstamp) in inner_dict.items():
                 max_row = max(max_row, user)
                 max_col = max(max_col, item)
-                if item not in select_items:
+                if select_items is not None and item not in select_items:
                     continue
                 rows.append(user)
                 cols.append(item)

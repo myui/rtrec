@@ -67,9 +67,9 @@ class Recommender:
         train_data = train_data[["user", "item", "tstamp", "rating"]]
 
         start_time = time.time()
-        total = len(train_data) // batch_size
-        for batch in tqdm(generate_batches(train_data, batch_size, as_generator=self.use_generator), total=total):
-            self.model.fit(batch, update_interaction=False)
+        for batch in generate_batches(train_data, batch_size, as_generator=self.use_generator):
+            self.model.add_interactions(batch)
+        self.model.bulk_fit()
         end_time = time.time()
         print(f"Fit completed in {end_time - start_time:.2f} seconds")
         print(f"Throughput: {len(train_data) / (end_time - start_time):.2f} samples/sec")

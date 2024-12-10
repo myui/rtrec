@@ -168,18 +168,21 @@ class SLIMElastic:
             model = FeatureSelectionWrapper(model, n_neighbors=int(self.nn_feature_selection))
         return model
 
-    def fit(self, interaction_matrix: sp.coo_matrix, progress_bar: bool=False):
+    def fit(self, interaction_matrix: sp.csc_matrix | sp.csr_matrix, progress_bar: bool=False):
         """
         Fit the SLIMElastic model to the interaction matrix.
 
         Args:
-            interaction_matrix (csr_matrix): User-item interaction matrix (sparse).
+            interaction_matrix (csc_matrix | csr_matrix): User-item interaction matrix (sparse).
             progress_bar (bool): Whether to show a progress bar during training.
         """
-        if not isinstance(interaction_matrix, sp.coo_matrix):
-            raise ValueError("Interaction matrix must be a scipy.sparse.csr_matrix of user-item interactions.")
+        if isinstance(interaction_matrix, sp.csr_matrix):
+            X = ColumnarView(interaction_matrix)
+        elif isinstance(interaction_matrix, sp.csc_matrix):
+            X = CSCMatrixWrapper(interaction_matrix)
+        else:
+            raise ValueError("Interaction matrix must be a scipy.sparse.csr_matrix or scipy.sparse.csc_matrix.")
 
-        X = CSCMatrixWrapper(interaction_matrix)
         num_items = X.shape[1]
 
         self.item_similarity = np.zeros((num_items, num_items))  # Initialize similarity matrix
