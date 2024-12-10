@@ -168,12 +168,13 @@ class SLIMElastic:
             model = FeatureSelectionWrapper(model, n_neighbors=int(self.nn_feature_selection))
         return model
 
-    def fit(self, interaction_matrix: sp.coo_matrix):
+    def fit(self, interaction_matrix: sp.coo_matrix, progress_bar: bool=False):
         """
         Fit the SLIMElastic model to the interaction matrix.
 
         Args:
             interaction_matrix (csr_matrix): User-item interaction matrix (sparse).
+            progress_bar (bool): Whether to show a progress bar during training.
         """
         if not isinstance(interaction_matrix, sp.coo_matrix):
             raise ValueError("Interaction matrix must be a scipy.sparse.csr_matrix of user-item interactions.")
@@ -190,7 +191,7 @@ class SLIMElastic:
             warnings.simplefilter("ignore", category=ConvergenceWarning)
 
             # Iterate through each item (column) and fit the model
-            for j in tqdm(range(num_items), desc="Fitting SLIMElastic"):
+            for j in tqdm(range(num_items), desc="Fitting SLIMElastic") if progress_bar else range(num_items):
                 # Target column (current item)
                 y = X.get_col(j)
 
@@ -206,26 +207,28 @@ class SLIMElastic:
                 # Reattach the item column after training
                 X.set_col(j, y.data)
 
-    def partial_fit(self, interaction_matrix: sp.csr_matrix, user_ids: List[int]):
+    def partial_fit(self, interaction_matrix: sp.csr_matrix, user_ids: List[int], progress_bar: bool=False):
         """
         Incrementally fit the SLIMElastic model with new or updated users.
 
         Args:
             interaction_matrix (csr_matrix): user-item interaction matrix (sparse).
             user_ids (list): List of user indices that were updated.
+            progress_bar (bool): Whether to show a progress bar during training.
         """        
         user_items = set()
         for user_id in user_ids:
             user_items.update(interaction_matrix[user_id].indices.tolist())
-        self.partial_fit_items(interaction_matrix, list(user_items))
+        self.partial_fit_items(interaction_matrix, list(user_items), progress_bar)
 
-    def partial_fit_items(self, interaction_matrix: sp.csc_matrix | sp.csr_matrix, updated_items: List[int]):
+    def partial_fit_items(self, interaction_matrix: sp.csc_matrix | sp.csr_matrix, updated_items: List[int], progress_bar: bool=False):
         """
         Incrementally fit the SLIMElastic model with new or updated items.
 
         Args:
             interaction_matrix (csc_matrix | csr_matrix): user-item interaction matrix (sparse).
             updated_items (list): List of item indices that were updated.
+            progress_bar (bool): Whether to show a progress bar during training.
         """
         if isinstance(interaction_matrix, sp.csr_matrix):
             X = ColumnarView(interaction_matrix)
@@ -252,7 +255,7 @@ class SLIMElastic:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=ConvergenceWarning)
 
-            for j in tqdm(updated_items, desc="Fitting SLIMElastic"):
+            for j in tqdm(updated_items, desc="Fitting SLIMElastic") if progress_bar else updated_items:
                 # Target column (current item)
                 y = X.get_col(j)
 
