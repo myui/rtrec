@@ -186,12 +186,14 @@ class UserItemInteractions:
         # Create the csr_matrix
         return csr_matrix((data, (rows, cols)), shape=(max_row + 1, max_col + 1))
 
-    def to_csc(self) -> csc_matrix:
+    def to_csc(self, select_items: List[int]) -> csc_matrix:
         rows, cols, data = [], [], []
         max_row, max_col = 0, 0
 
         for user, inner_dict in self.interactions.items():
             for item, (rating, tstamp) in inner_dict.items():
+                if item not in select_items:
+                    continue
                 rows.append(user)
                 cols.append(item)
                 data.append(self._apply_decay(rating, tstamp))
