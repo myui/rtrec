@@ -171,17 +171,19 @@ class UserItemInteractions:
         return [item_id for item_id in self.all_item_ids
                 if self.get_user_item_rating(user_id, item_id, default_rating=0.0) >= 0.0]
 
-    def to_csr(self) -> csr_matrix:
+    def to_csr(self, select_users: List[int] = None) -> csr_matrix:
         rows, cols, data = [], [], []
         max_row, max_col = 0, 0
 
         for user, inner_dict in self.interactions.items():
             for item, (rating, tstamp) in inner_dict.items():
+                max_row = max(max_row, user)
+                max_col = max(max_col, item)
+                if select_users is not None and user not in select_users:
+                    continue
                 rows.append(user)
                 cols.append(item)
                 data.append(self._apply_decay(rating, tstamp))
-                max_row = max(max_row, user)
-                max_col = max(max_col, item)
 
         # Create the csr_matrix
         return csr_matrix((data, (rows, cols)), shape=(max_row + 1, max_col + 1))

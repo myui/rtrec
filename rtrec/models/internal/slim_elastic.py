@@ -358,9 +358,8 @@ class SLIMElastic:
         # Get the top-K items by sorting the predicted scores in descending order
         # [::-1] reverses the order to get the items with the highest scores first
         top_items = np.argsort(user_scores)[-top_k:][::-1]
-
         return top_items
-    
+
     def similar_items(self, item_id: int, top_k: int=10):
         """
         Get the top-K most similar items to a given item.

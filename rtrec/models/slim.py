@@ -43,7 +43,7 @@ class SLIM(BaseModel):
         :param filter_interacted: Whether to filter out items the user has already interacted with
         :return: List of top-K item indices recommended for the user
         """
-        interaction_matrix = self.interactions.to_csr()
+        interaction_matrix = self.interactions.to_csr(select_users=[user_id])
         return self.model.recommend(user_id, interaction_matrix, candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted)
 
     def _similar_items(self, query_item_id: int, top_k: int = 10) -> List[int]:
