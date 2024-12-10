@@ -184,7 +184,7 @@ class UserItemInteractions:
                 max_col = max(max_col, item)
 
         # Create the csr_matrix
-        return csr_matrix((data, (rows, cols)), shape=(max_row, max_col))
+        return csr_matrix((data, (rows, cols)), shape=(max_row + 1, max_col + 1))
 
     def to_csc(self) -> csc_matrix:
         rows, cols, data = [], [], []
@@ -199,4 +199,4 @@ class UserItemInteractions:
                 max_col = max(max_col, item)
 
         # Create the csc_matrix
-        return csc_matrix((data, (rows, cols)), shape=(max_row, max_col))
+        return csc_matrix((data, (rows, cols)), shape=(max_row + 1, max_col + 1))
