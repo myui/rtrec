@@ -60,7 +60,6 @@ class BaseModel(ABC):
 
         return self._fit(user_ids, item_ids)
 
-    @abstractmethod
     def _fit(self, user_ids: List[int], item_ids: List[int]) -> None:
         """
         Fit the recommender model.
