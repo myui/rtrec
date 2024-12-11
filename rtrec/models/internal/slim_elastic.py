@@ -7,6 +7,7 @@ import warnings
 from sklearn.exceptions import ConvergenceWarning
 from tqdm import tqdm
 from scipy.sparse.linalg import cg
+from sklearn.utils.extmath import safe_sparse_dot
 
 class ColumnarView:
     def __init__(self, csr_matrix: sp.csr_matrix):
@@ -311,7 +312,8 @@ class SLIMElastic:
 
         # Compute the predicted scores for the selected items by performing dot product between the user interaction vector
         # and the item similarity matrix
-        return interaction_matrix[user_id, item_ids].dot(self.item_similarity[item_ids, :])
+        # return interaction_matrix[user_id, item_ids].dot(self.item_similarity[item_ids, :])
+        return safe_sparse_dot(interaction_matrix[user_id, item_ids], self.item_similarity[item_ids, :].T, dense_output=True)
 
     def predict_all(self, interaction_matrix: sp.csr_matrix):
         """
