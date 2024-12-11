@@ -1,6 +1,8 @@
 from collections import defaultdict
 from typing import List, Optional, Any
 import time, math
+import logging
+from datetime import datetime, timezone
 
 from scipy.sparse import csr_matrix, csc_matrix
 
@@ -30,6 +32,7 @@ class UserItemInteractions:
             self.decay_rate = 1.0 - (math.log(2) / decay_in_days)
         self.max_user_id = 0
         self.max_item_id = 0
+        self.max_timestamp = 0.0
 
     def get_decay_rate(self) -> Optional[float]:
         """
@@ -63,7 +66,7 @@ class UserItemInteractions:
         if self.decay_rate is None:
             return value
 
-        elapsed_seconds = time.time() - last_timestamp
+        elapsed_seconds = self.max_timestamp - last_timestamp
         elapsed_days = elapsed_seconds / 86400.0
 
         return value * self.decay_rate ** elapsed_days # approximated exponential decay in time e^(-ln(2)/decay_in_days * elapsed_days)
@@ -78,6 +81,16 @@ class UserItemInteractions:
             delta (float): Change in interaction count (default is 1.0).
             upsert (bool): Flag to update the interaction count if it already exists (default is False).
         """
+        # Validate the timestamp
+        current_unix_time = time.time()
+        if tstamp > current_unix_time + 180.0:  # Allow for a 180-second buffer
+            current_rfc3339 = datetime.fromtimestamp(current_unix_time, tz=timezone.utc).isoformat() + "Z"
+            tstamp_rfc3339 = datetime.fromtimestamp(tstamp, tz=timezone.utc).isoformat() + "Z"
+            logging.warning(f"Timestamp {tstamp_rfc3339} is in the future. Current time is {current_rfc3339}")
+
+        # Update the maximum timestamp to avoid conflicts
+        self.max_timestamp = max(self.max_timestamp, tstamp + 1.0)
+
         if upsert:
             self.interactions[user_id][item_id] = (delta, tstamp)
         else:
@@ -89,7 +102,9 @@ class UserItemInteractions:
 
             # Store the updated value with the current timestamp
             self.interactions[user_id][item_id] = (new_value, tstamp)
+        # Track all unique item IDs
         self.all_item_ids.add(item_id)
+        # Update maximum user and item IDs
         self.max_user_id = max(self.max_user_id, user_id)
         self.max_item_id = max(self.max_item_id, item_id)
 
@@ -105,7 +120,7 @@ class UserItemInteractions:
         Returns:
             float: The decayed interaction value for the specified user-item pair.
         """
-        current, last_timestamp = self.interactions[user_id].get(item_id, (default_rating, time.time()))
+        current, last_timestamp = self.interactions[user_id].get(item_id, (default_rating, 0.0))
         if current == default_rating:
             return default_rating  # Return default if no interaction exists
         return self._apply_decay(current, last_timestamp)
