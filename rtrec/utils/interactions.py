@@ -192,7 +192,6 @@ class UserItemInteractions:
                     rows.append(user)
                     cols.append(item)
                     data.append(self._apply_decay(rating, tstamp))
-
         else:
             for user in select_users:
                 for item, (rating, tstamp) in self.interactions.get(user, {}).items():
@@ -201,7 +200,7 @@ class UserItemInteractions:
                     data.append(self._apply_decay(rating, tstamp))
 
         # Create the csr_matrix
-        return csr_matrix((data, (rows, cols)), shape=(self.max_user_id, self.max_item_id))
+        return csr_matrix((data, (rows, cols)), shape=(self.max_user_id + 1, self.max_item_id + 1))
 
     def to_csc(self, select_items: List[int] = None) -> csc_matrix:
         rows, cols, data = [], [], []
@@ -215,4 +214,4 @@ class UserItemInteractions:
                 data.append(self._apply_decay(rating, tstamp))
 
         # Create the csc_matrix
-        return csc_matrix((data, (rows, cols)), shape=(self.max_user_id, self.max_item_id))
+        return csc_matrix((data, (rows, cols)), shape=(self.max_user_id + 1, self.max_item_id + 1))
