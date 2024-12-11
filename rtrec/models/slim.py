@@ -24,11 +24,11 @@ class SLIM(BaseModel):
                 logging.warning(f"Error processing interaction: {e}")
                 continue
         interaction_matrix = self.interactions.to_csc(item_ids)
-        self.model.partial_fit_items(interaction_matrix, item_ids)
+        self.model.partial_fit_items(interaction_matrix, item_ids, progress_bar=True)
 
     def _fit(self, user_ids: List[int], item_ids: List[int]) -> Self:
         interaction_matrix = self.interactions.to_csc(select_items=item_ids)
-        self.model.partial_fit_items(interaction_matrix, item_ids)
+        self.model.partial_fit_items(interaction_matrix, item_ids, progress_bar=True)
         return self
 
     def _bulk_fit(self, interaction_matrix: csc_matrix) -> None:

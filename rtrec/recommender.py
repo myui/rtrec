@@ -30,7 +30,7 @@ class Recommender:
     def fit(
         self,
         train_data: pd.DataFrame,
-        batch_size: int = 10_000,
+        batch_size: int = 1_000,
         update_interaction: bool = False
     ) -> Self:
         """
@@ -57,7 +57,7 @@ class Recommender:
         print(f"Throughput: {len(train_data) / (end_time - start_time):.2f} samples/sec")
         return self
 
-    def bulk_fit(self, train_data: pd.DataFrame, batch_size: int = 10_000, update_interaction: bool=False) -> Self:
+    def bulk_fit(self, train_data: pd.DataFrame, batch_size: int = 1_000, update_interaction: bool=False) -> Self:
         """
         Fit the recommender model on the given DataFrame of interactions in a single batch.
 
