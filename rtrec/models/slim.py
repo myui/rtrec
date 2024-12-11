@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Iterable, List, Optional, Tuple, override
+from typing import Any, Iterable, List, Optional, Tuple, override, Self
 from scipy.sparse import csc_matrix
 
 from ..models.internal.slim_elastic import SLIMElastic
@@ -25,6 +25,11 @@ class SLIM(BaseModel):
                 continue
         interaction_matrix = self.interactions.to_csc(item_ids)
         self.model.partial_fit_items(interaction_matrix, item_ids)
+
+    def _fit(self, user_ids: List[int], item_ids: List[int]) -> Self:
+        interaction_matrix = self.interactions.to_csc(select_items=item_ids)
+        self.model.partial_fit_items(interaction_matrix, item_ids)
+        return self
 
     def _bulk_fit(self, interaction_matrix: csc_matrix) -> None:
         """

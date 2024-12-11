@@ -2,7 +2,7 @@ import pandas as pd
 import time
 
 from tqdm import tqdm
-from typing import Dict, Iterator, Tuple, Iterable, Optional, Any, List
+from typing import Dict, Iterator, Tuple, Iterable, Optional, Any, List, Self
 
 from rtrec.utils.metrics import compute_scores
 from rtrec.models import Fast_SLIM_MSE
@@ -17,20 +17,22 @@ class Recommender:
     def get_model(self):
         return self.model
 
-    def partial_fit(self, user_interactions: Iterable[Tuple[int, int, int, float]]) -> None:
+    def partial_fit(self, user_interactions: Iterable[Tuple[int, int, int, float]], update_interaction: bool=False) -> Self:
         """
         Incrementally fit the recommender model on new interactions.
         """
-        self.model.fit(user_interactions)
+        start_time = time.time()
+        self.model.fit(user_interactions, update_interaction=update_interaction)
+        end_time = time.time()
+        print(f"Fit completed in {end_time - start_time:.2f} seconds")
+        return self
 
     def fit(
         self,
         train_data: pd.DataFrame,
-        epochs: int = 1,
         batch_size: int = 10_000,
-        random_seed: Optional[int] = None,
-        no_shuffle: bool = False,
-    ) -> None:
+        update_interaction: bool = False
+    ) -> Self:
         """
         Fit the recommender model on the given DataFrame of interactions.
 
@@ -43,21 +45,19 @@ class Recommender:
         """
         train_data = train_data[["user", "item", "tstamp", "rating"]]
 
-        # Iterate over epochs
-        for epoch in tqdm(range(epochs)):
-            if not no_shuffle:
-                # Shuffle the training data at the beginning of each epoch
-                train_data = train_data.sample(frac=1, random_state=random_seed).reset_index(drop=True)
+        user_ids, item_ids = [], []
+        start_time = time.time()
+        for batch in tqdm(generate_batches(train_data, batch_size, as_generator=self.use_generator)):
+            res_user_ids, res_item_ids = self.model.add_interactions(batch, update_interaction=update_interaction, return_indices=True)
+            user_ids.extend(res_user_ids)
+            item_ids.extend(res_item_ids)
+        self.model._fit(user_ids, item_ids)
+        end_time = time.time()
+        print(f"Fit completed in {end_time - start_time:.2f} seconds")
+        print(f"Throughput: {len(train_data) / (end_time - start_time):.2f} samples/sec")
+        return self
 
-            print(f"Starting epoch {epoch + 1}/{epochs}")
-            start_time = time.time()
-            for batch in generate_batches(train_data, batch_size, as_generator=self.use_generator):
-                self.model.fit(batch, update_interaction=epoch >= 1)
-            end_time = time.time()
-            print(f"Epoch {epoch + 1} completed in {end_time - start_time:.2f} seconds")
-            print(f"Throughput: {len(train_data) / (end_time - start_time):.2f} samples/sec")
-
-    def fit_single_batch(self, train_data: pd.DataFrame, batch_size: int = 10_000) -> None:
+    def bulk_fit(self, train_data: pd.DataFrame, batch_size: int = 10_000, update_interaction: bool=False) -> Self:
         """
         Fit the recommender model on the given DataFrame of interactions in a single batch.
 
@@ -68,11 +68,12 @@ class Recommender:
 
         start_time = time.time()
         for batch in generate_batches(train_data, batch_size, as_generator=self.use_generator):
-            self.model.add_interactions(batch)
+            self.model.add_interactions(batch, update_interaction=update_interaction)
         self.model.bulk_fit()
         end_time = time.time()
         print(f"Fit completed in {end_time - start_time:.2f} seconds")
         print(f"Throughput: {len(train_data) / (end_time - start_time):.2f} samples/sec")
+        return self
 
     def recommend(self, user: Any, top_k: int = 10, filter_interacted: bool = True) -> List[Any]:
         """
