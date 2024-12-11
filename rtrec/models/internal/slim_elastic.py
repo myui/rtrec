@@ -305,15 +305,15 @@ class SLIMElastic:
             interaction_matrix (csr_matrix): User-item interaction matrix.
 
         Returns:
-            numpy.ndarray: Predicted scores for the user and the selected items.
+            numpy.ndarray: Predicted scores for the user and the selected items. Shape: (len(item_ids),)
         """
         if self.item_similarity is None:
             raise RuntimeError("Model must be fitted before calling predict_selected.")
 
         # Compute the predicted scores for the selected items by performing dot product between the user interaction vector
         # and the item similarity matrix
-        # return interaction_matrix[user_id, item_ids].dot(self.item_similarity[item_ids, :])
-        return safe_sparse_dot(interaction_matrix[user_id, item_ids], self.item_similarity[item_ids, :], dense_output=True)
+        # return interaction_matrix[user_id, :].dot(self.item_similarity[:, item_ids])
+        return safe_sparse_dot(interaction_matrix[user_id, :], self.item_similarity[:, item_ids], dense_output=True)
 
     def predict_all(self, interaction_matrix: sp.csr_matrix):
         """
@@ -348,22 +348,26 @@ class SLIMElastic:
         """
         # Get predicted scores for all items for the given user
         if candidate_item_ids is None:
-            user_scores = self.predict(user_id, interaction_matrix).ravel()            
+            scores = self.predict(user_id, interaction_matrix).ravel()
             # Exclude items that the user has already interacted with
             if filter_interacted:
                 interacted_items = interaction_matrix[user_id, :].indices
-                user_scores[interacted_items] = -np.inf  # Exclude interacted items by setting scores to -inf
+                scores[interacted_items] = -np.inf  # Exclude interacted items by setting scores to -inf
+
+            # Get the top-K items by sorting the predicted scores in descending order
+            # [::-1] reverses the order to get the items with the highest scores first
+            top_items = np.argsort(scores)[-top_k:][::-1]
+
+            # Filter out items with -np.inf scores
+            if len(top_items) > 0:
+                valid_indices = scores[top_items] != -np.inf
+                top_items = top_items[valid_indices]
         else:
-            user_scores = self.predict_selected(user_id, candidate_item_ids, interaction_matrix).ravel()
+            scores = self.predict_selected(user_id, candidate_item_ids, interaction_matrix).ravel()
+            assert len(scores) == len(candidate_item_ids), f"Predicted scores must have the same length as candidate_item_ids: {len(scores)} != {len(candidate_item_ids)}"
+            # sort the candidate_item_ids by user_scores and take top-k
+            top_items = [candidate_item_ids[i] for i in np.argsort(scores)[-top_k:][::-1]]
 
-        # Get the top-K items by sorting the predicted scores in descending order
-        # [::-1] reverses the order to get the items with the highest scores first
-        top_items = np.argsort(user_scores)[-top_k:][::-1]
-
-        # Filter out items with -np.inf scores
-        if len(top_items) > 0:
-            valid_indices = user_scores[top_items] != -np.inf
-            top_items = top_items[valid_indices]
         return top_items
 
     def similar_items(self, item_id: int, top_k: int=10):
