@@ -43,7 +43,11 @@ class SLIM(BaseModel):
         :return: List of top-K item indices recommended for the user
         """
         interaction_matrix = self.interactions.to_csr(select_users=[user_id])
-        return self.model.recommend(user_id, interaction_matrix, top_k=top_k, filter_interacted=filter_interacted)
+
+        # Get candidate items for recommendation
+        candidate_item_ids = self.interactions.get_all_non_interacted_items(user_id) if filter_interacted else self.interactions.get_all_non_negative_items(user_id)
+
+        return self.model.recommend(user_id, interaction_matrix, candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted)
 
     def _recommend_batch(self, user_id: int, interaction_matrix: csc_matrix, candidate_item_ids: Optional[List[int]]=None, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
         """
