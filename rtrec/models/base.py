@@ -97,20 +97,12 @@ class BaseModel(ABC):
         """
         raise NotImplementedError("_fit_recorded method must be implemented in the derived class")
 
+    @abstractmethod
     def bulk_fit(self) -> Self:
         """
         Fit the recommender model on the given interaction matrix.
         """
-        interaction_matrix = self.interactions.to_csc()
-        return self._bulk_fit(interaction_matrix)
-
-    @abstractmethod
-    def _bulk_fit(self, interaction_matrix: csc_matrix) -> Self:
-        """
-        Fit the recommender model on the given interaction matrix.
-        :param interaction_matrix: Sparse interaction matrix
-        """
-        raise NotImplementedError("_bulk_fit method must be implemented in the derived class")
+        raise NotImplementedError("bulk_fit method must be implemented in the derived class")
 
     def recommend(self, user: Any, top_k: int = 10, filter_interacted: bool = True) -> List[Any]:
         """

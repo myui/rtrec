@@ -4,7 +4,7 @@ import time, math
 import logging
 from datetime import datetime, timezone
 
-from scipy.sparse import csr_matrix, csc_matrix
+from scipy.sparse import csr_matrix, csc_matrix, coo_matrix
 
 class UserItemInteractions:
     def __init__(self, min_value: int = -5, max_value: int = 10, decay_in_days: Optional[int] = None, **kwargs: Any) -> None:
@@ -230,3 +230,19 @@ class UserItemInteractions:
 
         # Create the csc_matrix
         return csc_matrix((data, (rows, cols)), shape=(self.max_user_id + 1, self.max_item_id + 1))
+
+    def to_coo(self, select_users: List[int] = None, select_items: List[int] = None) -> coo_matrix:
+        rows, cols, data = [], [], []
+
+        for user, inner_dict in self.interactions.items():
+            if select_users is not None and user not in select_users:
+                continue
+            for item, (rating, tstamp) in inner_dict.items():
+                if select_items is not None and item not in select_items:
+                    continue
+                rows.append(user)
+                cols.append(item)
+                data.append(self._apply_decay(rating, tstamp))
+
+        # Create the coo_matrix
+        return coo_matrix((data, (rows, cols)), shape=(self.max_user_id + 1, self.max_item_id + 1))

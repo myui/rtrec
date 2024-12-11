@@ -37,11 +37,12 @@ class SLIM(BaseModel):
         self.model.partial_fit_items(interaction_matrix, item_ids, progress_bar=True)
         self.pending_updates.clear()
 
-    def _bulk_fit(self, interaction_matrix: csc_matrix) -> None:
+    def bulk_fit(self) -> None:
         """
         Fit the recommender model on the given interaction matrix.
         :param interaction_matrix: Sparse interaction matrix
         """
+        interaction_matrix = self.interactions.to_csc()
         self.model.fit(interaction_matrix, progress_bar=True)
 
     def _recommend(self, user_id: int, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
