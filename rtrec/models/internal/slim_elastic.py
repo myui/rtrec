@@ -347,13 +347,12 @@ class SLIMElastic:
         # Get predicted scores for all items for the given user
         if candidate_item_ids is None:
             user_scores = self.predict(user_id, interaction_matrix).ravel()            
+            # Exclude items that the user has already interacted with
+            if filter_interacted:
+                interacted_items = interaction_matrix[user_id, :].indices
+                user_scores[interacted_items] = -np.inf  # Exclude interacted items by setting scores to -inf
         else:
             user_scores = self.predict_selected(user_id, candidate_item_ids, interaction_matrix).ravel()
-
-        # Exclude items that the user has already interacted with
-        if filter_interacted:
-            interacted_items = interaction_matrix[user_id, :].indices
-            user_scores[interacted_items] = -np.inf  # Exclude interacted items by setting scores to -inf
 
         # Get the top-K items by sorting the predicted scores in descending order
         # [::-1] reverses the order to get the items with the highest scores first
