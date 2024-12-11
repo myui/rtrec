@@ -18,6 +18,10 @@ dependencies = [
     "boto3>=1.35.50",
     "tqdm>=4.67.0",
     "scipy>=1.14.1",
+    # see https://github.com/lyst/lightfm/issues/709
+    "lightfm @ git+https://github.com/daviddavo/lightfm",
+    "optuna>=4.1.0",
+    "implicit>=0.7.2",
 ]
 
 classifiers = [
