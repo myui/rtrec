@@ -313,7 +313,7 @@ class SLIMElastic:
         # Compute the predicted scores for the selected items by performing dot product between the user interaction vector
         # and the item similarity matrix
         # return interaction_matrix[user_id, item_ids].dot(self.item_similarity[item_ids, :])
-        return safe_sparse_dot(interaction_matrix[user_id, item_ids], self.item_similarity[item_ids, :].T, dense_output=True)
+        return safe_sparse_dot(interaction_matrix[user_id, item_ids], self.item_similarity[item_ids, :], dense_output=True)
 
     def predict_all(self, interaction_matrix: sp.csr_matrix):
         """
