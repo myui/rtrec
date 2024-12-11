@@ -10,26 +10,32 @@ class SLIM(BaseModel):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.model = SLIMElastic(kwargs)
+        self.pending_updates = set()
 
     @override
     def fit(self, user_interactions: Iterable[Tuple[Any, Any, float, float]], update_interaction: bool=False) -> None:
-        item_ids = []
+        item_id_set = set()
         for user, item, tstamp, rating in user_interactions:
             try:
                 user_id = self.user_ids.identify(user)
                 item_id = self.item_ids.identify(item)
                 self.interactions.add_interaction(user_id, item_id, tstamp, rating, upsert=update_interaction)
-                item_ids.append(item_id)
+                item_id_set.add(item_id)
             except Exception as e:
                 logging.warning(f"Error processing interaction: {e}")
                 continue
+        item_ids = list(item_id_set)
         interaction_matrix = self.interactions.to_csc(item_ids)
         self.model.partial_fit_items(interaction_matrix, item_ids, progress_bar=True)
 
-    def _fit(self, user_ids: List[int], item_ids: List[int]) -> Self:
-        interaction_matrix = self.interactions.to_csc(select_items=item_ids)
+    def _record_interactions(self, user_id: int, item_id: int, tstamp: float, rating: float) -> None:
+        self.pending_updates.add(item_id)
+
+    def _fit_recorded(self) -> None:
+        item_ids = list(self.pending_updates)
+        interaction_matrix = self.interactions.to_csc(item_ids)
         self.model.partial_fit_items(interaction_matrix, item_ids, progress_bar=True)
-        return self
+        self.pending_updates.clear()
 
     def _bulk_fit(self, interaction_matrix: csc_matrix) -> None:
         """
@@ -49,18 +55,6 @@ class SLIM(BaseModel):
         """
         interaction_matrix = self.interactions.to_csr(select_users=[user_id])
         return self.model.recommend(user_id, interaction_matrix, top_k=top_k, filter_interacted=filter_interacted)
-
-    def _recommend_batch(self, user_id: int, interaction_matrix: csc_matrix, candidate_item_ids: Optional[List[int]]=None, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
-        """
-        Recommend top-K items for a list of users.
-        :param user_id: User index
-        :param interaction_matrix: Sparse user-item interaction matrix
-        :param candidate_item_ids: List of candidate item indices
-        :param top_k: Number of top items to recommend
-        :param filter_interacted: Whether to filter out items the user has already interacted with
-        :return: List of top-K item indices recommended for each user
-        """
-        return self.model.recommend(user_id, interaction_matrix, candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted)
 
     def _similar_items(self, query_item_id: int, top_k: int = 10) -> List[int]:
         """

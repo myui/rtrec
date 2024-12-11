@@ -50,26 +50,52 @@ class BaseModel(ABC):
             self,
             user_interactions: Iterable[Tuple[Any, Any, float, float]],
             update_interaction: bool = False,
-            return_indices: bool = False
-    )-> Tuple[List[int], List[int]]:
+            record_interactions: bool = False
+    ) -> None:
         """
         Add user-item interactions to the model.
         :param user_interactions: List of user-item interactions
+        :param update_interaction: Whether to update existing interactions
+        :param record_interactions: Whether to record user-item interactions
         :return: Tuple of user and item indices
         """
-        user_ids, item_ids = [], []
         for user, item, tstamp, rating in user_interactions:
             try:
                 user_id = self.user_ids.identify(user)
                 item_id = self.item_ids.identify(item)
                 self.interactions.add_interaction(user_id, item_id, tstamp, rating, upsert=update_interaction)
-                if return_indices:
-                    user_ids.append(user_id)
-                    item_ids.append(item_id)
+                if record_interactions:
+                    self._record_interactions(user_id, item_id, tstamp, rating)
             except Exception as e:
                 logging.warning(f"Error processing interaction: {e}")
                 continue
-        return user_ids, item_ids
+
+    @abstractmethod
+    def _record_interactions(self, user_id: int, item_id: int, tstamp: float, rating: float) -> None:
+        """
+        Record user-item interactions.
+        :param user_id: User index
+        :param item_id: Item index
+        :param tstamp: Interaction timestamp
+        :param rating: Interaction rating
+        """
+        raise NotImplementedError("_record_interactions method must be implemented in the derived class")
+
+    def fit(self, user_interactions: Iterable[Tuple[Any, Any, float, float]], update_interaction: bool=False) -> Self:
+        """
+        Fit the recommender model on the given user-item interactions.
+        :param user_interactions: List of user-item interactions
+        :param update_interaction: Whether to update existing interactions
+        """
+        self.add_interactions(user_interactions, update_interaction=update_interaction, record_interactions=True)
+        return self._fit_recorded()
+
+    @abstractmethod
+    def _fit_recorded(self) -> Self:
+        """
+        Fit the recommender model on the recorded user-item interactions.
+        """
+        raise NotImplementedError("_fit_recorded method must be implemented in the derived class")
 
     def bulk_fit(self) -> Self:
         """
@@ -85,29 +111,6 @@ class BaseModel(ABC):
         :param interaction_matrix: Sparse interaction matrix
         """
         raise NotImplementedError("_bulk_fit method must be implemented in the derived class")
-
-    def fit(self, user_interactions: Iterable[Tuple[Any, Any, float, float]], update_interaction: bool=False) -> Self: 
-        user_ids, item_ids = [], []
-        for user, item, tstamp, rating in user_interactions:
-            try:
-                user_id = self.user_ids.identify(user)
-                item_id = self.item_ids.identify(item)
-                self.interactions.add_interaction(user_id, item_id, tstamp, rating, upsert=update_interaction)
-                user_ids.append(user_id)
-                item_ids.append(item_id)
-            except Exception as e:
-                logging.warning(f"Error processing interaction: {e}")
-                continue
-
-        return self._fit(user_ids, item_ids)
-
-    def _fit(self, user_ids: List[int], item_ids: List[int] = None) -> Self:
-        """
-        Fit the recommender model on the given user-item interactions.
-        :param user_ids: List of user indices
-        :param item_ids: List of item indices
-        """
-        raise NotImplementedError("_fit method must be implemented in the derived class")
 
     def recommend(self, user: Any, top_k: int = 10, filter_interacted: bool = True) -> List[Any]:
         """
@@ -158,21 +161,9 @@ class BaseModel(ABC):
             if user_id is None:
                 results.append([]) # TODO: return popoular items?
                 continue
-            recommended_item_ids = self._recommend_batch(user_id, interaction_matrix, top_k=top_k, filter_interacted=filter_interacted)
+            recommended_item_ids = self._recommend(user_id, interaction_matrix, top_k=top_k, filter_interacted=filter_interacted)
             results.append([self.item_ids.get(item_id) for item_id in recommended_item_ids])
         return results
-
-    def _recommend_batch(self, user_id: int, interaction_matrix: csc_matrix, candidate_item_ids: Optional[List[int]]=None, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
-        """
-        Recommend top-K items for a list of users.
-        :param user_id: User index
-        :param interaction_matrix: Sparse user-item interaction matrix
-        :param candidate_item_ids: List of candidate item indices
-        :param top_k: Number of top items to recommend
-        :param filter_interacted: Whether to filter out items the user has already interacted with
-        :return: List of top-K item indices recommended for each user
-        """
-        raise NotImplementedError("_recommend_batch method must be implemented in the derived class")
 
     def similar_items(self, query_item: Any, top_k: int = 10) -> List[Any]:
         """

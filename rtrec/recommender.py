@@ -1,3 +1,4 @@
+import math
 import pandas as pd
 import time
 
@@ -35,23 +36,17 @@ class Recommender:
     ) -> Self:
         """
         Fit the recommender model on the given DataFrame of interactions.
-
-        Parameters:
-            train_data (pd.DataFrame): The DataFrame containing interactions with columns (user, item, tstamp, rating).
-            epochs (int): Number of epochs (iterations) over the dataset. Defaults to 1.
-            batch_size (int): The number of interactions per mini-batch. Defaults to 1000.
-            random_seed (Optional[int]): Random seed for reproducibility. Defaults to None.
-            no_shuffle (bool): Whether to disable shuffling of the training data between epochs. Defaults to False.
+        :param train_data (pd.DataFrame): The DataFrame containing interactions with columns (user, item, tstamp, rating).
+        :param batch_size (int): The number of interactions per mini-batch. Defaults to 1000.
+        :param update_interaction (bool): Whether to update existing interactions. Defaults to False.
         """
         train_data = train_data[["user", "item", "tstamp", "rating"]]
 
-        user_ids, item_ids = [], []
         start_time = time.time()
-        for batch in tqdm(generate_batches(train_data, batch_size, as_generator=self.use_generator)):
-            res_user_ids, res_item_ids = self.model.add_interactions(batch, update_interaction=update_interaction, return_indices=True)
-            user_ids.extend(res_user_ids)
-            item_ids.extend(res_item_ids)
-        self.model._fit(user_ids, item_ids)
+        total = math.ceil(len(train_data) / batch_size)
+        for batch in tqdm(generate_batches(train_data, batch_size, as_generator=self.use_generator), total=total, desc="Add interactions"):
+            self.model.add_interactions(batch, update_interaction=update_interaction, record_interactions=True)
+        self.model._fit_recorded()
         end_time = time.time()
         print(f"Fit completed in {end_time - start_time:.2f} seconds")
         print(f"Throughput: {len(train_data) / (end_time - start_time):.2f} samples/sec")
@@ -60,14 +55,15 @@ class Recommender:
     def bulk_fit(self, train_data: pd.DataFrame, batch_size: int = 1_000, update_interaction: bool=False) -> Self:
         """
         Fit the recommender model on the given DataFrame of interactions in a single batch.
-
-        Parameters:
-            train_data (pd.DataFrame): The DataFrame containing interactions with columns (user, item, tstamp, rating).
+        :param train_data (pd.DataFrame): The DataFrame containing interactions with columns (user, item, tstamp, rating).
+        :param batch_size (int): The number of interactions per mini-batch. Defaults to 1000.
+        :param update_interaction (bool): Whether to update existing interactions. Defaults to False.
         """
         train_data = train_data[["user", "item", "tstamp", "rating"]]
 
         start_time = time.time()
-        for batch in generate_batches(train_data, batch_size, as_generator=self.use_generator):
+        total = math.ceil(len(train_data) / batch_size)
+        for batch in tqdm(generate_batches(train_data, batch_size, as_generator=self.use_generator), total=total, desc="Add interactions"):
             self.model.add_interactions(batch, update_interaction=update_interaction)
         self.model.bulk_fit()
         end_time = time.time()
@@ -94,7 +90,6 @@ class Recommender:
         :return: List of top-K item indices recommended for each user
         """
         return [self.model.recommend(user, top_k, filter_interacted) for user in users]
-        #return self.model.recommend_batch(users, top_k, filter_interacted)
 
     def similar_items(self, query_items: List[Any], top_k: int = 10) -> List[List[Any]]:
         """
