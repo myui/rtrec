@@ -112,20 +112,19 @@ class BaseModel(ABC):
             return [] # TODO: return popoular items?
 
         # Get candidate items for recommendation
-        candidate_item_ids = self.interactions.get_all_non_interacted_items(user_id) if filter_interacted else self.interactions.get_all_non_negative_items(user_id)
+        # candidate_item_ids = self.interactions.get_all_non_interacted_items(user_id) if filter_interacted else self.interactions.get_all_non_negative_items(user_id)
 
         # Get top-K recommendations
-        recommended_item_ids = self._recommend(user_id, candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted)
+        recommended_item_ids = self._recommend(user_id, top_k=top_k, filter_interacted=filter_interacted)
 
         # Resolve item indices to original item values
         return [self.item_ids.get(item_id) for item_id in recommended_item_ids]
 
     @abstractmethod
-    def _recommend(self, user_id: int, candidate_item_ids: List[int], top_k: int = 10, filter_interacted: bool = True) -> List[int]:
+    def _recommend(self, user_id: int, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
         """
         Recommend top-K items for a given user.
         :param user_id: User index
-        :param candidate_item_ids: List of candidate item indices
         :param top_k: Number of top items to recommend
         :param filter_interacted: Whether to filter out items the user has already interacted with
         :return: List of top-K item indices recommended for the user
