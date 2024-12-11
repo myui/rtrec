@@ -1,4 +1,3 @@
-
 from bisect import bisect_left
 from typing import Iterable, Optional, Iterator, List, Set, TypeVar
 
