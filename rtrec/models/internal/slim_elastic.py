@@ -358,9 +358,10 @@ class SLIMElastic:
         # [::-1] reverses the order to get the items with the highest scores first
         top_items = np.argsort(user_scores)[-top_k:][::-1]
 
-        # If user_scores has element and the last item is -inf, remove -np.inf scores from the top items
-        if len(top_items) > 0 and user_scores[top_items[-1]] == -np.inf:
-            top_items = top_items[user_scores[top_items] != -np.inf]
+        # Filter out items with -np.inf scores
+        if len(top_items) > 0:
+            valid_indices = user_scores[top_items] != -np.inf
+            top_items = top_items[valid_indices]
         return top_items
 
     def similar_items(self, item_id: int, top_k: int=10):
