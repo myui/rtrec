@@ -28,6 +28,8 @@ class UserItemInteractions:
             # Half-life decay in time: decay_rate = 1 - ln(2) / decay_in_days
             # https://dl.acm.org/doi/10.1145/1099554.1099689
             self.decay_rate = 1.0 - (math.log(2) / decay_in_days)
+        self.max_user_id = 0
+        self.max_item_id = 0
 
     def get_decay_rate(self) -> Optional[float]:
         """
@@ -88,6 +90,8 @@ class UserItemInteractions:
             # Store the updated value with the current timestamp
             self.interactions[user_id][item_id] = (new_value, tstamp)
         self.all_item_ids.add(item_id)
+        self.max_user_id = max(self.max_user_id, user_id)
+        self.max_item_id = max(self.max_item_id, item_id)
 
     def get_user_item_rating(self, user_id: int, item_id: int, default_rating: float = 0.0) -> float:
         """
@@ -181,29 +185,29 @@ class UserItemInteractions:
 
     def to_csr(self, select_users: List[int] = None) -> csr_matrix:
         rows, cols, data = [], [], []
-        max_row, max_col = 0, 0
 
-        for user, inner_dict in self.interactions.items():
-            for item, (rating, tstamp) in inner_dict.items():
-                max_row = max(max_row, user)
-                max_col = max(max_col, item)
-                if select_users is not None and user not in select_users:
-                    continue
-                rows.append(user)
-                cols.append(item)
-                data.append(self._apply_decay(rating, tstamp))
+        if select_users is None:
+            for user, inner_dict in self.interactions.items():
+                for item, (rating, tstamp) in inner_dict.items():
+                    rows.append(user)
+                    cols.append(item)
+                    data.append(self._apply_decay(rating, tstamp))
+
+        else:
+            for user in select_users:
+                for item, (rating, tstamp) in self.interactions.get(user, {}).items():
+                    rows.append(user)
+                    cols.append(item)
+                    data.append(self._apply_decay(rating, tstamp))
 
         # Create the csr_matrix
-        return csr_matrix((data, (rows, cols)), shape=(max_row + 1, max_col + 1))
+        return csr_matrix((data, (rows, cols)), shape=(self.max_user_id, self.max_item_id))
 
     def to_csc(self, select_items: List[int] = None) -> csc_matrix:
         rows, cols, data = [], [], []
-        max_row, max_col = 0, 0
 
         for user, inner_dict in self.interactions.items():
             for item, (rating, tstamp) in inner_dict.items():
-                max_row = max(max_row, user)
-                max_col = max(max_col, item)
                 if select_items is not None and item not in select_items:
                     continue
                 rows.append(user)
@@ -211,4 +215,4 @@ class UserItemInteractions:
                 data.append(self._apply_decay(rating, tstamp))
 
         # Create the csc_matrix
-        return csc_matrix((data, (rows, cols)), shape=(max_row + 1, max_col + 1))
+        return csc_matrix((data, (rows, cols)), shape=(self.max_user_id, self.max_item_id))
