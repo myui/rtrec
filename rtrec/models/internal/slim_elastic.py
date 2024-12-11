@@ -1,5 +1,6 @@
-from typing import List, Optional
+from typing import List, Optional, Self
 import numpy as np
+from numpy import ndarray
 from numpy.typing import ArrayLike
 import scipy.sparse as sp
 from sklearn.linear_model import ElasticNet
@@ -152,7 +153,7 @@ class SLIMElastic:
         # Initialize an empty item similarity matrix (will be computed during fit)
         self.item_similarity = None
 
-    def get_model(self):
+    def get_model(self) -> ElasticNet | FeatureSelectionWrapper:
         model = ElasticNet(
                 alpha=self.alpha, # Regularization strength
                 l1_ratio=self.l1_ratio,
@@ -169,7 +170,7 @@ class SLIMElastic:
             model = FeatureSelectionWrapper(model, n_neighbors=int(self.nn_feature_selection))
         return model
 
-    def fit(self, interaction_matrix: sp.csc_matrix | sp.csr_matrix, progress_bar: bool=False):
+    def fit(self, interaction_matrix: sp.csc_matrix | sp.csr_matrix, progress_bar: bool=False) -> Self:
         """
         Fit the SLIMElastic model to the interaction matrix.
 
@@ -211,7 +212,9 @@ class SLIMElastic:
                 # Reattach the item column after training
                 X.set_col(j, y.data)
 
-    def partial_fit(self, interaction_matrix: sp.csr_matrix, user_ids: List[int], progress_bar: bool=False):
+        return self
+
+    def partial_fit(self, interaction_matrix: sp.csr_matrix, user_ids: List[int], progress_bar: bool=False) -> Self:
         """
         Incrementally fit the SLIMElastic model with new or updated users.
 
@@ -223,9 +226,9 @@ class SLIMElastic:
         user_items = set()
         for user_id in user_ids:
             user_items.update(interaction_matrix[user_id, :].indices.tolist())
-        self.partial_fit_items(interaction_matrix, list(user_items), progress_bar)
+        return self.partial_fit_items(interaction_matrix, list(user_items), progress_bar)
 
-    def partial_fit_items(self, interaction_matrix: sp.csc_matrix | sp.csr_matrix, updated_items: List[int], progress_bar: bool=False):
+    def partial_fit_items(self, interaction_matrix: sp.csc_matrix | sp.csr_matrix, updated_items: List[int], progress_bar: bool=False) -> Self:
         """
         Incrementally fit the SLIMElastic model with new or updated items.
 
@@ -277,7 +280,7 @@ class SLIMElastic:
 
         return self
 
-    def predict(self, user_id: int, interaction_matrix: sp.csr_matrix):
+    def predict(self, user_id: int, interaction_matrix: sp.csr_matrix) -> ndarray:
         """
         Compute the predicted scores for a specific user across all items.
 
@@ -295,7 +298,7 @@ class SLIMElastic:
         # and the item similarity matrix
         return interaction_matrix[user_id, :].dot(self.item_similarity)
 
-    def predict_selected(self, user_id: int, item_ids: List[int], interaction_matrix: sp.csr_matrix):
+    def predict_selected(self, user_id: int, item_ids: List[int], interaction_matrix: sp.csr_matrix) -> ndarray:
         """
         Compute the predicted scores for a specific user and a subset of items.
 
@@ -315,7 +318,7 @@ class SLIMElastic:
         # return interaction_matrix[user_id, :].dot(self.item_similarity[:, item_ids])
         return safe_sparse_dot(interaction_matrix[user_id, :], self.item_similarity[:, item_ids], dense_output=True)
 
-    def predict_all(self, interaction_matrix: sp.csr_matrix):
+    def predict_all(self, interaction_matrix: sp.csr_matrix) -> ndarray:
         """
         Compute the predicted scores for all users and items.
 
@@ -344,7 +347,7 @@ class SLIMElastic:
             filter_interacted (bool): Whether to exclude items the user has already interacted with. Ignored if candidate_item_ids is provided.
 
         Returns:
-            List of recommended item indices.
+            List[int]: List of top-K item indices recommended for the user.
         """
         # Get predicted scores for all items for the given user
         if candidate_item_ids is None:
@@ -368,9 +371,9 @@ class SLIMElastic:
             # sort the candidate_item_ids by user_scores and take top-k
             top_items = [candidate_item_ids[i] for i in np.argsort(scores)[-top_k:][::-1]]
 
-        return top_items
+        return top_items.tolist()
 
-    def similar_items(self, item_id: int, top_k: int=10):
+    def similar_items(self, item_id: int, top_k: int=10) -> List[int]:
         """
         Get the top-K most similar items to a given item.
 
@@ -379,7 +382,7 @@ class SLIMElastic:
             top_k (int): Number of similar items to retrieve.
 
         Returns:
-            List of similar item indices.
+            List[int]: List of top-K similar item indices
         """
         if self.item_similarity is None:
             raise RuntimeError("Model must be fitted before calling similar_items.")
@@ -389,4 +392,4 @@ class SLIMElastic:
 
         # Get the top-K similar items by sorting the similarity scores in descending order
         similar_items = np.argsort(item_similarity)[-1:-1-top_k:-1]
-        return similar_items
+        return similar_items.tolist()
