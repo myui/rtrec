@@ -30,8 +30,8 @@ homepage = "https://github.com/myui/rtrec"
 repository = "https://github.com/myui/rtrec"
 
 [build-system]
-requires = ["maturin>=0.13,<2.0"]
-build-backend = "maturin"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [tool.rye]
 managed = true
@@ -40,16 +40,26 @@ dev-dependencies = [
     "scipy>=1.14.1",
 ]
 
-[tool.maturin]
-python-source = "."
-module-name = "rtrec._lowlevel"
+[tool.hatch.metadata]
+allow-direct-references = true
 
-# This ensures that Maturin uses the correct Cargo profile for releases
-cargo-extra-args = ["--release"]
-
-# "extension-module" tells pyo3 we want to build an extension module (skips linking against libpython.so)
-features = ["pyo3/extension-module"]
+[tool.hatch.build.targets.wheel]
+packages = ["rtrec"]
 
 [tool.pytest.ini_options]
 addopts = "-s"
 testpaths = [ "tests" ]
+
+#[build-system]
+#requires = ["maturin>=0.13,<2.0"]
+#build-backend = "maturin"
+#
+#[tool.maturin]
+#python-source = "."
+#module-name = "rtrec._lowlevel"
+#
+## This ensures that Maturin uses the correct Cargo profile for releases
+#cargo-extra-args = ["--release"]
+#
+## "extension-module" tells pyo3 we want to build an extension module (skips linking against libpython.so)
+#features = ["pyo3/extension-module"]
