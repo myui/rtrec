@@ -17,7 +17,6 @@ class UserItemInteractions:
         """
         # Store interactions as a dictionary of dictionaries in shape {user_id: {item_id: (value, timestamp)}}
         self.interactions: defaultdict[int, dict[int, tuple[float, float]]] = defaultdict(dict)
-        self.empty = {}
         self.all_item_ids = set()
         assert max_value > min_value, f"max_value should be greater than min_value {max_value} > {min_value}"
         self.min_value = min_value
@@ -119,12 +118,19 @@ class UserItemInteractions:
         Returns:
             List[int]: List of item IDs that the user has interacted with.
         """
-        # use top-k recent items for the user
+        user_interactions = self.interactions.get(user_id)
+        if user_interactions is None:
+            return []
+
+        # Use top-k recent items for the user
         if n_recent is not None and len(self.interactions) > n_recent:
-            # sort by timestamp in descending order
-            return [item_id for item_id, _ in sorted(self.interactions.get(user_id, self.empty).items(), key=lambda x: x[1][1], reverse=True)[:n_recent]]
+            # Sort by timestamp in descending order
+            sorted_items = sorted(
+                user_interactions.items(), key=lambda x: x[1][1], reverse=True
+            )
+            return [item_id for item_id, _ in sorted_items[:n_recent]]
         else:
-            return list(self.interactions.get(user_id, self.empty).keys())
+            return list(user_interactions.keys())
 
     def get_all_item_ids(self) -> List[int]:
         """
@@ -154,8 +160,10 @@ class UserItemInteractions:
         Returns:
             List[int]: List of item IDs the user has not interacted with.
         """
-        interacted_items = set(self.get_user_items(user_id))
-        return [item_id for item_id in self.all_item_ids if item_id not in interacted_items]
+        interacted_items = self.get_user_items(user_id)
+        if len(interacted_items) == 0:
+            return list(self.all_item_ids)
+        return list(self.all_item_ids.difference(interacted_items))
 
     def get_all_non_negative_items(self, user_id: int) -> List[int]:
         """
