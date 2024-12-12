@@ -372,7 +372,7 @@ class SLIMElastic:
         results = {}
 
         for j in item_ids:
-            y = X[:, j].toarray().ravel()
+            y = X.getcol(j).copy()
 
             # Fit ElasticNet
             model = ElasticNet(
@@ -395,7 +395,7 @@ class SLIMElastic:
             X.data[X.indptr[j]:X.indptr[j + 1]] = 0
 
             # Fit the model
-            model.fit(X, y)
+            model.fit(X, y.toarray().ravel())
 
             # Restore the column
             X.data[X.indptr[j]:X.indptr[j + 1]] = y
