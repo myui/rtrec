@@ -388,7 +388,7 @@ class SLIMElastic:
             raise RuntimeError("Model must be fitted before calling similar_items.")
 
         # Get the item similarity vector for the given item
-        item_similarity = self.item_similarity[item_id]
+        item_similarity = self.item_similarity[:,item_id]
 
         # Get the top-K similar items by sorting the similarity scores in descending order
         similar_items = np.argsort(item_similarity)[-1:-1-top_k:-1]
