@@ -150,7 +150,7 @@ class SLIMElastic:
         self.random_state = config.get("random_state", 43)
         self.nn_feature_selection = config.get("nn_feature_selection", None)
 
-        # Initialize an empty item similarity matrix (will be computed during fit)
+        # Initialize an empty item similarity matrix (will be computed during fit) of type scipy.sparse.csc_matrix
         self.item_similarity = None
 
     def get_model(self) -> ElasticNet | FeatureSelectionWrapper:
@@ -187,8 +187,8 @@ class SLIMElastic:
 
         num_items = X.shape[1]
 
-        self.item_similarity = np.zeros((num_items, num_items))  # Initialize similarity matrix
-        
+        item_similarity = sp.lil_matrix((num_items, num_items))  # Start with LIL matrix
+
         model = self.get_model()
 
         # Ignore convergence warnings for ElasticNet
@@ -207,11 +207,15 @@ class SLIMElastic:
                 model.fit(X.matrix, y.toarray().ravel())
 
                 # Update the item similarity matrix with new coefficients (weights for each user-item interaction)
-                self.item_similarity[:, j] = model.coef_
+                # item_similarity[:, j] = model.coef_
+                for i, value in zip(model.sparse_coef_.indices, model.sparse_coef_.data):
+                    item_similarity[i, j] = value
 
                 # Reattach the item column after training
                 X.set_col(j, y.data)
 
+        # Convert item_similarity to CSC format for efficient access
+        self.item_similarity = item_similarity.tocsc()
         return self
 
     def partial_fit(self, interaction_matrix: sp.csr_matrix, user_ids: List[int], progress_bar: bool=False) -> Self:
@@ -246,17 +250,12 @@ class SLIMElastic:
 
         model = self.get_model()
 
+        num_items = X.shape[1]
         if self.item_similarity is None:
-            self.item_similarity = np.zeros((X.shape[1], X.shape[1]))
+            item_similarity = sp.lil_matrix((num_items, num_items))
         else:
             # ensure the item similarity matrix is large enough to accommodate the new items
-            old_size = self.item_similarity.shape[1]
-            new_size = X.shape[1]
-            if new_size > old_size:
-                # Expand both rows and columns symmetrically
-                expanded_similarity = np.zeros((new_size, new_size))
-                expanded_similarity[:old_size, :old_size] = self.item_similarity
-                self.item_similarity = expanded_similarity
+            item_similarity = self.item_similarity.tolil().resize((num_items, num_items))
 
         # Iterate through the updated items and fit the model incrementally
         with warnings.catch_warnings():
@@ -273,11 +272,15 @@ class SLIMElastic:
                 model.fit(X.matrix, y.toarray().ravel())
 
                 # Update the item similarity matrix with new coefficients (weights for each user-item interaction)
-                self.item_similarity[:, j] = model.coef_
+                # self.item_similarity[:, j] = model.coef_
+                for i, value in zip(model.sparse_coef_.indices, model.sparse_coef_.data):
+                    item_similarity[i, j] = value
 
                 # Reattach the item column after training
                 X.set_col(j, y.data)
 
+        # Convert item_similarity to CSC format for efficient access
+        self.item_similarity = item_similarity.tocsc()
         return self
 
     def predict(self, user_id: int, interaction_matrix: sp.csr_matrix) -> ndarray:
