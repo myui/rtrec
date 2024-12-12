@@ -241,7 +241,7 @@ class SLIMElastic:
         Fit the SLIM ElasticNet model in parallel.
 
         Args:
-            interaction_matrix (sp.csc_matrix | sp.csr_matrix): Sparse interaction matrix.
+            interaction_matrix (sp.csc_matrix): Sparse interaction matrix.
             progress_bar (bool): Whether to display a progress bar.
             chunk_size (int): Number of items per chunk for parallel processing.
             num_workers (int): Number of worker processes to use. Defaults to 70% of available CPU cores.
@@ -359,8 +359,8 @@ class SLIMElastic:
         shared_indices = shared_memory.SharedMemory(name=shared_indices_name)
         shared_indptr = shared_memory.SharedMemory(name=shared_indptr_name)
 
-        # Reconstruct CSR matrix with provided shapes
-        X = sp.csr_matrix(
+        # Reconstruct CSC matrix with provided shapes
+        X = sp.csc_matrix(
             (
                 np.ndarray(shm_shapes[0], dtype=shm_dtypes[0], buffer=shared_data.buf),
                 np.ndarray(shm_shapes[1], dtype=shm_dtypes[1], buffer=shared_indices.buf),
