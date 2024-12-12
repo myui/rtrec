@@ -111,7 +111,6 @@ class FeatureSelectionWrapper:
         assert n_neighbors > 0, f"n_neighbors must be a positive integer: {n_neighbors}"
         self.model = model
         self.n_neighbors = n_neighbors
-        self.coef_ = None
         self.sparse_coef_ = None
 
     def fit(self, X: sp.spmatrix, y: np.ndarray):
@@ -121,15 +120,14 @@ class FeatureSelectionWrapper:
         selected_features = np.argsort(feature_scores)[-1:-1-self.n_neighbors:-1]
 
         # Only fit the model with the selected features
+        # TODO: Implement a more efficient way to select the features for csr_matrix
         self.model.fit(X[:, selected_features], y)
         
         # Store the coefficients of the fitted model
-        from IPython.core.debugger import Pdb; Pdb().set_trace()
+        coeff = self.model.coef_ # of shape (n_neighbors,)
 
-        self.sparse_coef_ = self.model.sparse_coef_
-        # coef = np.zeros(X.shape[1])
-        # coef[selected_features] = self.model.coef_
-        # self.coef_ = coef
+        # Create a sparse representation (1, X.shape[1]) of the coefficients with only the selected features
+        self.sparse_coef_ = sp.csr_matrix((coeff, (np.zeros_like(coeff), selected_features)), shape=(1, X.shape[1]))
         return self
 
 class SLIMElastic:
