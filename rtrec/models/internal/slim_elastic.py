@@ -398,7 +398,7 @@ class SLIMElastic:
             model.fit(X, y.toarray().ravel())
 
             # Restore the column
-            X.data[X.indptr[j]:X.indptr[j + 1]] = y
+            X.data[X.indptr[j]:X.indptr[j + 1]] = y.data
 
             # Collect results
             results[j] = (model.sparse_coef_.indices, model.sparse_coef_.data)
