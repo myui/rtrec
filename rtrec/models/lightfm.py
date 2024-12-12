@@ -21,13 +21,13 @@ class LightFM(BaseModel):
         self.recorded_user_ids.add(user_id)
         self.recorded_item_ids.add(item_id)
 
-    def _fit_recorded(self) -> None:
+    def _fit_recorded(self, parallel: bool=False, progress_bar: bool=True) -> None:
         interactions = self.interactions.to_coo(select_users=list(self.recorded_user_ids), select_items=list(self.recorded_item_ids))
         # TODO
         self.recorded_user_ids.clear()
         self.recorded_item_ids.clear()
 
-    def bulk_fit(self) -> None:
+    def bulk_fit(self, parallel: bool=False, progress_bar: bool=True) -> None:
         interactions = self.interactions.to_coo()
 
         pass # TODO

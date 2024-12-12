@@ -181,14 +181,14 @@ class SLIMElastic:
             model = FeatureSelectionWrapper(model, n_neighbors=int(self.nn_feature_selection))
         return model
 
-    def fit(self, interaction_matrix: sp.csc_matrix | sp.csr_matrix, progress_bar: bool=False, parallel: bool=False) -> Self:
+    def fit(self, interaction_matrix: sp.csc_matrix | sp.csr_matrix, parallel: bool=False, progress_bar: bool=False) -> Self:
         """
         Fit the SLIMElastic model to the interaction matrix.
 
         Args:
             interaction_matrix (csc_matrix | csr_matrix): User-item interaction matrix (sparse).
-            progress_bar (bool): Whether to show a progress bar during training.
             parallel (bool): Whether to use parallel processing for fitting.
+            progress_bar (bool): Whether to show a progress bar during training.
         """
         if isinstance(interaction_matrix, sp.csc_matrix):
             if parallel:
@@ -235,13 +235,14 @@ class SLIMElastic:
         return self
 
     def fit_in_parallel(
-        self, interaction_matrix: sp.csc_matrix, progress_bar: bool = False, chunk_size: int = 100, num_workers: Optional[int] = None
+        self, interaction_matrix: sp.csc_matrix, item_ids: Optional[ndarray] = None, progress_bar: bool = False, chunk_size: int = 100, num_workers: Optional[int] = None
     ) -> Self:
         """
         Fit the SLIM ElasticNet model in parallel.
 
         Args:
             interaction_matrix (sp.csc_matrix): Sparse interaction matrix.
+            item_ids (ndarray): List of item indices to fit. If None, fit all items.
             progress_bar (bool): Whether to display a progress bar.
             chunk_size (int): Number of items per chunk for parallel processing.
             num_workers (int): Number of worker processes to use. Defaults to 70% of available CPU cores.
@@ -274,6 +275,9 @@ class SLIMElastic:
         num_items = matrix_shape[1]
         item_similarity = sp.lil_matrix((num_items, num_items))
 
+        if item_ids is None:
+            item_ids = np.arange(num_items)
+
         # Ignore convergence warnings
         with warnings.catch_warnings():
             warnings.simplefilter("ignore", category=ConvergenceWarning)
@@ -301,7 +305,7 @@ class SLIMElastic:
             )
 
             # Prepare batches of item indices using np.array_split
-            item_chunks = np.array_split(np.arange(num_items), int(num_items / chunk_size))
+            item_chunks = np.array_split(item_ids, int(num_items / chunk_size))
 
             # Use multiprocessing with imap_unordered
             with Pool(processes=num_workers) as pool:
@@ -410,13 +414,14 @@ class SLIMElastic:
 
         return results
 
-    def partial_fit(self, interaction_matrix: sp.csr_matrix, user_ids: List[int], progress_bar: bool=False) -> Self:
+    def partial_fit(self, interaction_matrix: sp.csr_matrix, user_ids: List[int], parallel: bool=False, progress_bar: bool=False) -> Self:
         """
         Incrementally fit the SLIMElastic model with new or updated users.
 
         Args:
             interaction_matrix (csr_matrix): user-item interaction matrix (sparse).
             user_ids (list): List of user indices that were updated.
+            parallel (bool): Whether to use parallel processing for fitting.
             progress_bar (bool): Whether to show a progress bar during training.
         """        
         user_items = set()
@@ -424,19 +429,22 @@ class SLIMElastic:
             user_items.update(interaction_matrix[user_id, :].indices.tolist())
         return self.partial_fit_items(interaction_matrix, list(user_items), progress_bar)
 
-    def partial_fit_items(self, interaction_matrix: sp.csc_matrix | sp.csr_matrix, updated_items: List[int], progress_bar: bool=False) -> Self:
+    def partial_fit_items(self, interaction_matrix: sp.csc_matrix | sp.csr_matrix, updated_items: List[int], parallel: bool=False, progress_bar: bool=False) -> Self:
         """
         Incrementally fit the SLIMElastic model with new or updated items.
 
         Args:
             interaction_matrix (csc_matrix | csr_matrix): user-item interaction matrix (sparse).
             updated_items (list): List of item indices that were updated.
+            parallel (bool): Whether to use parallel processing for fitting.
             progress_bar (bool): Whether to show a progress bar during training.
         """
-        if isinstance(interaction_matrix, sp.csr_matrix):
-            X = ColumnarView(interaction_matrix)
-        elif isinstance(interaction_matrix, sp.csc_matrix):
+        if isinstance(interaction_matrix, sp.csc_matrix):
+            if parallel:
+                self.fit_in_parallel(interaction_matrix, item_ids=np.array(updated_items), progress_bar=progress_bar)
             X = CSCMatrixWrapper(interaction_matrix)
+        elif isinstance(interaction_matrix, sp.csr_matrix):
+            X = ColumnarView(interaction_matrix)
         else:
             raise ValueError("Interaction matrix must be a scipy.sparse.csr_matrix or scipy.sparse.csc_matrix.")
 

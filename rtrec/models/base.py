@@ -91,18 +91,20 @@ class BaseModel(ABC):
         return self._fit_recorded()
 
     @abstractmethod
-    def _fit_recorded(self) -> Self:
+    def _fit_recorded(self, parallel: bool=False, progress_bar: bool=True) -> Self:
         """
         Fit the recommender model on the recorded user-item interactions.
+        :param parallel: Whether to run the fitting process in parallel. Defaults to False.
+        :param progress_bar: Whether to display a progress bar. Defaults to True.
         """
         raise NotImplementedError("_fit_recorded method must be implemented in the derived class")
 
     @abstractmethod
-    def bulk_fit(self, progress_bar: bool=True, parallel: bool=True) -> Self:
+    def bulk_fit(self, parallel: bool=True, progress_bar: bool=True) -> Self:
         """
         Fit the recommender model on the given interaction matrix.
-        :param progress_bar: Whether to display a progress bar. Defaults to True.
         :param parallel: Whether to run the fitting process in parallel. Defaults to True.
+        :param progress_bar: Whether to display a progress bar. Defaults to True.
         """
         raise NotImplementedError("bulk_fit method must be implemented in the derived class")
 
