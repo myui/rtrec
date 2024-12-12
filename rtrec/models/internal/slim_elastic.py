@@ -71,7 +71,7 @@ class CSCMatrixWrapper:
     def shape(self) -> tuple:
         return self.csc_matrix.shape
     
-    def get_col(self, j: int) -> sp.spmatrix:
+    def get_col(self, j: int, copy: bool = True) -> sp.spmatrix:
         """
         Return the j-th column of the matrix.
 
@@ -85,7 +85,10 @@ class CSCMatrixWrapper:
         scipy.sparse.spmatrix
             The j-th column of the matrix.
         """
-        return self.csc_matrix[:, j].copy()
+        col = self.csc_matrix.getcol(j)
+        if copy:
+            return col.copy()
+        return col
     
     def set_col(self, j: int, values: ArrayLike) -> None:
         """
@@ -108,7 +111,7 @@ class FeatureSelectionWrapper:
         assert n_neighbors > 0, f"n_neighbors must be a positive integer: {n_neighbors}"
         self.model = model
         self.n_neighbors = n_neighbors
-        # self.coef_ = None
+        self.coef_ = None
         self.sparse_coef_ = None
 
     def fit(self, X: sp.spmatrix, y: np.ndarray):
@@ -121,6 +124,8 @@ class FeatureSelectionWrapper:
         self.model.fit(X[:, selected_features], y)
         
         # Store the coefficients of the fitted model
+        from IPython.core.debugger import Pdb; Pdb().set_trace()
+
         self.sparse_coef_ = self.model.sparse_coef_
         # coef = np.zeros(X.shape[1])
         # coef[selected_features] = self.model.coef_
