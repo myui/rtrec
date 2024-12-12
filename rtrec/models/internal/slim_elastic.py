@@ -1,4 +1,6 @@
-from typing import List, Optional, Self
+import logging
+import os
+from typing import Any, Dict, List, Optional, Self, Tuple
 import numpy as np
 from numpy import ndarray
 from numpy.typing import ArrayLike
@@ -9,6 +11,10 @@ from sklearn.exceptions import ConvergenceWarning
 from tqdm import tqdm
 from scipy.sparse.linalg import cg
 from sklearn.utils.extmath import safe_sparse_dot
+from multiprocessing import Pool, cpu_count, shared_memory
+from functools import partial
+
+from rtrec.utils.multiprocessing import create_shared_array
 
 class ColumnarView:
     def __init__(self, csr_matrix: sp.csr_matrix):
@@ -146,7 +152,7 @@ class SLIMElastic:
             l1_ratio (float): The ratio between L1 and L2 regularization.
             positive_only (bool): Whether to enforce positive coefficients.
         """
-        self.eta0 = config.get("eta0", 0.001) # Learning rate used only for SGD
+        # self.eta0 = config.get("eta0", 0.001) # Learning rate used only for SGD
         self.alpha = config.get("alpha", 0.1) # Regularization strength
         self.l1_ratio = config.get("l1_ratio", 0.1) # mostly for L2 regularization for SLIM
         self.positive_only = config.get("positive_only", True)
@@ -175,18 +181,23 @@ class SLIMElastic:
             model = FeatureSelectionWrapper(model, n_neighbors=int(self.nn_feature_selection))
         return model
 
-    def fit(self, interaction_matrix: sp.csc_matrix | sp.csr_matrix, progress_bar: bool=False) -> Self:
+    def fit(self, interaction_matrix: sp.csc_matrix | sp.csr_matrix, progress_bar: bool=False, parallel: bool=False) -> Self:
         """
         Fit the SLIMElastic model to the interaction matrix.
 
         Args:
             interaction_matrix (csc_matrix | csr_matrix): User-item interaction matrix (sparse).
             progress_bar (bool): Whether to show a progress bar during training.
+            parallel (bool): Whether to use parallel processing for fitting.
         """
-        if isinstance(interaction_matrix, sp.csr_matrix):
-            X = ColumnarView(interaction_matrix)
-        elif isinstance(interaction_matrix, sp.csc_matrix):
+        if isinstance(interaction_matrix, sp.csc_matrix):
+            if parallel:
+                return self.fit_in_parallel(interaction_matrix, progress_bar=progress_bar)
             X = CSCMatrixWrapper(interaction_matrix)
+        elif isinstance(interaction_matrix, sp.csr_matrix):
+            if parallel:
+                logging.warning("Multiprocessing is only supported for CSC format. Fitting in single process.")
+            X = ColumnarView(interaction_matrix)
         else:
             raise ValueError("Interaction matrix must be a scipy.sparse.csr_matrix or scipy.sparse.csc_matrix.")
 
@@ -222,6 +233,167 @@ class SLIMElastic:
         # Convert item_similarity to CSC format for efficient access
         self.item_similarity = item_similarity.tocsc()
         return self
+
+    def fit_in_parallel(
+        self, interaction_matrix: sp.csc_matrix, progress_bar: bool = False, chunk_size: int = 100, num_workers: Optional[int] = None
+    ) -> Self:
+        """
+        Fit the SLIM ElasticNet model in parallel.
+
+        Args:
+            interaction_matrix (sp.csc_matrix | sp.csr_matrix): Sparse interaction matrix.
+            progress_bar (bool): Whether to display a progress bar.
+            chunk_size (int): Number of items per chunk for parallel processing.
+            num_workers (int): Number of worker processes to use. Defaults to 70% of available CPU cores.
+
+        Returns:
+            Self: The fitted SLIM ElasticNet model.
+        """
+        if num_workers is None:
+            num_workers = int(os.cpu_count() * 0.7)  # Default to 70% of available CPU cores
+
+        if not isinstance(interaction_matrix, sp.csc_matrix):
+            raise ValueError("Interaction matrix must be in CSC format for parallel processing.")
+
+        # Create shared memory for interaction matrix
+        shared_data = create_shared_array(interaction_matrix.data)
+        shared_indices = create_shared_array(interaction_matrix.indices)
+        shared_indptr = create_shared_array(interaction_matrix.indptr)
+
+        # Create shapes for shared arrays
+        shm_shapes = (
+            interaction_matrix.shape,  # shape of the entire matrix
+            interaction_matrix.indices.shape,  # shape of the indices array
+            interaction_matrix.indptr.shape,  # shape of the indptr array
+        )
+
+        # Initialize item similarity matrix
+        matrix_shape = interaction_matrix.shape
+        num_items = matrix_shape[1]
+        item_similarity = sp.lil_matrix((num_items, num_items))
+
+        # Ignore convergence warnings
+        with warnings.catch_warnings():
+            warnings.simplefilter("ignore", category=ConvergenceWarning)
+
+            config = {
+                "alpha": self.alpha,
+                "l1_ratio": self.l1_ratio,
+                "positive_only": self.positive_only,
+                "max_iter": self.max_iter,
+                "tol": self.tol,
+                "random_state": self.random_state,
+                "nn_feature_selection": self.nn_feature_selection,
+            }
+
+            # Prepare partial function for multiprocessing
+            worker_fn = partial(
+                self._fit_items,
+                shared_data_name = shared_data.name,
+                shared_indices_name = shared_indices.name,
+                shared_indptr_name = shared_indptr.name,
+                shm_shapes = shm_shapes,
+                matrix_shape = matrix_shape,
+                config = config,
+            )
+
+            # Prepare batches of item indices using np.array_split
+            item_chunks = np.array_split(np.arange(num_items), int(num_items / chunk_size))
+
+            # Use multiprocessing with imap_unordered
+            with Pool(processes=num_workers) as pool:
+                results = pool.imap_unordered(worker_fn, item_chunks)
+
+                if progress_bar:
+                    results = tqdm(results, total=len(item_chunks), desc="Fitting SLIMElastic in parallel")
+
+                for result in results:
+                    for j, (indices, values) in result.items():
+                        for i, value in zip(indices, values):
+                            item_similarity[i, j] = value
+
+        # Cleanup shared memory
+        shared_data.close()
+        shared_indices.close()
+        shared_indptr.close()
+        shared_data.unlink()
+        shared_indices.unlink()
+        shared_indptr.unlink()
+
+        # Convert item similarity to CSC format
+        self.item_similarity = item_similarity.tocsc()
+        return self
+
+    @staticmethod
+    def _fit_items(
+        item_ids: ndarray,
+        shared_data_name: str,
+        shared_indices_name: str,
+        shared_indptr_name: str,
+        shm_shapes: Tuple[Tuple[int, int], Tuple[int], Tuple[int]],
+        matrix_shape: Tuple[int, int],
+        config: dict[str, Any],
+    ) -> Dict[int, Tuple[np.ndarray, np.ndarray]]:
+        """
+        Worker function for fitting multiple items using shared memory.
+
+        Args:
+            shared_data_name (str): Name of shared memory for `data`.
+            shared_indices_name (str): Name of shared memory for `indices`.
+            shared_indptr_name (str): Name of shared memory for `indptr`.
+            shm_shapes (Tuple[Tuple[int, int], Tuple[int], Tuple[int]]): Shapes of the shared arrays (`data`, `indices`, `indptr`).
+            matrix_shape (Tuple[int, int]): Shape of the full interaction matrix.
+            items (List[int]): List of target column indices.
+            alpha (float): Regularization strength.
+            l1_ratio (float): ElasticNet mixing parameter.
+
+        Returns:
+            Dict[int, Tuple[np.ndarray, np.ndarray]]: Mapping of item index to (non-zero indices, coefficients).
+        """
+        # Access shared memory
+        shared_data = shared_memory.SharedMemory(name=shared_data_name)
+        shared_indices = shared_memory.SharedMemory(name=shared_indices_name)
+        shared_indptr = shared_memory.SharedMemory(name=shared_indptr_name)
+
+        # Reconstruct CSR matrix with provided shapes
+        X = sp.csr_matrix(
+            (
+                np.ndarray(shm_shapes[0], dtype=np.float32, buffer=shared_data.buf),
+                np.ndarray(shm_shapes[1], dtype=np.int32, buffer=shared_indices.buf),
+                np.ndarray(shm_shapes[2], dtype=np.int32, buffer=shared_indptr.buf),
+            ),
+            shape=matrix_shape,
+        )
+
+        results = {}
+
+        for j in item_ids:
+            y = X[:, j].toarray().ravel()
+
+            # Fit ElasticNet
+            model = ElasticNet(**config)
+            nn_feature_selection = config.get("nn_feature_selection", None)
+            if nn_feature_selection is not None:
+                model = FeatureSelectionWrapper(model, n_neighbors=int(nn_feature_selection))
+
+            # Temporarily zero-out the target column
+            X.data[X.indptr[j]:X.indptr[j + 1]] = 0
+
+            # Fit the model
+            model.fit(X, y)
+
+            # Restore the column
+            X.data[X.indptr[j]:X.indptr[j + 1]] = y
+
+            # Collect results
+            results[j] = (model.sparse_coef_.indices, model.sparse_coef_.data)
+
+        # Close shared memory
+        shared_data.close()
+        shared_indices.close()
+        shared_indptr.close()
+
+        return results
 
     def partial_fit(self, interaction_matrix: sp.csr_matrix, user_ids: List[int], progress_bar: bool=False) -> Self:
         """

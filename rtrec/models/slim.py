@@ -37,13 +37,15 @@ class SLIM(BaseModel):
         self.model.partial_fit_items(interaction_matrix, item_ids, progress_bar=True)
         self.recorded_item_ids.clear()
 
-    def bulk_fit(self) -> None:
+    def bulk_fit(self, progress_bar: bool=True, parallel: bool=True) -> None:
         """
         Fit the recommender model on the given interaction matrix.
         :param interaction_matrix: Sparse interaction matrix
+        :param progress_bar: Whether to display a progress bar
+        :param parallel: Whether to run the fitting process in parallel
         """
         interaction_matrix = self.interactions.to_csc()
-        self.model.fit(interaction_matrix, progress_bar=True)
+        self.model.fit(interaction_matrix, progress_bar=progress_bar, parallel=parallel)
 
     def _recommend(self, user_id: int, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
         """

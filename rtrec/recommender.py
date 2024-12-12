@@ -52,12 +52,13 @@ class Recommender:
         print(f"Throughput: {len(train_data) / (end_time - start_time):.2f} samples/sec")
         return self
 
-    def bulk_fit(self, train_data: pd.DataFrame, batch_size: int = 1_000, update_interaction: bool=False) -> Self:
+    def bulk_fit(self, train_data: pd.DataFrame, batch_size: int = 1_000, update_interaction: bool=False, parallel: bool=False) -> Self:
         """
         Fit the recommender model on the given DataFrame of interactions in a single batch.
         :param train_data (pd.DataFrame): The DataFrame containing interactions with columns (user, item, tstamp, rating).
         :param batch_size (int): The number of interactions per mini-batch. Defaults to 1000.
         :param update_interaction (bool): Whether to update existing interactions. Defaults to False.
+        :param parallel (bool): Whether to run the fitting process in parallel. Defaults to False.
         """
         train_data = train_data[["user", "item", "tstamp", "rating"]]
 
@@ -65,7 +66,7 @@ class Recommender:
         total = math.ceil(len(train_data) / batch_size)
         for batch in tqdm(generate_batches(train_data, batch_size, as_generator=self.use_generator), total=total, desc="Add interactions"):
             self.model.add_interactions(batch, update_interaction=update_interaction)
-        self.model.bulk_fit()
+        self.model.bulk_fit(progress_bar=True, parallel=parallel)
         end_time = time.time()
         print(f"Fit completed in {end_time - start_time:.2f} seconds")
         print(f"Throughput: {len(train_data) / (end_time - start_time):.2f} samples/sec")

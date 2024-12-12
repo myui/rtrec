@@ -98,9 +98,11 @@ class BaseModel(ABC):
         raise NotImplementedError("_fit_recorded method must be implemented in the derived class")
 
     @abstractmethod
-    def bulk_fit(self) -> Self:
+    def bulk_fit(self, progress_bar: bool=True, parallel: bool=True) -> Self:
         """
         Fit the recommender model on the given interaction matrix.
+        :param progress_bar: Whether to display a progress bar. Defaults to True.
+        :param parallel: Whether to run the fitting process in parallel. Defaults to True.
         """
         raise NotImplementedError("bulk_fit method must be implemented in the derived class")
 
