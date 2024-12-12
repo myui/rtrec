@@ -445,7 +445,7 @@ class SLIMElastic:
         """
         if isinstance(interaction_matrix, sp.csc_matrix):
             if parallel:
-                self.fit_in_parallel(interaction_matrix, item_ids=np.array(updated_items), progress_bar=progress_bar)
+                return self.fit_in_parallel(interaction_matrix, item_ids=np.array(updated_items), progress_bar=progress_bar)
             X = CSCMatrixWrapper(interaction_matrix)
         elif isinstance(interaction_matrix, sp.csr_matrix):
             X = ColumnarView(interaction_matrix)
