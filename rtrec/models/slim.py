@@ -10,12 +10,12 @@ class SLIM(BaseModel):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         self.model = SLIMElastic(kwargs)
-        self.pending_updates = set()
+        self.recorded_item_ids = set()
 
     @override
-    def fit(self, user_interactions: Iterable[Tuple[Any, Any, float, float]], update_interaction: bool=False) -> None:
+    def fit(self, interactions: Iterable[Tuple[Any, Any, float, float]], update_interaction: bool=False) -> None:
         item_id_set = set()
-        for user, item, tstamp, rating in user_interactions:
+        for user, item, tstamp, rating in interactions:
             try:
                 user_id = self.user_ids.identify(user)
                 item_id = self.item_ids.identify(item)
@@ -29,13 +29,13 @@ class SLIM(BaseModel):
         self.model.partial_fit_items(interaction_matrix, item_ids, progress_bar=True)
 
     def _record_interactions(self, user_id: int, item_id: int, tstamp: float, rating: float) -> None:
-        self.pending_updates.add(item_id)
+        self.recorded_item_ids.add(item_id)
 
     def _fit_recorded(self) -> None:
-        item_ids = list(self.pending_updates)
+        item_ids = list(self.recorded_item_ids)
         interaction_matrix = self.interactions.to_csc(item_ids)
         self.model.partial_fit_items(interaction_matrix, item_ids, progress_bar=True)
-        self.pending_updates.clear()
+        self.recorded_item_ids.clear()
 
     def bulk_fit(self) -> None:
         """

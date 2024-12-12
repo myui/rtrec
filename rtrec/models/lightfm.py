@@ -14,7 +14,7 @@ class LightFM(BaseModel):
         self.recorded_user_ids = set()
         self.recorded_item_ids = set()
 
-    def fit(self, user_interactions: Iterable[Tuple[Any, Any, float, float]], update_interaction: bool=False) -> None:        
+    def fit(self, interactions: Iterable[Tuple[Any, Any, float, float]], update_interaction: bool=False) -> None:
         pass # TODO
 
     def _record_interactions(self, user_id: int, item_id: int, tstamp: float, rating: float) -> None:

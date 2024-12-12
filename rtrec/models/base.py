@@ -48,7 +48,7 @@ class BaseModel(ABC):
 
     def add_interactions(
             self,
-            user_interactions: Iterable[Tuple[Any, Any, float, float]],
+            interactions: Iterable[Tuple[Any, Any, float, float]],
             update_interaction: bool = False,
             record_interactions: bool = False
     ) -> None:
@@ -59,7 +59,7 @@ class BaseModel(ABC):
         :param record_interactions: Whether to record user-item interactions
         :return: Tuple of user and item indices
         """
-        for user, item, tstamp, rating in user_interactions:
+        for user, item, tstamp, rating in interactions:
             try:
                 user_id = self.user_ids.identify(user)
                 item_id = self.item_ids.identify(item)
@@ -81,13 +81,13 @@ class BaseModel(ABC):
         """
         raise NotImplementedError("_record_interactions method must be implemented in the derived class")
 
-    def fit(self, user_interactions: Iterable[Tuple[Any, Any, float, float]], update_interaction: bool=False) -> Self:
+    def fit(self, interactions: Iterable[Tuple[Any, Any, float, float]], update_interaction: bool=False) -> Self:
         """
         Fit the recommender model on the given user-item interactions.
         :param user_interactions: List of user-item interactions
         :param update_interaction: Whether to update existing interactions
         """
-        self.add_interactions(user_interactions, update_interaction=update_interaction, record_interactions=True)
+        self.add_interactions(interactions, update_interaction=update_interaction, record_interactions=True)
         return self._fit_recorded()
 
     @abstractmethod
