@@ -270,10 +270,14 @@ class SLIMElastic:
 
         shm_dtypes = (interaction_matrix.data.dtype, interaction_matrix.indices.dtype, interaction_matrix.indptr.dtype)
 
-        # Initialize item similarity matrix
         matrix_shape = interaction_matrix.shape
         num_items = matrix_shape[1]
-        item_similarity = sp.lil_matrix((num_items, num_items))
+        if self.item_similarity is None:
+            item_similarity = sp.lil_matrix((num_items, num_items))
+        else:
+            # ensure the item similarity matrix is large enough to accommodate the new items
+            item_similarity = self.item_similarity.tolil()
+            item_similarity.resize((num_items, num_items))
 
         if item_ids is None:
             item_ids = np.arange(num_items)
@@ -455,7 +459,8 @@ class SLIMElastic:
             item_similarity = sp.lil_matrix((num_items, num_items))
         else:
             # ensure the item similarity matrix is large enough to accommodate the new items
-            item_similarity = self.item_similarity.tolil().resize((num_items, num_items))
+            item_similarity = self.item_similarity.tolil()
+            item_similarity.resize((num_items, num_items))
 
         # Iterate through the updated items and fit the model incrementally
         with warnings.catch_warnings():
