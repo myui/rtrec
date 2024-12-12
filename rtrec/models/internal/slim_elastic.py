@@ -294,14 +294,14 @@ class SLIMElastic:
             interaction_matrix (csr_matrix): User-item interaction matrix.
 
         Returns:
-            numpy.ndarray: Predicted scores for the user across all items.
+            numpy.ndarray: Predicted scores for the user across all items of shape (n_items,)
         """
         if self.item_similarity is None:
             raise RuntimeError("Model must be fitted before calling predict.")
 
         # Compute the predicted scores by performing dot product between the user interaction vector
         # and the item similarity matrix
-        return interaction_matrix[user_id, :].dot(self.item_similarity)
+        return safe_sparse_dot(interaction_matrix[user_id, :], self.item_similarity, dense_output=True)
 
     def predict_selected(self, user_id: int, item_ids: List[int], interaction_matrix: sp.csr_matrix) -> ndarray:
         """
@@ -313,7 +313,7 @@ class SLIMElastic:
             interaction_matrix (csr_matrix): User-item interaction matrix.
 
         Returns:
-            numpy.ndarray: Predicted scores for the user and the selected items. Shape: (len(item_ids),)
+            numpy.ndarray: Predicted scores for the user and selected items of shape (len(item_ids),)
         """
         if self.item_similarity is None:
             raise RuntimeError("Model must be fitted before calling predict_selected.")
@@ -323,22 +323,23 @@ class SLIMElastic:
         # return interaction_matrix[user_id, :].dot(self.item_similarity[:, item_ids])
         return safe_sparse_dot(interaction_matrix[user_id, :], self.item_similarity[:, item_ids], dense_output=True)
 
-    def predict_all(self, interaction_matrix: sp.csr_matrix) -> ndarray:
+    def predict_all(self, interaction_matrix: sp.csr_matrix, dense_output: bool=False) -> ndarray | sp.csr_matrix:
         """
         Compute the predicted scores for all users and items.
 
         Args:
             interaction_matrix (csr_matrix): User-item interaction matrix.
+            dense_output (bool): Whether to return a dense output.
 
         Returns:
-            numpy.ndarray: Predicted scores for all users and items.
+            numpy.ndarray | scipy.sparse.csr_matrix: Predicted scores for all users and items.
         """
         if self.item_similarity is None:
             raise RuntimeError("Model must be fitted before calling predict_all.")
 
         # Compute the predicted scores for all users by performing dot product between the interaction matrix
         # and the item similarity matrix
-        return interaction_matrix.dot(self.item_similarity)
+        return safe_sparse_dot(interaction_matrix, self.item_similarity, dense_output=dense_output)
 
     def recommend(self, user_id: int, interaction_matrix: sp.csr_matrix, candidate_item_ids: Optional[List[int]]=None, top_k: int=10, filter_interacted: bool=True) -> List[int]:
         """
