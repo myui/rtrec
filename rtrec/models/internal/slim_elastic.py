@@ -156,7 +156,7 @@ class SLIMElastic:
         self.alpha = config.get("alpha", 0.1) # Regularization strength
         self.l1_ratio = config.get("l1_ratio", 0.1) # mostly for L2 regularization for SLIM
         self.positive_only = config.get("positive_only", True)
-        self.max_iter = config.get("max_iter", 30)
+        self.max_iter = config.get("max_iter", 100)
         self.tol = config.get("tol", 1e-4)
         self.random_state = config.get("random_state", 43)
         self.nn_feature_selection = config.get("nn_feature_selection", None)
@@ -168,14 +168,14 @@ class SLIMElastic:
         model = ElasticNet(
                 alpha=self.alpha, # Regularization strength
                 l1_ratio=self.l1_ratio,
-                positive=self.positive_only, # Enforce positive coefficients
                 fit_intercept=False,
-                copy_X=False, # Avoid copying the input matrix
                 precompute=True, # Precompute Gram matrix for faster computation
                 max_iter=self.max_iter,
+                copy_X=False, # Avoid copying the input matrix
                 tol=self.tol,
-                selection='random', # Randomize the order of features
+                positive=self.positive_only, # Enforce positive coefficients
                 random_state=self.random_state,
+                selection='random', # Randomize the order of features
             )
         if self.nn_feature_selection is not None:
             model = FeatureSelectionWrapper(model, n_neighbors=int(self.nn_feature_selection))
@@ -375,7 +375,18 @@ class SLIMElastic:
             y = X[:, j].toarray().ravel()
 
             # Fit ElasticNet
-            model = ElasticNet(**config)
+            model = ElasticNet(
+                alpha=config["alpha"],
+                l1_ratio=config["l1_ratio"],
+                fit_intercept=False,
+                precompute=True,
+                max_iter=config["max_iter"],
+                copy_X=False,
+                tol=config["tol"],
+                positive=config["positive_only"],
+                random_state=config["random_state"],
+                selection="random",
+            )
             nn_feature_selection = config.get("nn_feature_selection", None)
             if nn_feature_selection is not None:
                 model = FeatureSelectionWrapper(model, n_neighbors=int(nn_feature_selection))
