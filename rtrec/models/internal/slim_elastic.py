@@ -262,10 +262,12 @@ class SLIMElastic:
 
         # Create shapes for shared arrays
         shm_shapes = (
-            interaction_matrix.shape,  # shape of the entire matrix
+            interaction_matrix.data.shape,  # shape of the entire matrix
             interaction_matrix.indices.shape,  # shape of the indices array
             interaction_matrix.indptr.shape,  # shape of the indptr array
         )
+
+        shm_dtypes = (interaction_matrix.data.dtype, interaction_matrix.indices.dtype, interaction_matrix.indptr.dtype)
 
         # Initialize item similarity matrix
         matrix_shape = interaction_matrix.shape
@@ -293,6 +295,7 @@ class SLIMElastic:
                 shared_indices_name = shared_indices.name,
                 shared_indptr_name = shared_indptr.name,
                 shm_shapes = shm_shapes,
+                shm_dtypes = shm_dtypes,
                 matrix_shape = matrix_shape,
                 config = config,
             )
@@ -331,6 +334,7 @@ class SLIMElastic:
         shared_indices_name: str,
         shared_indptr_name: str,
         shm_shapes: Tuple[Tuple[int, int], Tuple[int], Tuple[int]],
+        shm_dtypes: Tuple[np.dtype, np.dtype, np.dtype],
         matrix_shape: Tuple[int, int],
         config: dict[str, Any],
     ) -> Dict[int, Tuple[np.ndarray, np.ndarray]]:
@@ -358,9 +362,9 @@ class SLIMElastic:
         # Reconstruct CSR matrix with provided shapes
         X = sp.csr_matrix(
             (
-                np.ndarray(shm_shapes[0], dtype=np.float32, buffer=shared_data.buf),
-                np.ndarray(shm_shapes[1], dtype=np.int32, buffer=shared_indices.buf),
-                np.ndarray(shm_shapes[2], dtype=np.int32, buffer=shared_indptr.buf),
+                np.ndarray(shm_shapes[0], dtype=shm_dtypes[0], buffer=shared_data.buf),
+                np.ndarray(shm_shapes[1], dtype=shm_dtypes[1], buffer=shared_indices.buf),
+                np.ndarray(shm_shapes[2], dtype=shm_dtypes[2], buffer=shared_indptr.buf),
             ),
             shape=matrix_shape,
         )
