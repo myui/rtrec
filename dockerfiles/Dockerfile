@@ -14,7 +14,8 @@ RUN apt-get -y update \
  && apt-get install -y libopenblas-dev \
  && apt-get install -y pkg-config libssl-dev \
  && apt-get install -y libffi-dev \
-# Node.js >=20 is required for JupyterLab
+ && apt-get install -y python3-gdbm \
+ # Node.js >=20 is required for JupyterLab
 # && curl -fsSL https://deb.nodesource.com/setup_${NODE_MAJOR}.x | bash - && apt-get install -y nodejs \
  && apt-get clean && rm -rf /var/lib/apt/lists/*
 

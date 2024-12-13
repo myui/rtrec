@@ -21,6 +21,7 @@ RUN apt-get -y update && \
     apt-get install --no-install-recommends -y git sudo curl wget time unzip && \
     apt-get install --no-install-recommends -y build-essential ca-certificates && \
     apt-get install --no-install-recommends -y libopenblas-dev && \
+    apt-get install --no-install-recommends -y python3-gdbm && \
     # For Jupyter notebook
     # required for pygraphviz
     # see https://github.com/pygraphviz/pygraphviz/issues/155
