@@ -3,17 +3,15 @@ import pandas as pd
 import time
 
 from tqdm import tqdm
-from typing import Dict, Iterator, Tuple, Iterable, Optional, Any, List, Self
+from typing import Dict, Iterator, Tuple, Iterable, Any, List, Self
 
 from rtrec.utils.metrics import compute_scores
-from rtrec.models import Fast_SLIM_MSE
 
 class Recommender:
 
-    def __init__(self, model):
+    def __init__(self, model, use_generator: bool = True):
         self.model = model
-        # Rust module do not support Python generators
-        self.use_generator = not isinstance(model, Fast_SLIM_MSE)
+        self.use_generator = use_generator
 
     def get_model(self):
         return self.model
