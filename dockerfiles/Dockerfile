@@ -44,7 +44,8 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
 # `/home/td-user/rtrec/target/release/build/proc-macro2-27b8d773934653fd/build-script-build` (signal: 11, SIGSEGV: invalid memory reference)
 # see https://github.com/rust-lang/cargo/issues/10679#issuecomment-1132612876
 RUN git clone https://github.com/myui/rtrec.git && cd rtrec \
-  && . ~/.cargo/env && cargo update && cargo clean && . ~/.local/bin/env && uv python pin 3.12 \
+  && . ~/.cargo/env && cargo update && cargo clean \
+  && . ~/.local/bin/env && uv python pin 3.12 && uv venv --python 3.12 \
   && RUSTFLAGS="-Ctarget-feature=-crt-static" RUST_BACKTRACE=1 uv sync
 
 ENV PYTHONPATH="/home/td-user/rtrec/.venv/lib/python3.12/site-packages"
