@@ -33,20 +33,19 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --pr
   && rustc --version && cargo --version
 
 # Install Rye and maturin
-RUN curl -sSf https://rye.astral.sh/get | RYE_NO_AUTO_INSTALL=1 RYE_INSTALL_OPTION="--yes" bash \
- && . ~/.rye/env \
- && echo '. "$HOME/.rye/env"' >> ~/.bashrc \
- && rye pin 3.12 \
- && rye install maturin \
- && rye install streamlit && rye install matplotlib \
- && rye install jupyter && rye install jupyterlab && rye install ipywidgets
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
+ && echo "$HOME/.local/bin" >> ~/.bashrc \
+ && . ~/.local/bin/env \
+ && uv python pin 3.12 \
+ && uv venv --python 3.12 \
+ && uv pip install maturin streamlit matplotlib jupyter jupyterlab ipywidgets
 
 # workaround for process didn't exit successfully:
 # `/home/td-user/rtrec/target/release/build/proc-macro2-27b8d773934653fd/build-script-build` (signal: 11, SIGSEGV: invalid memory reference)
 # see https://github.com/rust-lang/cargo/issues/10679#issuecomment-1132612876
 RUN git clone https://github.com/myui/rtrec.git && cd rtrec \
-  && . ~/.cargo/env && cargo update && cargo clean && . ~/.rye/env && rye pin 3.12 \
-  && RUSTFLAGS="-Ctarget-feature=-crt-static" RUST_BACKTRACE=1 rye sync
+  && . ~/.cargo/env && cargo update && cargo clean && . ~/.local/bin/env && uv python pin 3.12 \
+  && RUSTFLAGS="-Ctarget-feature=-crt-static" RUST_BACKTRACE=1 uv sync
 
 ENV PYTHONPATH="/home/td-user/rtrec/.venv/lib/python3.12/site-packages"
 
