@@ -9,9 +9,8 @@ from sklearn.linear_model import ElasticNet
 import warnings
 from sklearn.exceptions import ConvergenceWarning
 from tqdm import tqdm
-from scipy.sparse.linalg import cg
 from sklearn.utils.extmath import safe_sparse_dot
-from multiprocessing import Pool, cpu_count, shared_memory
+from multiprocessing import Pool, shared_memory
 from functools import partial
 
 from rtrec.utils.multiprocessing import create_shared_array
