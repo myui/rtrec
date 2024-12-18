@@ -5,6 +5,18 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Python:Streamlit",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "streamlit",
+            "args": [
+                "run",
+                "${file}",
+                "--server.port",
+                "2000"
+            ]
+        },
+        {
             "type": "lldb",
             "request": "launch",
             "name": "Debug unit tests in library 'rtrec'",
