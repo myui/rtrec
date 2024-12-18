@@ -573,13 +573,14 @@ class SLIMElastic:
             if len(top_items) > 0:
                 valid_indices = scores[top_items] != -np.inf
                 top_items = top_items[valid_indices]
+
+            return top_items.tolist() # Convert numpy array to list
         else:
             scores = self.predict_selected(user_id, candidate_item_ids, interaction_matrix).ravel()
             assert len(scores) == len(candidate_item_ids), f"Predicted scores must have the same length as candidate_item_ids: {len(scores)} != {len(candidate_item_ids)}"
             # sort the candidate_item_ids by user_scores and take top-k
             top_items = [candidate_item_ids[i] for i in np.argsort(scores)[-top_k:][::-1]]
-
-        return top_items.tolist()
+            return top_items
 
     def similar_items(self, item_id: int, top_k: int=10) -> List[int]:
         """
