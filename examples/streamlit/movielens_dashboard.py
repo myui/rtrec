@@ -1,10 +1,16 @@
 import datetime
 import os
+import time
+from typing import Dict, Optional, Tuple
+
 import streamlit as st
 import pandas as pd
 import requests
 import re
 import urllib.parse
+
+from rtrec.models import SLIM
+from rtrec.recommender import Recommender
 
 OMDB_API_KEY = os.getenv("OMDB_API_KEY")
 
@@ -16,7 +22,7 @@ USER_FILE = DATASET_URL + "u.user"
 
 # Caching functions
 @st.cache_data
-def load_movielens_100k():
+def load_movielens_100k() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     """Load the MovieLens 100K dataset and merge ratings with movie details."""
     col_rat = ['user_id', 'movie_id', 'rating', 'unix_timestamp']
     ratings_df = pd.read_csv(RATINGS_FILE, sep='\t', names=col_rat)
@@ -36,20 +42,20 @@ def load_movielens_100k():
     return ratings_df, items_df, merged_df
 
 @st.cache_data
-def load_user_data():
+def load_user_data() -> pd.DataFrame:
     """Load the user demographic data from the MovieLens 100K dataset."""
     col_user = ['user_id', 'age', 'gender', 'occupation', 'zip_code']
     user_df = pd.read_csv(USER_FILE, sep='|', names=col_user, encoding='latin-1')
     return user_df
 
 @st.cache_data
-def load_movie_posters():
+def load_movie_posters() -> Dict[int, str]:
     """Load movie posters from an external source."""
     poster_url = "https://raw.githubusercontent.com/babu-thomas/movielens-posters/refs/heads/master/movie_poster.csv"
     poster_df = pd.read_csv(poster_url, header=None, names=['movie_id', 'url'])
     return dict(zip(poster_df['movie_id'], poster_df['url']))
 
-def fetch_movie_details(title):
+def fetch_movie_details(title: str) -> Tuple[Optional[str], str]:
     """Fetch movie poster and plot from OMDB API."""
     def extract_title_year(movie_str):
         match = re.match(r'^(.*)\s\((\d{4})\)$', movie_str)
@@ -68,20 +74,36 @@ def fetch_movie_details(title):
         if response.status_code == 200:
             data = response.json()
             if data.get("Response") == "True":
-                return data.get("Poster"), data.get("Plot")
+                plot = data.get("Plot")
+                director = data.get("Director")
+                genre = data.get("Genre")
+                descrioption = f"{plot}\n\n**Director:** {director}\n**Genre:** {genre}"
+                return data.get("Poster"), descrioption
             return None, data.get("Error", "No description available.")
     except requests.RequestException:
         return None, "Error fetching movie details."
 
     return None, "No description available."
 
-def recommend_movies(user_id, df, feedback, top_n=5):
+def recommend_movies(user_id: int, df: pd.DataFrame, feedback: Dict[str, list], top_k: int = 5) -> pd.DataFrame:
     """Generate movie recommendations excluding already seen movies."""
-    seen_movies = df[df["user_id"] == user_id]["movie_id"].unique()
-    recommendations = df[~df["movie_id"].isin(seen_movies)].drop_duplicates("movie_id")
-    return recommendations.sample(n=top_n)
+    return recommender.recommend(user_id, top_k=top_k, filter_interacted=True)
 
-def display_movie(title, movie_id, poster_dict):
+@st.cache_resource
+def recommender_init() -> Recommender:
+    """Initialize the SLIM recommender model."""
+    # Build Model
+    model = SLIM(min_value=-5, max_value=10, decay_in_days=365)
+    recommender = Recommender(model=model)
+    recommender.bulk_fit(ratings_df.rename(columns={"user_id": "user", "movie_id": "item", "unix_timestamp": "tstamp"}), update_interaction=True, parallel=False)
+    return recommender
+
+@st.cache_data
+def load_movie_titles() -> Dict[int, str]:
+    """Load movie titles from the MovieLens 100K dataset."""
+    return dict(zip(items_df['movie_id'], items_df['movie_title']))
+
+def display_movie(title: str, movie_id: int, poster_dict: Dict[int, str]) -> None:
     """Display movie details including poster and plot with like/dislike feedback."""
     poster, plot = fetch_movie_details(title)
     if poster is None:
@@ -105,12 +127,16 @@ def display_movie(title, movie_id, poster_dict):
 
     feedback_id = f"feedback_{movie_id}"
     feedback_options = ["👍 Like", "👎 Dislike"]
+    feedback_unixtime = float(time.mktime(feedback_date.timetuple()))
+
     def handle_feedback():
         selected_index = feedback_options.index(st.session_state[feedback_id])
         if selected_index == 0:
+            recommender.partial_fit([(user_id, movie_id, 5, feedback_unixtime)], update_interaction=False)
             st.session_state.feedback["liked"].append(title)
         elif selected_index == 1:
             st.session_state.feedback["disliked"].append(title)
+            recommender.partial_fit([(user_id, movie_id, -5, feedback_unixtime)], update_interaction=False)
         st.session_state.feedback["date"].append(feedback_date)
 
     st.radio("Feedback", options=feedback_options, key=feedback_id, index=None, horizontal=True, on_change=handle_feedback)
@@ -123,6 +149,10 @@ st.sidebar.header("User Input")
 ratings_df, items_df, merged_df = load_movielens_100k()
 user_df = load_user_data()
 poster_dict = load_movie_posters()
+movie_title_dict = load_movie_titles()
+
+# Initialize recommender
+recommender = recommender_init()
 
 # User input
 user_id = st.sidebar.number_input("Enter User ID", min_value=1, value=1)
@@ -139,6 +169,11 @@ recent_feedback_n = st.sidebar.slider("Recent Feedback Items (N)", min_value=1, 
 
 feedback_date = st.sidebar.date_input("Feedback date", datetime.date(1998, 4, 23))
 
+# Display raw data
+if st.sidebar.checkbox("Show Raw Data"):
+    st.write("Ratings Data", ratings_df.head())
+    st.write("Items Data", items_df.head())
+
 # Tabs for navigation
 tab1, tab2, tab3 = st.tabs(["Recommendations", "Recently Feedbacked Movies", "Search Movies"])
 
@@ -147,8 +182,8 @@ with tab1:
     recommendations = recommend_movies(user_id, merged_df, st.session_state.feedback, top_n)
     st.write(f"Top {top_n} recommendations for User {user_id}:")
 
-    for _, row in recommendations.iterrows():
-        display_movie(row["movie_title"], row["movie_id"], poster_dict)
+    for movie_id in recommendations:
+        display_movie(movie_title_dict[movie_id], movie_id, poster_dict)
 
 with tab2:
     st.write("### User Information and Recently Feedbacked Movies")
@@ -220,7 +255,3 @@ with tab3:
         else:
             st.write("No movies found.")
 
-# Display raw data
-if st.sidebar.checkbox("Show Raw Data"):
-    st.write("Ratings Data", ratings_df.head())
-    st.write("Items Data", items_df.head())
