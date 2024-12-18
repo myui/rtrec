@@ -1,11 +1,13 @@
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Any, Dict
+from typing import List, Any
 import logging
+import os
 
-from rtrec.models import Fast_SLIM_MSE as SlimMSE
-from .dependencies import resolve_account_id
+from rtrec.models import SLIM
+
+SECRET_TOKEN = os.getenv("X_TOKEN", "fake_secret_token")
 
 # Create a FastAPI instance
 app = FastAPI()
@@ -19,7 +21,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-recommender = SlimMSE(alpha=0.1, beta=1.0, lambda1=0.0002, lambda2=0.0001, min_value=-5, max_value=10)
+recommender = SLIM(min_value=-5, max_value=10, decay_in_days=365)
 
 # Define input models for requests
 class Interaction(BaseModel):
@@ -36,7 +38,7 @@ class RecommendationRequest(BaseModel):
 # Response model for recommendations
 class RecommendationResponse(BaseModel):
     user: Any
-    recommendations: List[Dict[str, Any]]
+    recommendations: List[Any]
 
 @app.get("/")
 def read_root():
@@ -44,7 +46,10 @@ def read_root():
 
 # Fit endpoint to train the recommender system
 @app.post("/fit")
-async def fit(interactions: List[Interaction], account_id: str = Depends(resolve_account_id)):
+async def fit(interactions: List[Interaction], x_token: str = Header()):
+    if x_token != SECRET_TOKEN:
+        raise HTTPException(status_code=400, detail="Invalid X-Token header")
+
     try:
         user_interactions = [
             (interaction.user, interaction.item, interaction.timestamp, interaction.rating)
@@ -58,7 +63,10 @@ async def fit(interactions: List[Interaction], account_id: str = Depends(resolve
 
 # Recommend endpoint to get recommendations for a user
 @app.post("/recommend", response_model=RecommendationResponse)
-async def recommend(request: RecommendationRequest, account_id: str = Depends(resolve_account_id)):
+async def recommend(request: RecommendationRequest, x_token: str = Header()):
+    if x_token != SECRET_TOKEN:
+        raise HTTPException(status_code=400, detail="Invalid X-Token header")
+
     try:
         recommendations = recommender.recommend(
             user=request.user, top_k=request.top_k, filter_interacted=request.filter_interacted
@@ -67,7 +75,7 @@ async def recommend(request: RecommendationRequest, account_id: str = Depends(re
         # Format recommendations as a list of dictionaries with metadata
         response = {
             "user": request.user,
-            "recommendations": [{"item": item} for item in recommendations]
+            "recommendations": recommendations
         }
         return response
     except Exception as e:
