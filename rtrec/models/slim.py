@@ -57,7 +57,8 @@ class SLIM(BaseModel):
         :return: List of top-K item indices recommended for the user
         """
         interaction_matrix = self.interactions.to_csr(select_users=[user_id])
-        return self.model.recommend(user_id, interaction_matrix, top_k=top_k, filter_interacted=filter_interacted)
+        dense_output = not self.item_ids.pass_through
+        return self.model.recommend(user_id, interaction_matrix, top_k=top_k, filter_interacted=filter_interacted, dense_output=dense_output)
 
     def _similar_items(self, query_item_id: int, top_k: int = 10) -> List[int]:
         """

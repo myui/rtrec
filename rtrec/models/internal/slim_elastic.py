@@ -487,13 +487,14 @@ class SLIMElastic:
         self.item_similarity = item_similarity.tocsc()
         return self
 
-    def predict(self, user_id: int, interaction_matrix: sp.csr_matrix) -> ndarray:
+    def predict(self, user_id: int, interaction_matrix: sp.csr_matrix, dense_output: bool=True) -> ndarray:
         """
         Compute the predicted scores for a specific user across all items.
 
         Args:
             user_id (int): The user ID (row index in interaction_matrix).
             interaction_matrix (csr_matrix): User-item interaction matrix.
+            dense_output (bool): Whether to return a dense output.
 
         Returns:
             numpy.ndarray: Predicted scores for the user across all items of shape (n_items,)
@@ -503,9 +504,9 @@ class SLIMElastic:
 
         # Compute the predicted scores by performing dot product between the user interaction vector
         # and the item similarity matrix
-        return safe_sparse_dot(interaction_matrix[user_id, :], self.item_similarity, dense_output=True)
+        return safe_sparse_dot(interaction_matrix[user_id, :], self.item_similarity, dense_output=dense_output)
 
-    def predict_selected(self, user_id: int, item_ids: List[int], interaction_matrix: sp.csr_matrix) -> ndarray:
+    def predict_selected(self, user_id: int, item_ids: List[int], interaction_matrix: sp.csr_matrix, dense_output: bool=True) -> ndarray:
         """
         Compute the predicted scores for a specific user and a subset of items.
 
@@ -513,6 +514,7 @@ class SLIMElastic:
             user_id (int): The user ID (row index in interaction_matrix).
             item_ids (List[int]): List of item indices to compute the predicted scores for.
             interaction_matrix (csr_matrix): User-item interaction matrix.
+            dense_output (bool): Whether to return a dense output.
 
         Returns:
             numpy.ndarray: Predicted scores for the user and selected items of shape (len(item_ids),)
@@ -523,9 +525,9 @@ class SLIMElastic:
         # Compute the predicted scores for the selected items by performing dot product between the user interaction vector
         # and the item similarity matrix
         # return interaction_matrix[user_id, :].dot(self.item_similarity[:, item_ids])
-        return safe_sparse_dot(interaction_matrix[user_id, :], self.item_similarity[:, item_ids], dense_output=True)
+        return safe_sparse_dot(interaction_matrix[user_id, :], self.item_similarity[:, item_ids], dense_output=dense_output)
 
-    def predict_all(self, interaction_matrix: sp.csr_matrix, dense_output: bool=False) -> ndarray | sp.csr_matrix:
+    def predict_all(self, interaction_matrix: sp.csr_matrix, dense_output: bool=True) -> ndarray | sp.csr_matrix:
         """
         Compute the predicted scores for all users and items.
 
@@ -543,7 +545,14 @@ class SLIMElastic:
         # and the item similarity matrix
         return safe_sparse_dot(interaction_matrix, self.item_similarity, dense_output=dense_output)
 
-    def recommend(self, user_id: int, interaction_matrix: sp.csr_matrix, candidate_item_ids: Optional[List[int]]=None, top_k: int=10, filter_interacted: bool=True) -> List[int]:
+    def recommend(self,
+                  user_id: int,
+                  interaction_matrix: sp.csr_matrix,
+                  candidate_item_ids: Optional[List[int]]=None,
+                  top_k: int=10,
+                  filter_interacted: bool=True,
+                  dense_output: bool=True
+    ) -> List[int]:
         """
         Recommend top-K items for a given user.
 
@@ -553,34 +562,89 @@ class SLIMElastic:
             candidate_item_ids (List[int]): List of candidate item indices to recommend from. If None, recommend from all items.
             top_k (int): Number of recommendations to return.
             filter_interacted (bool): Whether to exclude items the user has already interacted with. Ignored if candidate_item_ids is provided.
+            dense_output (bool): Whether to return dense item IDs at prediction time.
 
         Returns:
             List[int]: List of top-K item indices recommended for the user.
         """
         # Get predicted scores for all items for the given user
         if candidate_item_ids is None:
-            scores = self.predict(user_id, interaction_matrix).ravel()
-            # Exclude items that the user has already interacted with
-            if filter_interacted:
-                interacted_items = interaction_matrix[user_id, :].indices
-                scores[interacted_items] = -np.inf  # Exclude interacted items by setting scores to -inf
-
-            # Get the top-K items by sorting the predicted scores in descending order
-            # [::-1] reverses the order to get the items with the highest scores first
-            top_items = np.argsort(scores)[-top_k:][::-1]
-
-            # Filter out items with -np.inf scores
-            if len(top_items) > 0:
-                valid_indices = scores[top_items] != -np.inf
-                top_items = top_items[valid_indices]
-
-            return top_items.tolist() # Convert numpy array to list
+            scores = self.predict(user_id, interaction_matrix, dense_output=dense_output)
+            if dense_output:
+                return self._dense_topk_indicies(scores, top_k, user_id, interaction_matrix, filter_interacted)
+            else:
+                return self._sparse_topk_indicies(scores, top_k, user_id, interaction_matrix, filter_interacted)
         else:
-            scores = self.predict_selected(user_id, candidate_item_ids, interaction_matrix).ravel()
+            scores = self.predict_selected(user_id, candidate_item_ids, interaction_matrix, dense_output=True)
+            scores = scores.ravel()
             assert len(scores) == len(candidate_item_ids), f"Predicted scores must have the same length as candidate_item_ids: {len(scores)} != {len(candidate_item_ids)}"
             # sort the candidate_item_ids by user_scores and take top-k
             top_items = [candidate_item_ids[i] for i in np.argsort(scores)[-top_k:][::-1]]
             return top_items
+
+    @staticmethod
+    def _dense_topk_indicies(scores: ndarray, top_k: int, user_id: int, interaction_matrix: sp.csr_matrix, filter_interacted: bool=True) -> List[int]:
+        """
+        Get the top-K indices for a given dense matrix.
+
+        Args:
+            scores (ndarray): Dense matrix of scores.
+            top_k (int): Number of top indices to retrieve.
+            user_id (int): User index.
+            interaction_matrix (csr_matrix): User-item interaction matrix.
+            filter_interacted (bool): Whether to filter out items the user has already interacted with.
+
+        Returns:
+            List[int]: List of top-K indices.
+        """
+        scores = scores.ravel()
+        # Exclude items that the user has already interacted with
+        if filter_interacted:
+            interacted_items = interaction_matrix[user_id, :].indices
+            scores[interacted_items] = -np.inf  # Exclude interacted items by setting scores to -inf
+
+        # Get the top-K items by sorting the predicted scores in descending order
+        # [::-1] reverses the order to get the items with the highest scores first
+        top_items = np.argsort(scores)[-top_k:][::-1]
+
+        # Filter out items with -np.inf scores
+        if len(top_items) > 0:
+            valid_indices = scores[top_items] != -np.inf
+            top_items = top_items[valid_indices]
+
+        return top_items.tolist() # Convert numpy array to list
+
+    @staticmethod
+    def _sparse_topk_indicies(scores: sp.csr_matrix, top_k: int, user_id: int, interaction_matrix: sp.csr_matrix, filter_interacted: bool=True) -> List[int]:
+        """
+        Get the top-K indices for a given sparse matrix.
+
+        Args:
+            scores (csr_matrix): Sparse matrix of scores.
+            top_k (int): Number of top indices to retrieve.
+            filter_interacted (bool): Whether to filter out items the user has already interacted with.
+
+        Returns:
+            List[int]: List of top-K indices.
+            """
+        # Extract non-zero scores and their indices from the sparse matrix
+        score_data = scores.data.tolist()
+        score_indices = scores.indices.tolist()
+
+        if filter_interacted:
+            # Filter out scores for interacted items
+            interacted_items = set(interaction_matrix[user_id].indices.tolist())
+            filtered_scores = [
+                (idx, score) for idx, score in zip(score_indices, score_data) if idx not in interacted_items
+            ]
+        else:
+            filtered_scores = [(idx, score) for idx, score in zip(score_indices, score_data)]
+
+        # Sort by score in descending order
+        top_items = sorted(filtered_scores, key=lambda x: x[1], reverse=True)[:top_k]
+
+        # Extract and return the top-k indices
+        return [idx for idx, _ in top_items]
 
     def similar_items(self, item_id: int, top_k: int=10) -> List[int]:
         """
