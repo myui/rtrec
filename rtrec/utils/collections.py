@@ -20,7 +20,7 @@ class SortedSet:
         if item in self._set:
             return self.index(item)  # Return the existing index
         else:
-            index = bisect_left(item)
+            index = bisect_left(self._list, item)
             self._set.add(item)
             self._list.insert(index, item)
             return index  # Return the inserted index
