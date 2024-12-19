@@ -21,7 +21,7 @@ class Recommender:
         Incrementally fit the recommender model on new interactions.
         """
         start_time = time.time()
-        self.model.fit(user_interactions, update_interaction=update_interaction)
+        self.model.fit(user_interactions, update_interaction=update_interaction, progress_bar=False)
         end_time = time.time()
         print(f"Fit completed in {end_time - start_time:.2f} seconds")
         return self

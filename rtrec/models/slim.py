@@ -13,7 +13,7 @@ class SLIM(BaseModel):
         self.recorded_item_ids = set()
 
     @override
-    def fit(self, interactions: Iterable[Tuple[Any, Any, float, float]], update_interaction: bool=False) -> None:
+    def fit(self, interactions: Iterable[Tuple[Any, Any, float, float]], update_interaction: bool=False, progress_bar: bool=True) -> None:
         item_id_set = set()
         for user, item, tstamp, rating in interactions:
             try:
@@ -26,7 +26,7 @@ class SLIM(BaseModel):
                 continue
         item_ids = list(item_id_set)
         interaction_matrix = self.interactions.to_csc(item_ids)
-        self.model.partial_fit_items(interaction_matrix, item_ids, progress_bar=True)
+        self.model.partial_fit_items(interaction_matrix, item_ids, progress_bar=progress_bar)
 
     def _record_interactions(self, user_id: int, item_id: int, tstamp: float, rating: float) -> None:
         self.recorded_item_ids.add(item_id)

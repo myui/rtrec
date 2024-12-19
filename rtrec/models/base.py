@@ -81,14 +81,15 @@ class BaseModel(ABC):
         """
         raise NotImplementedError("_record_interactions method must be implemented in the derived class")
 
-    def fit(self, interactions: Iterable[Tuple[Any, Any, float, float]], update_interaction: bool=False) -> Self:
+    def fit(self, interactions: Iterable[Tuple[Any, Any, float, float]], update_interaction: bool=False, progress_bar: bool=True) -> Self:
         """
         Fit the recommender model on the given user-item interactions.
         :param user_interactions: List of user-item interactions
         :param update_interaction: Whether to update existing interactions
+        :param progress_bar: Whether to display a progress bar
         """
         self.add_interactions(interactions, update_interaction=update_interaction, record_interactions=True)
-        return self._fit_recorded()
+        return self._fit_recorded(progress_bar=progress_bar)
 
     @abstractmethod
     def _fit_recorded(self, parallel: bool=False, progress_bar: bool=True) -> Self:

@@ -55,7 +55,7 @@ async def fit(interactions: List[Interaction], x_token: str = Header()):
             (interaction.user, interaction.item, interaction.timestamp, interaction.rating)
             for interaction in interactions
         ]
-        recommender.fit(user_interactions)
+        recommender.fit(user_interactions, progress_bar=False)
         return {"message": "Training successful"}
     except Exception as e:
         logging.error(f"Training failed: {e}")
