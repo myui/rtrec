@@ -238,7 +238,7 @@ class SLIMElastic:
                 X.set_col(j, y.data)
 
         # Convert item_similarity to CSC format for efficient access
-        self.item_similarity = item_similarity.tocsc()
+        self.item_similarity = item_similarity.tocsc(copy=False)
         return self
 
     def fit_in_parallel(
@@ -339,7 +339,7 @@ class SLIMElastic:
         shared_indptr.unlink()
 
         # Convert item similarity to CSC format
-        self.item_similarity = item_similarity.tocsc()
+        self.item_similarity = item_similarity.tocsc(copy=False)
         return self
 
     @staticmethod
@@ -492,7 +492,7 @@ class SLIMElastic:
                 X.set_col(j, y.data)
 
         # Convert item_similarity to CSC format for efficient access
-        self.item_similarity = item_similarity.tocsc()
+        self.item_similarity = item_similarity.tocsc(copy=False)
         return self
 
     def predict(self, user_id: int, interaction_matrix: sp.csr_matrix, dense_output: bool=True) -> ndarray:
