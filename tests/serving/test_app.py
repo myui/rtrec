@@ -1,18 +1,23 @@
+from fastapi import FastAPI
 import pytest
 from fastapi.testclient import TestClient
-from rtrec.serving.app import app
+from rtrec.serving.app import create_app
 
 # Mock secret token for tests
 SECRET_TOKEN = "fake_secret_token"
 
-client = TestClient(app)
+@pytest.fixture
+def client():
+    """Fixture to provide a TestClient with a fresh app instance."""
+    app = create_app()
+    return TestClient(app)
 
-def test_read_root():
+def test_read_root(client):
     response = client.get("/")
     assert response.status_code == 200
     assert response.json() == {"message": "Recommender System API is running"}
 
-def test_fit():
+def test_fit(client):
     interactions = [
         {"user": "user1", "item": "item1", "timestamp": 1672531200.0, "rating": 5.0},
         {"user": "user1", "item": "item2", "timestamp": 1672617600.0, "rating": 3.0},
@@ -27,7 +32,7 @@ def test_fit():
     assert response.status_code == 200
     assert response.json() == {"message": "Training successful"}
 
-def test_fit_invalid_token():
+def test_fit_invalid_token(client):
     interactions = [
         {"user": "user1", "item": "item1", "timestamp": 1672531200.0, "rating": 5.0},
     ]
@@ -40,7 +45,7 @@ def test_fit_invalid_token():
     assert response.status_code == 400
     assert response.json() == {"detail": "Invalid X-Token header"}
 
-def test_recommend():
+def test_recommend(client):
     # Train the model first
     interactions = [
         {"user": "user1", "item": "item1", "timestamp": 1672531200.0, "rating": 5.0},
@@ -72,7 +77,7 @@ def test_recommend():
     # item3 and item4 are recommended
     assert all(item in ["item3", "item4"] for item in response_json["recommendations"])
 
-def test_recommend_integers():
+def test_recommend_integers(client):
     # Train the model first
     interactions = [
         {"user": 1, "item": 1, "timestamp": 1672531200.0, "rating": 5.0},
@@ -103,7 +108,7 @@ def test_recommend_integers():
     assert len(response_json["recommendations"]) == 2
     assert all(item in [3, 4] for item in response_json["recommendations"])
 
-def test_recommend_invalid_token():
+def test_recommend_invalid_token(client):
     request_payload = {
         "user": "user1",
         "top_k": 5,
@@ -116,3 +121,6 @@ def test_recommend_invalid_token():
     )
     assert response.status_code == 400
     assert response.json() == {"detail": "Invalid X-Token header"}
+
+if __name__ == "__main__":
+    pytest.main()

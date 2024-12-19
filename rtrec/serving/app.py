@@ -7,21 +7,12 @@ import os
 
 from rtrec.models import SLIM
 
-SECRET_TOKEN = os.getenv("X_TOKEN", "fake_secret_token")
+# Default secret token for testing
+DEFAULT_SECRET_TOKEN = "fake_secret_token"
+SECRET_TOKEN = os.getenv("X_TOKEN", DEFAULT_SECRET_TOKEN)
 
-# Create a FastAPI instance
-app = FastAPI()
-
-# CORS Middleware (if necessary)
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],  # Adjust based on your requirements
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-recommender = SLIM(min_value=-5, max_value=10, decay_in_days=365)
+# Initialize logging
+logging.basicConfig(level=logging.INFO)
 
 # Define input models for requests
 class Interaction(BaseModel):
@@ -40,49 +31,67 @@ class RecommendationResponse(BaseModel):
     user: Any
     recommendations: List[Any]
 
-@app.get("/")
-def read_root():
-    return {"message": "Recommender System API is running"}
+def create_app() -> FastAPI:
+    """Factory function to create a FastAPI instance."""
+    app = FastAPI()
 
-# Fit endpoint to train the recommender system
-@app.post("/fit")
-async def fit(interactions: List[Interaction], x_token: str = Header()):
-    if x_token != SECRET_TOKEN:
-        raise HTTPException(status_code=400, detail="Invalid X-Token header")
+    # Add CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
-    try:
-        user_interactions = [
-            (interaction.user, interaction.item, interaction.timestamp, interaction.rating)
-            for interaction in interactions
-        ]
-        recommender.fit(user_interactions, progress_bar=False)
-        return {"message": "Training successful"}
-    except Exception as e:
-        logging.error(f"Training failed: {e}")
-        raise HTTPException(status_code=500, detail="Training failed")
+    # Initialize the recommender instance
+    recommender = SLIM(min_value=-5, max_value=10, decay_in_days=365)
 
-# Recommend endpoint to get recommendations for a user
-@app.post("/recommend", response_model=RecommendationResponse)
-async def recommend(request: RecommendationRequest, x_token: str = Header()):
-    if x_token != SECRET_TOKEN:
-        raise HTTPException(status_code=400, detail="Invalid X-Token header")
+    @app.get("/")
+    def read_root():
+        return {"message": "Recommender System API is running"}
 
-    try:
-        recommendations = recommender.recommend(
-            user=request.user, top_k=request.top_k, filter_interacted=request.filter_interacted
-        )
+    # Fit endpoint to train the recommender system
+    @app.post("/fit")
+    async def fit(interactions: List[Interaction], x_token: str = Header()):
+        if x_token != SECRET_TOKEN:
+            raise HTTPException(status_code=400, detail="Invalid X-Token header")
 
-        # Format recommendations as a list of dictionaries with metadata
-        response = {
-            "user": request.user,
-            "recommendations": recommendations
-        }
-        return response
-    except Exception as e:
-        logging.error(f"Recommendation failed: {e}")
-        raise HTTPException(status_code=500, detail="Recommendation failed")
+        try:
+            user_interactions = [
+                (interaction.user, interaction.item, interaction.timestamp, interaction.rating)
+                for interaction in interactions
+            ]
+            recommender.fit(user_interactions, progress_bar=False)
+            return {"message": "Training successful"}
+        except Exception as e:
+            logging.error(f"Training failed: {e}")
+            raise HTTPException(status_code=500, detail="Training failed")
+
+    # Recommend endpoint to get recommendations for a user
+    @app.post("/recommend", response_model=RecommendationResponse)
+    async def recommend(request: RecommendationRequest, x_token: str = Header()):
+        if x_token != SECRET_TOKEN:
+            raise HTTPException(status_code=400, detail="Invalid X-Token header")
+
+        try:
+            recommendations = recommender.recommend(
+                user=request.user, top_k=request.top_k, filter_interacted=request.filter_interacted
+            )
+
+            # Format recommendations as a list of dictionaries with metadata
+            response = {
+                "user": request.user,
+                "recommendations": recommendations
+            }
+            return response
+        except Exception as e:
+            logging.error(f"Recommendation failed: {e}")
+            raise HTTPException(status_code=500, detail="Recommendation failed")
+
+    return app
 
 # Run the app if this file is executed directly
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(create_app(), host="0.0.0.0", port=8000)
