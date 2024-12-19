@@ -15,8 +15,14 @@ from functools import partial
 
 from rtrec.utils.multiprocessing import create_shared_array
 
-class ColumnarView:
+class CSRMatrixWrapper:
+    """
+    CSRMatrixWrapper is a wrapper class for a CSR matrix that provides efficient access to columns.
+    """
+
     def __init__(self, csr_matrix: sp.csr_matrix):
+        if not isinstance(csr_matrix, sp.csr_matrix):
+            raise ValueError("Input matrix must be a scipy.sparse.csr_matrix.")
         self.csr_matrix = csr_matrix
         # create the columnar view of the matrix
         ind = self.csr_matrix.copy()
@@ -66,6 +72,8 @@ class ColumnarView:
 class CSCMatrixWrapper:
 
     def __init__(self, csc_matrix: sp.csc_matrix):
+        if not isinstance(csc_matrix, sp.csc_matrix):
+            raise ValueError("Input matrix must be a scipy.sparse.csc_matrix.")
         self.csc_matrix = csc_matrix
 
     @property
@@ -196,7 +204,7 @@ class SLIMElastic:
         elif isinstance(interaction_matrix, sp.csr_matrix):
             if parallel:
                 logging.warning("Multiprocessing is only supported for CSC format. Fitting in single process.")
-            X = ColumnarView(interaction_matrix)
+            X = CSRMatrixWrapper(interaction_matrix)
         else:
             raise ValueError("Interaction matrix must be a scipy.sparse.csr_matrix or scipy.sparse.csc_matrix.")
 
@@ -447,7 +455,7 @@ class SLIMElastic:
                 return self.fit_in_parallel(interaction_matrix, item_ids=np.array(updated_items), progress_bar=progress_bar)
             X = CSCMatrixWrapper(interaction_matrix)
         elif isinstance(interaction_matrix, sp.csr_matrix):
-            X = ColumnarView(interaction_matrix)
+            X = CSRMatrixWrapper(interaction_matrix)
         else:
             raise ValueError("Interaction matrix must be a scipy.sparse.csr_matrix or scipy.sparse.csc_matrix.")
 
