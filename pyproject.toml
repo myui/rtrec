@@ -17,8 +17,9 @@ dependencies = [
     "httpx>=0.27.2",
     "boto3>=1.35.50",
     "tqdm>=4.67.0",
+    # The latest released version of lightfm 1.17 does not work for python 3.12
     # see https://github.com/lyst/lightfm/issues/709
-    "lightfm @ git+https://github.com/daviddavo/lightfm",
+    "rectools-lightfm>=1.17.3",
     "optuna>=4.1.0",
     "implicit>=0.7.2",
 ]
