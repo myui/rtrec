@@ -93,6 +93,9 @@ def test_decayed_rating_after_7days(interactions_with_decay):
     # Add interaction with a timestamp from 7 days ago
     interactions_with_decay.add_interaction(1, 10, tstamp_7_days_ago, 5.0)
 
+    # workaround to advance the last update time by another user as the decay is based on the last update time
+    interactions_with_decay.add_interaction(2, 10, time.time(), 5.0)
+
     # Get the rating after 1 second to check the decay
     sleep(1)
     decayed_rating = interactions_with_decay.get_user_item_rating(1, 10)
