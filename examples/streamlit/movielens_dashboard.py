@@ -87,7 +87,7 @@ def fetch_movie_details(title: str) -> Tuple[Optional[str], str]:
 
 def recommend_movies(user_id: int, df: pd.DataFrame, feedback: Dict[str, list], top_k: int = 5) -> pd.DataFrame:
     """Generate movie recommendations excluding already seen movies."""
-    return recommender.recommend(user_id, top_k=top_k, filter_interacted=True)
+    return recommender.recommend(user_id, top_k=top_k, filter_interacted=filter_watched)
 
 @st.cache_resource
 def recommender_init() -> Recommender:
@@ -168,6 +168,10 @@ top_n = st.sidebar.slider("Number of Recommendations", min_value=1, max_value=10
 recent_feedback_n = st.sidebar.slider("Recent Feedback Items (N)", min_value=1, max_value=20, value=5)
 
 feedback_date = st.sidebar.date_input("Feedback date", datetime.date(1998, 4, 23))
+
+filter_watched = True
+if not st.sidebar.checkbox("Filter watched movies", value=True):
+    filter_watched = False
 
 # Display raw data
 if st.sidebar.checkbox("Show Raw Data"):
