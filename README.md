@@ -2,7 +2,7 @@ rtrec: Realtime Recommendation Library in Python
 ================================================
 
 [![PyPI version](https://img.shields.io/pypi/v/rtrec.svg?logo=pypi&logoColor=FFE873)](https://pypi.org/project/rtrec/)
-[![Supported Python versions](https://img.shields.io/pypi/pyversions/pypistats.svg?logo=python&logoColor=FFE873)](https://pypi.org/project/rtrec/)
+[![Supported Python versions](https://img.shields.io/pypi/pyversions/rtrec.svg?logo=python&logoColor=FFE873)](https://pypi.org/project/rtrec/)
 [![CI status](https://github.com/myui/rtrec/actions/workflows/ci.yml/badge.svg)](https://github.com/myui/rtrec/actions)
 [![Licence](https://img.shields.io/github/license/myui/rtrec.svg)](LICENSE.txt)
 
