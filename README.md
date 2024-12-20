@@ -14,7 +14,7 @@ An realtime recommendation system supporting online updates.
 - ⚡️ Fast implementation (>=190k samples/sec training on laptop).
 - ◍ efficient sparse data support.
 - 🕑 decaying weights of user-item interactions based on recency.
-- ![Rust]("https://avatars.githubusercontent.com/u/5430905?s=20&v=4") experimental [Rust implementation](https://github.com/myui/rtrec/tree/rust)
+- ![Rust](https://avatars.githubusercontent.com/u/5430905?s=20&v=4) experimental [Rust implementation](https://github.com/myui/rtrec/tree/rust)
 
 ## Supported Recommendation Algorithims
 
