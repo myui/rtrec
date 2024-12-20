@@ -29,4 +29,4 @@ pip install rtrec
 
 ## Usage
 
-Find usages in [notebooks](https://github.com/myui/rtrec/tree/main/notebooks)/[examples](https://github.com/myui/rtrec/blob/main/examples/streamlit/movielens_dashboard.py).
+Find usages in [notebooks](https://github.com/myui/rtrec/tree/main/notebooks)/[examples](https://github.com/myui/rtrec/tree/main/examples).
