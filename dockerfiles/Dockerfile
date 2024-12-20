@@ -6,7 +6,6 @@ ENV DEBCONF_NOWARNINGS=yes
 # https://docs.python.org/3/library/faulthandler.html
 ENV PYTHONFAULTHANDLER=1
 ENV PYTHON_VERSION=3.12
-ENV NODE_MAJOR=20
 
 RUN apt-get -y update \
  && apt-get install -y git sudo wget curl \
@@ -15,8 +14,6 @@ RUN apt-get -y update \
  && apt-get install -y pkg-config libssl-dev \
  && apt-get install -y libffi-dev \
  && apt-get install -y python3-gdbm \
- # Node.js >=20 is required for JupyterLab
-# && curl -fsSL https://deb.nodesource.com/setup_${NODE_MAJOR}.x | bash - && apt-get install -y nodejs \
  && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN groupadd -g 65432 wheel \
