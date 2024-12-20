@@ -1,6 +1,6 @@
 [project]
 name = "rtrec"
-version = "0.1.1"
+version = "0.1.2"
 description = "An realtime recommendation system supporting online updates"
 authors = [
     { name = "myui", email = "myui@apache.org" }
@@ -8,20 +8,41 @@ authors = [
 readme = "README.md"
 requires-python = ">= 3.10"
 dependencies = [
-    "numpy>=2.1.2",
-    "scipy>=1.14.1",
-    "pandas>=2.2.3",
-    "fastapi>=0.115.4",
-    "pydantic>=2.9.2",
-    "uvicorn>=0.32.0",
-    "httpx>=0.27.2",
-    "boto3>=1.35.50",
-    "tqdm>=4.67.0",
-    # The latest released version of lightfm 1.17 does not work for python 3.12
-    # see https://github.com/lyst/lightfm/issues/709
-    "rectools-lightfm>=1.17.3",
-    "optuna>=4.1.0",
-    "implicit>=0.7.2",
+    # Requires NumPy >= 1.21.0 for features like the improved random number generator API
+    "numpy>=1.21.0,<3.0.0",
+
+    # Requires SciPy >= 1.5.0 for compatibility with Python >= 3.10
+    "scipy>=1.5.0,<2.0.0",
+
+    # Requires pandas >= 1.3.0 for features like enhanced I/O support and typing improvements
+    "pandas>=1.3.0,<3.0.0",
+
+    # Requires FastAPI >= 0.70.0 for lifecycle events and bug fixes
+    "fastapi>=0.70.0,<1.0.0",
+
+    # Requires Pydantic >= 1.10.0 for compatibility with FastAPI and enhanced validation
+    "pydantic>=1.10.0,<3.0.0",
+
+    # Requires Uvicorn >= 0.18.0 for HTTP/3 support and updated ASGI server capabilities
+    "uvicorn>=0.18.0,<1.0.0",
+
+    # Requires HTTPX >= 0.20.0 for HTTP/2 support and performance improvements
+    "httpx>=0.20.0,<1.0.0",
+
+    # Requires Boto3 >= 1.20.0 for features like S3 Object Lambda support
+    "boto3>=1.20.0,<2.0.0",
+
+    # Requires Tqdm >= 4.60.0 for asynchronous iterator support and other improvements
+    "tqdm>=4.60.0,<5.0.0",
+
+    # Compatible version of rectools-lightfm for Python 3.12
+    "rectools-lightfm>=1.17.3,<2.0.0",
+
+    # Requires Optuna >= 3.0.0 for new optimization features and Python 3.10 compatibility
+    "optuna>=3.0.0,<5.0.0",
+
+    # Requires Implicit >= 0.6.0 for performance optimizations in matrix factorization
+    "implicit>=0.6.0,<1.0.0",
 ]
 
 classifiers = [
@@ -39,8 +60,11 @@ build-backend = "hatchling.build"
 [tool.uv]
 managed = true
 dev-dependencies = [
-    "pytest>=8.3.3",
-    "streamlit>=1.41.1",
+    # Requires pytest >= 7.0.0 for Python 3.10 compatibility
+    "pytest>=7.0.0,<9.0.0",
+
+    # Requires Streamlit >= 1.10.0 for session state improvements
+    "streamlit>=1.10.0,<2.0.0",
 ]
 
 [tool.hatch.metadata]
