@@ -1,4 +1,4 @@
-from typing import List, Set
+from typing import List, Optional, Set
 from scipy.sparse import csr_matrix
 import numpy as np
 from .collections import SortedSet
@@ -67,15 +67,17 @@ class FeatureStore:
         data = np.ones(len(item_feature_ids))
         return csr_matrix((data, (rows, cols)), shape=(1, len(self.item_features)))
 
-    def build_user_features_matrix(self) -> csr_matrix:
+    def build_user_features_matrix(self, user_id: Optional[int]=None) -> csr_matrix:
         """
+        Parameters:
+            user_id (int): User ID to build the user features matrix for
         Returns:
             csr_matrix: User features matrix of shape (n_users, n_features)
         """
 
         rows, cols, data = [], [], []
 
-        for user_id, feature_ids in self.user_feature_map.items():
+        for user_id, feature_ids in self.user_feature_map.items() if user_id is None else [(user_id, self.user_feature_map.get(user_id, []))]:
             for feature_id in feature_ids:
                 rows.append(user_id)
                 cols.append(feature_id)
@@ -83,15 +85,17 @@ class FeatureStore:
 
         return csr_matrix((data, (rows, cols)), shape=(len(self.user_feature_map), len(self.user_features)))
 
-    def build_item_features_matrix(self) -> csr_matrix:
+    def build_item_features_matrix(self, item_id: Optional[int]=None) -> csr_matrix:
         """
+        Parameters:
+            item_id (int): Item ID to build the item features matrix for
         Returns:
             csr_matrix: Item features matrix of shape (n_items, n_features)
         """
 
         rows, cols, data = [], [], []
 
-        for item_id, feature_ids in self.item_feature_map.items():
+        for item_id, feature_ids in self.item_feature_map.items() if item_id is None else [(item_id, self.item_feature_map.get(item_id, []))]:
             for feature_id in feature_ids:
                 rows.append(item_id)
                 cols.append(feature_id)
