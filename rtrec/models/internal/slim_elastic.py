@@ -673,4 +673,6 @@ class SLIMElastic:
 
         # Get the top-K similar items by sorting the similarity scores in descending order
         similar_items = np.argsort(item_similarity)[-1:-1-top_k:-1]
-        return similar_items.tolist()
+
+        # exclude the query item itself
+        return similar_items[similar_items != item_id].tolist()
