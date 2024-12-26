@@ -1,6 +1,5 @@
 import numpy as np
 
-@staticmethod
 def sigmoid(x):
     """
     sigmoid function
@@ -21,3 +20,10 @@ def sigmoid(x):
     x = np.clip(x, -sigmoid_range, sigmoid_range)
 
     return 1.0 / (1.0 + np.exp(-x))
+
+def calc_norm(factors: np.ndarray, avoid_zeros: bool = False) -> np.ndarray:
+    norm = np.linalg.norm(factors, axis=1)
+    # don't divide by zero in similar_items, replace with small value
+    if avoid_zeros:
+        norm[norm == 0] = 1e-10
+    return norm
