@@ -61,7 +61,7 @@ class FeatureStore:
         cols = np.array(user_feature_ids)
         rows = np.zeros(len(user_feature_ids))
         data = np.ones(len(user_feature_ids))
-        return csr_matrix((data, (rows, cols)), shape=(1, len(self.user_features)))
+        return csr_matrix((data, (rows, cols)), shape=(1, len(self.user_features)), dtype=np.float32)
 
     def get_item_feature_repr(self, item_tags: List[str]) -> csr_matrix:
         """
@@ -81,17 +81,18 @@ class FeatureStore:
         cols = np.array(item_feature_ids)
         rows = np.zeros(len(item_feature_ids))
         data = np.ones(len(item_feature_ids))
-        return csr_matrix((data, (rows, cols)), shape=(1, len(self.item_features)))
+        return csr_matrix((data, (rows, cols)), shape=(1, len(self.item_features)), dtype=np.float32)
 
-    def build_user_features_matrix(self, user_ids: Optional[List[int]]=None) -> csr_matrix | None:
+    def build_user_features_matrix(self, user_ids: Optional[List[int]]=None, num_users: Optional[int]=None) -> csr_matrix | None:
         """
         Parameters:
-            user_ids (List[int]): List of user IDs to build the user features matrix for
+            user_ids (Optional[List[int]]): List of user IDs to build the user features matrix for.
+            num_users (Optional[int]): Number of users to build the user features matrix for.
         Returns:
             csr_matrix: User features matrix of shape (n_users, n_features). If no user features are registered, return None.
         """
         # If no user features are registered, return None
-        if not self.user_features:
+        if len(self.user_features) == 0:
             return None
 
         rows, cols, data = [], [], []
@@ -109,17 +110,20 @@ class FeatureStore:
                     cols.append(feature_id)
                     data.append(1)
 
-        return csr_matrix((data, (rows, cols)), shape=(len(self.user_feature_map), len(self.user_features)))
+        if num_users is None:
+            num_users = len(self.user_feature_map)
+        return csr_matrix((data, (rows, cols)), shape=(num_users, len(self.user_features)), dtype=np.float32)
 
-    def build_item_features_matrix(self, item_ids: Optional[int]=None) -> csr_matrix | None:
+    def build_item_features_matrix(self, item_ids: Optional[int]=None, num_items: Optional[int]=None) -> csr_matrix | None:
         """
         Parameters:
-            item_ids (List[int]): List of item IDs to build the item features matrix for
+            item_ids (Optional[List[int]]): List of item IDs to build the item features matrix for
+            num_items (Optional[int]): Number of items to build the item features matrix for
         Returns:
             csr_matrix: Item features matrix of shape (n_items, n_features). If no item features are registered, return None.
         """
         # If no item features are registered, return None
-        if not self.item_features:
+        if len(self.item_features) == 0:
             return None
 
         rows, cols, data = [], [], []
@@ -137,4 +141,6 @@ class FeatureStore:
                     cols.append(feature_id)
                     data.append(1)
 
-        return csr_matrix((data, (rows, cols)), shape=(len(self.item_feature_map), len(self.item_features)))
+        if num_items is None:
+            num_items = len(self.item_feature_map)
+        return csr_matrix((data, (rows, cols)), shape=(num_items, len(self.item_features)), dtype=np.float32)
