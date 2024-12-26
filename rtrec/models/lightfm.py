@@ -16,6 +16,7 @@ class LightFM(BaseModel):
         super().__init__(**kwargs)
         self.epochs = kwargs.get("epochs", 10)
         self.n_threads = kwargs.get("n_threads", 1)
+        self.use_bias = kwargs.get("use_bias", True)
         self.model = LightFMWrapper(**kwargs)
         self.recorded_user_ids = set()
         self.recorded_item_ids = set()
@@ -75,11 +76,15 @@ class LightFM(BaseModel):
         item_features = self._create_item_features(num_items)
 
         user_biases, user_embeddings = self.model.get_user_representations(user_features)
-        # Note np.ones for dot product with item biases
-        user_vector = np.hstack((user_biases[:, np.newaxis], np.ones((user_biases.size, 1)), user_embeddings), dtype=np.float32)
         item_biases, item_embeddings = self.model.get_item_representations(item_features)
-        # Note np.ones for dot product with user biases
-        item_vector = np.hstack((np.ones((item_biases.size, 1)), item_biases[:, np.newaxis], item_embeddings), dtype=np.float32)
+        if self.use_bias:
+            # Note np.ones for dot product with item biases
+            user_vector = np.hstack((user_biases[:, np.newaxis], np.ones((user_biases.size, 1)), user_embeddings), dtype=np.float32)
+            # Note np.ones for dot product with user biases
+            item_vector = np.hstack((np.ones((item_biases.size, 1)), item_biases[:, np.newaxis], item_embeddings), dtype=np.float32)
+        else:
+            user_vector = user_embeddings
+            item_vector = item_embeddings
 
         filter_items = None
         if filter_interacted:
@@ -112,10 +117,14 @@ class LightFM(BaseModel):
         target_features = self._create_item_features(num_items=num_items)
 
         query_biases, query_embeddings = self.model.get_item_representations(query_features)
-        query_vector = np.hstack((query_biases[:, np.newaxis], query_embeddings), dtype=np.float32)
-
         target_biases, target_embeddings = self.model.get_item_representations(target_features)
-        target_vector = np.hstack((target_biases[:, np.newaxis], target_embeddings), dtype=np.float32)
+        if self.use_bias:
+            query_vector = np.hstack((query_biases[:, np.newaxis], query_embeddings), dtype=np.float32)
+            target_vector = np.hstack((target_biases[:, np.newaxis], target_embeddings), dtype=np.float32)
+        else:
+            query_vector = query_embeddings
+            target_vector = target_embeddings
+
         target_norm = calc_norm(target_vector)
 
         ids, scores = implicit.topk(items=target_vector, query=query_vector, k=top_k, item_norms=target_norm, filter_items=np.array([query_item_id], dtype="int32"), num_threads=self.n_threads)
