@@ -13,16 +13,16 @@ class LightFMWrapper(LightFM):
     def __init__(
         self,
         no_components=10,
-        k=5,
-        n=10,
+        k=5,             # for k-OS training, the k-th positive example will be selected from the n positive examples sampled for every user.
+        n=10,            # for k-OS training, maximum number of positives sampled for each update.
         learning_schedule="adagrad",
         loss="warp",
         learning_rate=0.05,
-        rho=0.95,
-        epsilon=1e-6,
-        item_alpha=0.0,
-        user_alpha=0.0,
-        max_sampled=10,
+        rho=0.95,        # moving average coefficient for the adadelta learning schedule.
+        epsilon=1e-6,    # conditioning parameter for the adadelta learning schedule.
+        item_alpha=1e-7, # L2 penalty on item features
+        user_alpha=1e-7, # L2 penalty on user features
+        max_sampled=10,  # maximum number of negative samples used during WARP fitting
         random_state=None,
         **kwargs,
     ):
