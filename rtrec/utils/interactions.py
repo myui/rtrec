@@ -215,7 +215,7 @@ class UserItemInteractions:
                     data.append(self._apply_decay(rating, tstamp))
 
         # Create the csr_matrix
-        return csr_matrix((data, (rows, cols)), shape=(self.max_user_id + 1, self.max_item_id + 1))
+        return csr_matrix((data, (rows, cols)), shape=(self.max_user_id + 1, self.max_item_id + 1), dtype="float32")
 
     def to_csc(self, select_items: List[int] = None) -> csc_matrix:
         rows, cols, data = [], [], []
@@ -229,7 +229,7 @@ class UserItemInteractions:
                 data.append(self._apply_decay(rating, tstamp))
 
         # Create the csc_matrix
-        return csc_matrix((data, (rows, cols)), shape=(self.max_user_id + 1, self.max_item_id + 1))
+        return csc_matrix((data, (rows, cols)), shape=(self.max_user_id + 1, self.max_item_id + 1), dtype="float32")
 
     def to_coo(self, select_users: List[int] = None, select_items: List[int] = None) -> coo_matrix:
         rows, cols, data = [], [], []
@@ -269,4 +269,14 @@ class UserItemInteractions:
                         data.append(self._apply_decay(rating, tstamp))
 
         # Create the coo_matrix
-        return coo_matrix((data, (rows, cols)), shape=(self.max_user_id + 1, self.max_item_id + 1))
+        return coo_matrix((data, (rows, cols)), shape=(self.max_user_id + 1, self.max_item_id + 1), dtype="float32")
+
+    @property
+    def shape(self) -> tuple[int, int]:
+        """
+        Retrieves the shape of the interaction matrix.
+
+        Returns:
+            tuple[int, int]: The shape of the interaction matrix.
+        """
+        return self.max_user_id + 1, self.max_item_id + 1
