@@ -3,6 +3,7 @@ from collections import Counter
 import time
 from time import sleep
 from rtrec.utils.interactions import UserItemInteractions
+from scipy.sparse import csc_matrix, coo_matrix
 
 @pytest.fixture
 def interactions():
@@ -111,6 +112,64 @@ def test_decayed_rating_after_7days(interactions_with_decay):
 
     # Check if the decayed rating is as expected, allowing some tolerance for floating-point comparison
     assert abs(decayed_rating - expected_rating) < 0.001
+
+def test_to_csc():
+    interactions = UserItemInteractions(min_value=-5, max_value=10, decay_in_days=None)
+    interactions.add_interaction(0, 0, tstamp=12345, delta=5)
+    interactions.add_interaction(0, 1, tstamp=12346, delta=3)
+    interactions.add_interaction(1, 1, tstamp=12347, delta=4)
+    interactions.add_interaction(1, 2, tstamp=12348, delta=2)
+    interactions.add_interaction(2, 0, tstamp=12349, delta=1)
+    interactions.add_interaction(2, 2, tstamp=12350, delta=3)
+
+    # Full matrix
+    csc = interactions.to_csc()
+    expected = csc_matrix((
+        [5, 3, 4, 2, 1, 3],
+        ([0, 0, 1, 1, 2, 2], [0, 1, 1, 2, 0, 2])
+    ), shape=(3, 3))
+    assert (csc != expected).nnz == 0
+
+    # Filter by items
+    csc_filtered = interactions.to_csc(select_items=[1, 2])
+    expected_filtered = csc_matrix((
+        [3, 4, 2, 3],
+        ([0, 1, 1, 2], [1, 1, 2, 2])
+    ), shape=(3, 3))
+    assert (csc_filtered != expected_filtered).nnz == 0
+
+def test_to_coo():
+    interactions = UserItemInteractions(min_value=-5, max_value=10, decay_in_days=None)
+    interactions.add_interaction(0, 0, tstamp=12345, delta=5)
+    interactions.add_interaction(0, 1, tstamp=12346, delta=3)
+    interactions.add_interaction(1, 1, tstamp=12347, delta=4)
+    interactions.add_interaction(1, 2, tstamp=12348, delta=2)
+    interactions.add_interaction(2, 0, tstamp=12349, delta=1)
+    interactions.add_interaction(2, 2, tstamp=12350, delta=3)
+
+    # Full matrix
+    coo = interactions.to_coo()
+    expected = coo_matrix((
+        [5, 3, 4, 2, 1, 3],
+        ([0, 0, 1, 1, 2, 2], [0, 1, 1, 2, 0, 2])
+    ), shape=(3, 3))
+    assert (coo != expected).nnz == 0
+
+    # Filter by users
+    coo_filtered_users = interactions.to_coo(select_users=[1, 2])
+    expected_filtered_users = coo_matrix((
+        [4, 2, 1, 3],
+        ([1, 1, 2, 2], [1, 2, 0, 2])
+    ), shape=(3, 3))
+    assert (coo_filtered_users != expected_filtered_users).nnz == 0
+
+    # Filter by users and items
+    coo_filtered_users_items = interactions.to_coo(select_users=[1, 2], select_items=[1, 2])
+    expected_filtered_users_items = coo_matrix((
+        [4, 2, 3],
+        ([1, 1, 2], [1, 2, 2])
+    ), shape=(3, 3))
+    assert (coo_filtered_users_items != expected_filtered_users_items).nnz == 0
 
 if __name__ == "__main__":
     pytest.main()

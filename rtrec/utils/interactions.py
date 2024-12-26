@@ -234,15 +234,39 @@ class UserItemInteractions:
     def to_coo(self, select_users: List[int] = None, select_items: List[int] = None) -> coo_matrix:
         rows, cols, data = [], [], []
 
-        for user, inner_dict in self.interactions.items():
-            if select_users is not None and user not in select_users:
-                continue
-            for item, (rating, tstamp) in inner_dict.items():
-                if select_items is not None and item not in select_items:
-                    continue
-                rows.append(user)
-                cols.append(item)
-                data.append(self._apply_decay(rating, tstamp))
+        if select_users is None:
+            if select_items is None:
+                for user, inner_dict in self.interactions.items():
+                    for item, (rating, tstamp) in inner_dict.items():
+                        rows.append(user)
+                        cols.append(item)
+                        data.append(self._apply_decay(rating, tstamp))
+            else:
+                for user, inner_dict in self.interactions.items():
+                    for item in select_items:
+                        if item not in inner_dict:
+                            continue
+                        rating, tstamp = inner_dict[item]
+                        rows.append(user)
+                        cols.append(item)
+                        data.append(self._apply_decay(rating, tstamp))
+        else:
+            if select_items is None:
+                for user in select_users:
+                    for item, (rating, tstamp) in self.interactions.get(user, {}).items():
+                        rows.append(user)
+                        cols.append(item)
+                        data.append(self._apply_decay(rating, tstamp))
+            else:
+                for user in select_users:
+                    inner_dict = self.interactions.get(user, {})
+                    for item in select_items:
+                        if item not in inner_dict:
+                            continue
+                        rating, tstamp = inner_dict[item]
+                        rows.append(user)
+                        cols.append(item)
+                        data.append(self._apply_decay(rating, tstamp))
 
         # Create the coo_matrix
         return coo_matrix((data, (rows, cols)), shape=(self.max_user_id + 1, self.max_item_id + 1))
