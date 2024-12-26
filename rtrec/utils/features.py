@@ -15,6 +15,10 @@ class FeatureStore:
         """
         Add a list of user features to the user features set.
         Replace the existing user features if the user ID already exists.
+
+        Parameters:
+            user_id (int): User ID
+            user_tags (List[str]): List of user features
         """
         user_feature_ids = []
         for tag in user_tags:
@@ -27,6 +31,10 @@ class FeatureStore:
         """
         Add a list of item features to the item features set.
         Replace the existing item features if the item ID already exists.
+
+        Parameters:
+            item_id (int): Item ID
+            item_tags (List[str]): List of item features
         """
         item_feature_ids = []
         for tag in item_tags:
@@ -37,6 +45,10 @@ class FeatureStore:
 
     def get_user_feature_repr(self, user_tags: List[str]) -> csr_matrix:
         """
+        Get the user feature representation matrix for the given user tags.
+
+        Parameters:
+            user_tags (List[str]): List of user tags
         Returns:
             csr_matrix: User feature representation of shape (1, n_features)
         """
@@ -53,6 +65,10 @@ class FeatureStore:
 
     def get_item_feature_repr(self, item_tags: List[str]) -> csr_matrix:
         """
+        Get the item feature representation for the given item tags.
+
+        Parameters:
+            item_tags (List[str]): List of item tags
         Returns:
             csr_matrix: Item feature representation of shape (1, n_features)
         """
@@ -67,38 +83,58 @@ class FeatureStore:
         data = np.ones(len(item_feature_ids))
         return csr_matrix((data, (rows, cols)), shape=(1, len(self.item_features)))
 
-    def build_user_features_matrix(self, user_id: Optional[int]=None) -> csr_matrix:
+    def build_user_features_matrix(self, user_ids: Optional[List[int]]=None) -> csr_matrix | None:
         """
         Parameters:
-            user_id (int): User ID to build the user features matrix for
+            user_ids (List[int]): List of user IDs to build the user features matrix for
         Returns:
-            csr_matrix: User features matrix of shape (n_users, n_features)
+            csr_matrix: User features matrix of shape (n_users, n_features). If no user features are registered, return None.
         """
+        # If no user features are registered, return None
+        if not self.user_features:
+            return None
 
         rows, cols, data = [], [], []
 
-        for user_id, feature_ids in self.user_feature_map.items() if user_id is None else [(user_id, self.user_feature_map.get(user_id, []))]:
-            for feature_id in feature_ids:
-                rows.append(user_id)
-                cols.append(feature_id)
-                data.append(1)
+        if user_ids is None:
+            for user_id, feature_ids in self.user_feature_map.items():
+                for feature_id in feature_ids:
+                    rows.append(user_id)
+                    cols.append(feature_id)
+                    data.append(1)
+        else:
+            for user_id in user_ids:
+                for feature_id in self.user_feature_map.get(user_id, []):
+                    rows.append(user_id)
+                    cols.append(feature_id)
+                    data.append(1)
 
         return csr_matrix((data, (rows, cols)), shape=(len(self.user_feature_map), len(self.user_features)))
 
-    def build_item_features_matrix(self, item_id: Optional[int]=None) -> csr_matrix:
+    def build_item_features_matrix(self, item_ids: Optional[int]=None) -> csr_matrix | None:
         """
         Parameters:
-            item_id (int): Item ID to build the item features matrix for
+            item_ids (List[int]): List of item IDs to build the item features matrix for
         Returns:
-            csr_matrix: Item features matrix of shape (n_items, n_features)
+            csr_matrix: Item features matrix of shape (n_items, n_features). If no item features are registered, return None.
         """
+        # If no item features are registered, return None
+        if not self.item_features:
+            return None
 
         rows, cols, data = [], [], []
 
-        for item_id, feature_ids in self.item_feature_map.items() if item_id is None else [(item_id, self.item_feature_map.get(item_id, []))]:
-            for feature_id in feature_ids:
-                rows.append(item_id)
-                cols.append(feature_id)
-                data.append(1)
+        if item_ids is None:
+            for item_id, feature_ids in self.item_feature_map.items():
+                for feature_id in feature_ids:
+                    rows.append(item_id)
+                    cols.append(feature_id)
+                    data.append(1)
+        else:
+            for item_id in item_ids:
+                for feature_id in self.item_feature_map.get(item_id, []):
+                    rows.append(item_id)
+                    cols.append(feature_id)
+                    data.append(1)
 
         return csr_matrix((data, (rows, cols)), shape=(len(self.item_feature_map), len(self.item_features)))
