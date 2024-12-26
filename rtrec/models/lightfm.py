@@ -70,8 +70,8 @@ class LightFM(BaseModel):
         self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sampled_weights, epochs=self.epochs, num_threads=self.n_threads)
 
     def _recommend(self, user_id: int, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
-        _, num_items = self.interactions.shape
-        user_features = self._create_user_features(num_users=1, user_ids=[user_id])
+        num_users, num_items = self.interactions.shape
+        user_features = self._create_user_features(num_users=num_users, user_ids=[user_id])
         item_features = self._create_item_features(num_items)
 
         user_biases, user_embeddings = self.model.get_user_representations(user_features)
@@ -106,8 +106,10 @@ class LightFM(BaseModel):
         return ids.tolist() # ndarray to list
 
     def _similar_items(self, query_item_id: int, top_k: int = 10) -> List[int]:
-        query_features = self._create_item_features(num_items=1, item_ids=[query_item_id])
-        target_features = self._create_item_features(num_items=self.interactions.shape[1])
+        _, num_items = self.interactions.shape
+
+        query_features = self._create_item_features(num_items=num_items, item_ids=[query_item_id])
+        target_features = self._create_item_features(num_items=num_items)
 
         query_biases, query_embeddings = self.model.get_item_representations(query_features)
         query_vector = np.hstack((query_biases[:, np.newaxis], query_embeddings), dtype=np.float32)
