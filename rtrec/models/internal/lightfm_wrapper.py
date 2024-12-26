@@ -16,7 +16,7 @@ class LightFMWrapper(LightFM):
         k=5,
         n=10,
         learning_schedule="adagrad",
-        loss="logistic",
+        loss="warp",
         learning_rate=0.05,
         rho=0.95,
         epsilon=1e-6,
