@@ -1,12 +1,12 @@
 import logging
-from typing import Any, Iterable, List, Optional, Tuple
+from typing import Any, Iterable, List, Optional, Tuple, overload, override
 
 from ..utils.math import calc_norm
 from .base import BaseModel
 from .internal.lightfm_wrapper import LightFMWrapper
 
 from scipy import sparse
-from scipy.sparse import csr_matrix
+from scipy.sparse import csr_matrix, csc_matrix
 import numpy as np
 import implicit.cpu.topk as implicit
 
@@ -109,6 +109,45 @@ class LightFM(BaseModel):
         # scores = scores.ravel() / query_norm
 
         return ids.tolist() # ndarray to list
+
+    @override
+    def _recommend_batch(self, user_ids: List[int], interaction_matrix: csc_matrix, top_k: int = 10, filter_interacted: bool = True) -> List[List[int]]:
+        num_users, num_items = self.interactions.shape
+        user_features = self._create_user_features(num_users=num_users, user_ids=user_ids)
+        item_features = self._create_item_features(num_items)
+
+        user_biases, user_embeddings = self.model.get_user_representations(user_features)
+        item_biases, item_embeddings = self.model.get_item_representations(item_features)
+        if self.use_bias:
+            # Note np.ones for dot product with item biases
+            user_vector = np.hstack((user_biases[:, np.newaxis], np.ones((user_biases.size, 1)), user_embeddings), dtype=np.float32)
+            # Note np.ones for dot product with user biases
+            item_vector = np.hstack((np.ones((item_biases.size, 1)), item_biases[:, np.newaxis], item_embeddings), dtype=np.float32)
+        else:
+            user_vector = user_embeddings
+            item_vector = item_embeddings
+
+        filter_items = None
+        if filter_interacted:
+            ui_csr = self.interactions.to_csr(select_users=user_ids)
+            filter_items = ui_csr[user_ids:].indices
+
+        ids_array, scores_array = implicit.topk(items=item_vector, query=user_vector, k=top_k, filter_items=filter_items, num_threads=self.n_threads)
+        assert len(ids_array) == len(user_ids)
+
+        results = []
+        for ids, scores in zip(ids_array, scores_array):
+            # implicit assigns negative infinity to the scores to be fitered out
+            # see https://github.com/benfred/implicit/blob/v0.7.2/implicit/cpu/topk.pyx#L54
+            # the largest possible negative finite value in float32, which is approximately -3.4028235e+38.
+            min_score = -np.finfo(np.float32).max
+            # remove ids less than or equal to min_score
+            for i in range(len(ids)):
+                if scores[i] <= min_score:
+                    ids = ids[:i]
+                    break
+            results.append(ids.tolist())
+        return results
 
     def _similar_items(self, query_item_id: int, top_k: int = 10) -> List[int]:
         _, num_items = self.interactions.shape

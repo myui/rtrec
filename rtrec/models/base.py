@@ -153,6 +153,17 @@ class BaseModel(ABC):
         user_ids = [self.user_ids.get_id(user) for user in users]
         interaction_matrix = self.interactions.to_csr(select_users=user_ids)
 
+        return self._recommend_batch(user_ids, interaction_matrix, top_k=top_k, filter_interacted=filter_interacted)
+
+    def _recommend_batch(self, user_ids: List[int], interaction_matrix: csc_matrix, top_k: int = 10, filter_interacted: bool = True) -> List[List[int]]:
+        """
+        Recommend top-K items for a list of users.
+        :param user_ids: List of user indices
+        :param interaction_matrix: User-item interaction matrix
+        :param top_k: Number of top items to recommend
+        :param filter_interacted: Whether to filter out items the user has already interacted with
+        :return: List of top-K item indices recommended for each user
+        """
         results = []
         for user_id in user_ids:
             if user_id is None:
