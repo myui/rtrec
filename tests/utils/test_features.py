@@ -93,44 +93,44 @@ def test_build_user_features_matrix_with_user_id():
     features = FeatureStore()
     features.put_user_feature(0, ["tag1", "tag2"])
     features.put_user_feature(1, ["tag2", "tag3"])
+
+    # Test with a single valid user ID
     user_matrix = features.build_user_features_matrix([0])
     assert user_matrix.nnz == 2
-    expected_matrix = csr_matrix(np.array([[1, 1, 0], [0, 0, 0]]), shape=(2, 3))
+    expected_matrix = csr_matrix(np.array([[1, 1, 0]]), shape=(1, 3))  # 1 user, 3 features
     assert (user_matrix != expected_matrix).nnz == 0
-    # not exist user id
+
+    # Test with a non-existent user ID
     user_matrix = features.build_user_features_matrix([2])
     assert user_matrix.nnz == 0
-    expected_matrix = csr_matrix(np.array([[0, 0, 0], [0, 0, 0]]), shape=(2, 3))
+    expected_matrix = csr_matrix(np.array([[0, 0, 0]]), shape=(1, 3))  # 1 user, 3 features
     assert (user_matrix != expected_matrix).nnz == 0
+
     # Test with two valid user IDs
     user_matrix = features.build_user_features_matrix([0, 1])
-    expected_matrix = csr_matrix((2, 3))
-    expected_matrix[0, 0] = 1
-    expected_matrix[0, 1] = 1
-    expected_matrix[1, 1] = 1
-    expected_matrix[1, 2] = 1
+    expected_matrix = csr_matrix(np.array([[1, 1, 0], [0, 1, 1]]), shape=(2, 3))  # 2 users, 3 features
     assert (user_matrix != expected_matrix).nnz == 0
 
 def test_build_item_features_matrix_with_item_id():
     features = FeatureStore()
     features.put_item_feature(0, ["item_tag1", "item_tag2"])
     features.put_item_feature(1, ["item_tag2", "item_tag3"])
+
+    # Test with a single valid item ID
     item_matrix = features.build_item_features_matrix([0])
     assert item_matrix.nnz == 2
-    expected_matrix = csr_matrix(np.array([[1, 1, 0], [0, 0, 0]]), shape=(2, 3))
+    expected_matrix = csr_matrix(np.array([[1, 1, 0]]), shape=(1, 3))  # 1 item, 3 features
     assert (item_matrix != expected_matrix).nnz == 0
-    # not exist item id
+
+    # Test with a non-existent item ID
     item_matrix = features.build_item_features_matrix([2])
     assert item_matrix.nnz == 0
-    expected_matrix = csr_matrix(np.array([[0, 0, 0], [0, 0, 0]]), shape=(2, 3))
+    expected_matrix = csr_matrix(np.array([[0, 0, 0]]), shape=(1, 3))  # 1 item, 3 features
     assert (item_matrix != expected_matrix).nnz == 0
+
     # Test with two valid item IDs
     item_matrix = features.build_item_features_matrix([0, 1])
-    expected_matrix = csr_matrix((2, 3))
-    expected_matrix[0, 0] = 1
-    expected_matrix[0, 1] = 1
-    expected_matrix[1, 1] = 1
-    expected_matrix[1, 2] = 1
+    expected_matrix = csr_matrix(np.array([[1, 1, 0], [0, 1, 1]]), shape=(2, 3))  # 2 items, 3 features
     assert (item_matrix != expected_matrix).nnz == 0
 
 # Run tests using pytest if this file is executed directly

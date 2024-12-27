@@ -99,18 +99,18 @@ class FeatureStore:
         max_user_id = 0
         if user_ids is None:
             for user_id, feature_ids in self.user_feature_map.items():
-                max_user_id = max(max_user_id, user_id)
                 for feature_id in feature_ids:
                     rows.append(user_id)
                     cols.append(feature_id)
                     data.append(1)
+                    max_user_id = max(max_user_id, user_id)
         else:
             for user_id in user_ids:
-                max_user_id = max(max_user_id, user_id)
                 for feature_id in self.user_feature_map.get(user_id, []):
                     rows.append(user_id)
                     cols.append(feature_id)
                     data.append(1)
+                    max_user_id = max(max_user_id, user_id)
 
         if num_users is None:
             num_users = max_user_id + 1
@@ -132,18 +132,18 @@ class FeatureStore:
         max_item_id = 0
         if item_ids is None:
             for item_id, feature_ids in self.item_feature_map.items():
-                max_item_id = max(max_item_id, item_id)
                 for feature_id in feature_ids:
                     rows.append(item_id)
                     cols.append(feature_id)
                     data.append(1)
+                    max_item_id = max(max_item_id, item_id)
         else:
             for item_id in item_ids:
-                max_item_id = max(max_item_id, item_id)
                 for feature_id in self.item_feature_map.get(item_id, []):
                     rows.append(item_id)
                     cols.append(feature_id)
                     data.append(1)
+                    max_item_id = max(max_item_id, item_id)
 
         if num_items is None:
             num_items = max_item_id + 1
