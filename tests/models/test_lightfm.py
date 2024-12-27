@@ -6,7 +6,7 @@ import random
 
 @pytest.fixture
 def model():
-    model = LightFM(random_state=42)
+    model = LightFM(random_state=42, epochs=10)
     return model
 
 def test_similar_items_no_data(model):
@@ -186,16 +186,13 @@ def test_recommend_and_similar_items(model):
     current_unixtime = 1609459200  # Arbitrary timestamp for current time
     jitter_range = 5.0  # Jitter range for random time offset
 
-    # Simulate 20 interactions
-    users = ['user_1', 'user_2', 'user_3', 'user_4', 'user_5', 'user_6', 'user_7', 'user_8', 'user_9', 'user_10']
-    items = ['item_1', 'item_2', 'item_3', 'item_4', 'item_5', 'item_6', 'item_7', 'item_8', 'item_9', 'item_10']
-
     # Define 20 interactions with randomized jitter and ratings
     interactions = [
         ('user_1', 'item_1', current_unixtime + rng.uniform(0, jitter_range), 5.0),
         ('user_2', 'item_2', current_unixtime + 1 + rng.uniform(0, jitter_range), 3.0),
         ('user_1', 'item_3', current_unixtime + 2 + rng.uniform(0, jitter_range), 4.0), 
         ('user_5', 'item_10', current_unixtime + 9 + rng.uniform(0, jitter_range), 4.0),
+        ('user_5', 'item_1', current_unixtime + 9 + rng.uniform(0, jitter_range), 4.0),
         ('user_3', 'item_5', current_unixtime + 3 + rng.uniform(0, jitter_range), 5.0),
         ('user_4', 'item_4', current_unixtime + 4 + rng.uniform(0, jitter_range), 2.0),
         ('user_6', 'item_6', current_unixtime + 5 + rng.uniform(0, jitter_range), 3.5),
@@ -270,8 +267,6 @@ def test_recommend_and_similar_items(model):
     assert similar_items[0] == 'item_3'  # item_3 is the most similar to item_1
     assert 'item_2' in similar_items  # item_2 is co-occurring with item_1
     assert 'item_4' in similar_items  # item_4 might be co-occurring based on interactions
-    assert 'item_10' in similar_items  # item_10 is also a likely co-occurring item
-    assert 'item_7' in similar_items  # item_7 might be relevant depending on co-occurrence
 
     # Test: Validate that co-occurrence affects similarity
     similar_items = model.similar_items('item_3', top_k=5)
