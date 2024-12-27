@@ -5,15 +5,16 @@ import time
 from tqdm import tqdm
 from typing import Dict, Iterator, Tuple, Iterable, Any, List, Self
 
-from rtrec.utils.metrics import compute_scores
+from .models.base import BaseModel
+from .utils.metrics import compute_scores
 
 class Recommender:
 
-    def __init__(self, model, use_generator: bool = True):
+    def __init__(self, model: BaseModel, use_generator: bool = True):
         self.model = model
         self.use_generator = use_generator
 
-    def get_model(self):
+    def get_model(self) -> BaseModel:
         return self.model
 
     def partial_fit(self, user_interactions: Iterable[Tuple[int, int, int, float]], update_interaction: bool=False) -> Self:

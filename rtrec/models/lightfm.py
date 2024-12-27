@@ -131,11 +131,11 @@ class LightFM(BaseModel):
         assert len(ids_array) == len(user_ids)
 
         results = []
+        # implicit assigns negative infinity to the scores to be fitered out
+        # see https://github.com/benfred/implicit/blob/v0.7.2/implicit/cpu/topk.pyx#L54
+        # the largest possible negative finite value in float32, which is approximately -3.4028235e+38.
+        min_score = -np.finfo(np.float32).max
         for ids, scores in zip(ids_array, scores_array):
-            # implicit assigns negative infinity to the scores to be fitered out
-            # see https://github.com/benfred/implicit/blob/v0.7.2/implicit/cpu/topk.pyx#L54
-            # the largest possible negative finite value in float32, which is approximately -3.4028235e+38.
-            min_score = -np.finfo(np.float32).max
             # remove ids less than or equal to min_score
             for i in range(len(ids)):
                 if scores[i] <= min_score:
