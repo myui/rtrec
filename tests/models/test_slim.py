@@ -15,7 +15,7 @@ def test_register_user_feature(model):
     user_index = model.register_user_feature(user_id, user_tags)
     # Verify that the user feature is registered correctly
     assert user_index == model.user_ids.identify(user_id)
-    assert model.feature_store.build_user_features_matrix(user_id=user_index).nnz == 2
+    assert model.feature_store.build_user_features_matrix(user_ids=[user_index]).nnz == 2
 
 def test_register_item_feature(model):
     item_id = 'item_1'
@@ -23,7 +23,7 @@ def test_register_item_feature(model):
     item_index = model.register_item_feature(item_id, item_tags)
     # Verify that the item feature is registered correctly
     assert item_index == model.item_ids.identify(item_id)
-    assert model.feature_store.build_item_features_matrix(item_id=item_index).nnz == 2
+    assert model.feature_store.build_item_features_matrix(item_ids=[item_index]).nnz == 2
 
 def test_add_interactions(model):
     interactions = [('user_1', 'item_1', 1622470427.0, 5.0)]
