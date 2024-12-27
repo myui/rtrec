@@ -96,22 +96,24 @@ class FeatureStore:
             return None
 
         rows, cols, data = [], [], []
-
+        max_user_id = 0
         if user_ids is None:
             for user_id, feature_ids in self.user_feature_map.items():
+                max_user_id = max(max_user_id, user_id)
                 for feature_id in feature_ids:
                     rows.append(user_id)
                     cols.append(feature_id)
                     data.append(1)
         else:
             for user_id in user_ids:
+                max_user_id = max(max_user_id, user_id)
                 for feature_id in self.user_feature_map.get(user_id, []):
                     rows.append(user_id)
                     cols.append(feature_id)
                     data.append(1)
 
         if num_users is None:
-            num_users = len(self.user_feature_map)
+            num_users = max_user_id + 1
         return csr_matrix((data, (rows, cols)), shape=(num_users, len(self.user_features)), dtype=np.float32)
 
     def build_item_features_matrix(self, item_ids: Optional[int]=None, num_items: Optional[int]=None) -> csr_matrix | None:
@@ -127,20 +129,22 @@ class FeatureStore:
             return None
 
         rows, cols, data = [], [], []
-
+        max_item_id = 0
         if item_ids is None:
             for item_id, feature_ids in self.item_feature_map.items():
+                max_item_id = max(max_item_id, item_id)
                 for feature_id in feature_ids:
                     rows.append(item_id)
                     cols.append(feature_id)
                     data.append(1)
         else:
             for item_id in item_ids:
+                max_item_id = max(max_item_id, item_id)
                 for feature_id in self.item_feature_map.get(item_id, []):
                     rows.append(item_id)
                     cols.append(feature_id)
                     data.append(1)
 
         if num_items is None:
-            num_items = len(self.item_feature_map)
+            num_items = max_item_id + 1
         return csr_matrix((data, (rows, cols)), shape=(num_items, len(self.item_features)), dtype=np.float32)
