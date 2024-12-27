@@ -111,7 +111,7 @@ class LightFM(BaseModel):
         return ids.tolist() # ndarray to list
 
     @override
-    def _recommend_batch(self, user_ids: List[int], interaction_matrix: csc_matrix, top_k: int = 10, filter_interacted: bool = True) -> List[List[int]]:
+    def _recommend_batch(self, user_ids: List[int], top_k: int = 10, filter_interacted: bool = True) -> List[List[int]]:
         num_users, num_items = self.interactions.shape
         user_features = self._create_user_features(num_users=num_users, user_ids=user_ids)
         item_features = self._create_item_features(num_items)

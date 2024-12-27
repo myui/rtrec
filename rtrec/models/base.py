@@ -151,11 +151,10 @@ class BaseModel(ABC):
         :return: List of top-K item indices recommended for each user
         """
         user_ids = [self.user_ids.get_id(user) for user in users]
-        interaction_matrix = self.interactions.to_csr(select_users=user_ids)
+        results = self._recommend_batch(user_ids, top_k=top_k, filter_interacted=filter_interacted)
+        return [[self.item_ids.get(item_id) for item_id in internal_ids] for internal_ids in results]
 
-        return self._recommend_batch(user_ids, interaction_matrix, top_k=top_k, filter_interacted=filter_interacted)
-
-    def _recommend_batch(self, user_ids: List[int], interaction_matrix: csc_matrix, top_k: int = 10, filter_interacted: bool = True) -> List[List[int]]:
+    def _recommend_batch(self, user_ids: List[int], top_k: int = 10, filter_interacted: bool = True) -> List[List[int]]:
         """
         Recommend top-K items for a list of users.
         :param user_ids: List of user indices
@@ -169,8 +168,8 @@ class BaseModel(ABC):
             if user_id is None:
                 results.append([]) # TODO: return popoular items?
                 continue
-            recommended_item_ids = self._recommend(user_id, interaction_matrix, top_k=top_k, filter_interacted=filter_interacted)
-            results.append([self.item_ids.get(item_id) for item_id in recommended_item_ids])
+            recommended_item_ids = self._recommend(user_id, top_k=top_k, filter_interacted=filter_interacted)
+            results.append(recommended_item_ids)
         return results
 
     def similar_items(self, query_item: Any, top_k: int = 10) -> List[Any]:
