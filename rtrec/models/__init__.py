@@ -1,4 +1,4 @@
-#from rtrec._lowlevel import SlimMSE as Fast_SLIM_MSE
 from .slim import SLIM
+from .lightfm import LightFM
 
-__all__ = ["SLIM"]
+__all__ = ["SLIM", "LightFM"]
