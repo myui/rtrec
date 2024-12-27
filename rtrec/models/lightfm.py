@@ -39,9 +39,9 @@ class LightFM(BaseModel):
         ui_coo = self.interactions.to_coo(select_users=user_ids, select_items=item_ids)
         user_features = self._create_user_features(user_ids=user_ids)
         item_features = self._create_item_features(item_ids=item_ids)
-        sampled_weights = None if self.model.loss == "warp-kos" else ui_coo
+        sample_weights = ui_coo if self.model.loss == "warp-kos" else None
 
-        self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sampled_weights, epochs=self.epochs, num_threads=self.n_threads)
+        self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sample_weights, epochs=self.epochs, num_threads=self.n_threads)
 
     def _record_interactions(self, user_id: int, item_id: int, tstamp: float, rating: float) -> None:
         self.recorded_user_ids.add(user_id)
@@ -53,8 +53,8 @@ class LightFM(BaseModel):
         user_features = self._create_user_features(user_ids=user_ids)
         item_features = self._create_item_features(item_ids=item_ids)
         ui_coo = self.interactions.to_coo(select_users=user_ids, select_items=item_ids)
-        sampled_weights = None if self.model.loss == "warp-kos" else ui_coo
-        self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sampled_weights, epochs=self.epochs, num_threads=self.n_threads)
+        sample_weights = ui_coo if self.model.loss == "warp-kos" else None
+        self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sample_weights, epochs=self.epochs, num_threads=self.n_threads)
 
         # Clear recorded user and item IDs
         self.recorded_user_ids.clear()
@@ -64,8 +64,8 @@ class LightFM(BaseModel):
         user_features = self._create_user_features()
         item_features = self._create_item_features()
         ui_coo = self.interactions.to_coo()
-        sampled_weights = None if self.model.loss == "warp-kos" else ui_coo
-        self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sampled_weights, epochs=self.epochs, num_threads=self.n_threads)
+        sample_weights = ui_coo if self.model.loss == "warp-kos" else None
+        self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sample_weights, epochs=self.epochs, num_threads=self.n_threads)
 
     def _recommend(self, user_id: int, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
         user_features = self._create_user_features(user_ids=[user_id])
