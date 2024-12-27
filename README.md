@@ -6,7 +6,7 @@ rtrec: Realtime Recommendation Library in Python
 [![CI status](https://github.com/myui/rtrec/actions/workflows/ci.yml/badge.svg)](https://github.com/myui/rtrec/actions)
 [![Licence](https://img.shields.io/github/license/myui/rtrec.svg)](LICENSE.txt)
 
-An realtime recommendation system supporting online updates.
+A realtime recommendation system supporting online updates.
 
 ## Highlights
 
