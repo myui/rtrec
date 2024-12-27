@@ -44,6 +44,36 @@ def test_fit_and_recommend(model):
     # Verify that the recommendations are correct
     assert recommendations == ["item_4", "item_2"]
 
+def test_fit_and_recommend_batch(model):
+    import time
+    current_unixtime = time.time()
+    interactions = [('user_1', 'item_1', current_unixtime, 5.0),
+                   ('user_2', 'item_2', current_unixtime, -2.0),
+                   ('user_2', 'item_1', current_unixtime, 3.0),
+                   ('user_2', 'item_4', current_unixtime, 3.0),
+                   ('user_1', 'item_3', current_unixtime, 4.0)]
+    model.fit(interactions)
+
+    def yield_interactions():
+        for interaction in interactions:
+            yield interaction
+    model.fit(yield_interactions())
+
+    recommendations = model.recommend_batch(['user_1', 'user_2'], top_k=5)
+    # Verify that the recommendations are correct
+    assert recommendations == [["item_4", "item_2"], ["item_3"]]
+
+    # more user 3 interactions
+    interactions = [('user_3', 'item_1', current_unixtime, 5.0),
+                   ('user_3', 'item_1', current_unixtime, 3.0),
+                   ('user_3', 'item_4', current_unixtime, 3.0),
+                   ('user_3', 'item_3', current_unixtime, 4.0)]
+    model.fit(interactions)
+
+    recommendations = model.recommend_batch(['user_2', 'user_3'], top_k=5)
+    # Verify that the recommendations are correct
+    assert recommendations == [["item_3"], ["item_2"]]
+
 def test_register_user_feature_and_recommend(model):
     rng = random.Random(42)  # Create a non-global RNG with a fixed seed
     current_unixtime = time.time()
