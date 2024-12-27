@@ -5,5 +5,5 @@ Get your OMDB API key from [here](https://www.omdbapi.com/apikey.aspx).
 
 ```sh
 export OMDB_API_KEY=xxxxxxx
-streamlit run examples/streamlit/movielens/movielens_dashboard.py
+uv run streamlit run examples/streamlit/movielens/movielens_dashboard.py
 ```
