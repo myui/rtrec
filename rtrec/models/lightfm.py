@@ -127,12 +127,12 @@ class LightFM(BaseModel):
             user_vector = user_embeddings
             item_vector = item_embeddings
 
-        filter_items = None
+        filter_query_items = None
         if filter_interacted:
-            ui_csr = self.interactions.to_csr(select_users=user_ids)
-            filter_items = ui_csr[user_ids:].indices
+            # see https://github.com/benfred/implicit/blob/v0.7.2/implicit/cpu/topk.pyx#L54
+            filter_query_items = self.interactions.to_csr(select_users=user_ids)
 
-        ids_array, scores_array = implicit.topk(items=item_vector, query=user_vector, k=top_k, filter_items=filter_items, num_threads=self.n_threads)
+        ids_array, scores_array = implicit.topk(items=item_vector, query=user_vector, k=top_k, filter_query_items=filter_query_items, num_threads=self.n_threads)
         assert len(ids_array) == len(user_ids)
 
         results = []
