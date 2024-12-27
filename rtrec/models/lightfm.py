@@ -61,10 +61,9 @@ class LightFM(BaseModel):
         self.recorded_item_ids.clear()
 
     def bulk_fit(self, parallel: bool=False, progress_bar: bool=True) -> None:
+        user_features = self._create_user_features()
+        item_features = self._create_item_features()
         ui_coo = self.interactions.to_coo()
-        num_users, num_items = ui_coo.shape
-        user_features = self._create_user_features(num_users)
-        item_features = self._create_item_features(num_items)
         sampled_weights = None if self.model.loss == "warp-kos" else ui_coo
         self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sampled_weights, epochs=self.epochs, num_threads=self.n_threads)
 
