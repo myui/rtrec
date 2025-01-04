@@ -84,7 +84,7 @@ class LightFM(BaseModel):
 
         filter_items = None
         if filter_interacted:
-            ui_csr = self.interactions.to_csr(select_users=[user_id])
+            ui_csr = self.interactions.to_csr(select_users=[user_id], include_weights=False)
             filter_items = ui_csr[user_id:].indices
 
         ids, scores = implicit.topk(items=item_vector, query=user_vector, k=top_k, filter_items=filter_items, num_threads=self.n_threads)
@@ -125,7 +125,7 @@ class LightFM(BaseModel):
         filter_query_items = None
         if filter_interacted:
             # see https://github.com/benfred/implicit/blob/v0.7.2/implicit/cpu/topk.pyx#L54
-            filter_query_items = self.interactions.to_csr(select_users=user_ids)
+            filter_query_items = self.interactions.to_csr(select_users=user_ids, include_weights=False)
             filter_query_items = filter_query_items[user_ids,:]
 
         ids_array, scores_array = implicit.topk(items=item_vector, query=user_vector, k=top_k, filter_query_items=filter_query_items, num_threads=self.n_threads)

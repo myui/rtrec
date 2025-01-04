@@ -4,6 +4,7 @@ import time, math
 import logging
 from datetime import datetime, timezone
 
+import numpy as np
 from scipy.sparse import csr_matrix, csc_matrix, coo_matrix
 
 class UserItemInteractions:
@@ -198,24 +199,37 @@ class UserItemInteractions:
         return [item_id for item_id in self.all_item_ids
                 if self.get_user_item_rating(user_id, item_id, default_rating=0.0) >= 0.0]
 
-    def to_csr(self, select_users: List[int] = None) -> csr_matrix:
-        rows, cols, data = [], [], []
+    def to_csr(self, select_users: List[int] = None, include_weights: bool = True) -> csr_matrix:
+        rows, cols = [], []
 
-        if select_users is None:
-            for user, inner_dict in self.interactions.items():
-                for item, (rating, tstamp) in inner_dict.items():
-                    rows.append(user)
-                    cols.append(item)
-                    data.append(self._apply_decay(rating, tstamp))
+        if include_weights:
+            data = []
+            if select_users:
+                for user in select_users:
+                    for item, (rating, tstamp) in self.interactions.get(user, {}).items():
+                        rows.append(user)
+                        cols.append(item)
+                        data.append(self._apply_decay(rating, tstamp))
+            else:
+                for user, inner_dict in self.interactions.items():
+                    for item, (rating, tstamp) in inner_dict.items():
+                        rows.append(user)
+                        cols.append(item)
+                        data.append(self._apply_decay(rating, tstamp))
+            return csr_matrix((data, (rows, cols)), shape=(self.max_user_id + 1, self.max_item_id + 1), dtype="float32")
         else:
-            for user in select_users:
-                for item, (rating, tstamp) in self.interactions.get(user, {}).items():
-                    rows.append(user)
-                    cols.append(item)
-                    data.append(self._apply_decay(rating, tstamp))
-
-        # Create the csr_matrix
-        return csr_matrix((data, (rows, cols)), shape=(self.max_user_id + 1, self.max_item_id + 1), dtype="float32")
+            if select_users:
+                for user in select_users:
+                    for item in self.interactions.get(user, {}):
+                        rows.append(user)
+                        cols.append(item)
+            else:
+                for user, inner_dict in self.interactions.items():
+                    for item in inner_dict:
+                        rows.append(user)
+                        cols.append(item)
+            data = np.ones(len(rows), dtype="int32")
+            return csr_matrix((data, (rows, cols)), shape=(self.max_user_id + 1, self.max_item_id + 1), dtype="int32")
 
     def to_csc(self, select_items: List[int] = None) -> csc_matrix:
         rows, cols, data = [], [], []
