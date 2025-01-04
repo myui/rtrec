@@ -126,6 +126,7 @@ class LightFM(BaseModel):
         if filter_interacted:
             # see https://github.com/benfred/implicit/blob/v0.7.2/implicit/cpu/topk.pyx#L54
             filter_query_items = self.interactions.to_csr(select_users=user_ids)
+            filter_query_items = filter_query_items[user_ids,:]
 
         ids_array, scores_array = implicit.topk(items=item_vector, query=user_vector, k=top_k, filter_query_items=filter_query_items, num_threads=self.n_threads)
         assert len(ids_array) == len(user_ids)
