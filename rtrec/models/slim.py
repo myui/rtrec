@@ -60,12 +60,12 @@ class SLIM(BaseModel):
         dense_output = not self.item_ids.pass_through
         return self.model.recommend(user_id, interaction_matrix, top_k=top_k, filter_interacted=filter_interacted, dense_output=dense_output)
 
-    def _similar_items(self, query_item_id: int, top_k: int = 10) -> List[int]:
+    def _similar_items(self, query_item_id: int, top_k: int = 10) -> List[Tuple[int, float]]:
         """
         Find similar items for a list of query items.
         :param query_item_ids: List of query item indices
         :param top_k: Number of top similar items to return for each query item
         :param filter_query_items: Whether to filter out items in the query_items list
-        :return: List of top-K similar items for each query item
+        :return: List of top-K similar items for each query item with similarity scores
         """
         return self.model.similar_items(query_item_id, top_k=top_k)

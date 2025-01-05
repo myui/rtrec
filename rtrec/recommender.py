@@ -93,14 +93,14 @@ class Recommender:
         """
         return self.model.recommend_batch(users, top_k, filter_interacted)
 
-    def similar_items(self, query_items: List[Any], top_k: int = 10) -> List[List[Any]]:
+    def similar_items(self, query_items: List[Any], top_k: int = 10, ret_scores: bool=False) -> List[List[Any]] | List[List[Tuple[Any, float]]]:
         """
         Find similar items for a list of query items.
         :param query_items: List of query items
         :param top_k: Number of top similar items to return
         :return: List of top-K similar items for each query item
         """
-        return [self.model.similar_items(item, top_k) for item in query_items]
+        return [self.model.similar_items(item, top_k, ret_scores=ret_scores) for item in query_items]
 
     def evaluate(self, test_data: pd.DataFrame, recommend_size: int = 10, batch_size=100, filter_interacted: bool = True) -> Dict[str, float]:
         """

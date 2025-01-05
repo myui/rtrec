@@ -154,7 +154,7 @@ class LightFM(BaseModel):
             results.append(ids.tolist())
         return results
 
-    def _similar_items(self, query_item_id: int, top_k: int = 10) -> List[int]:
+    def _similar_items(self, query_item_id: int, top_k: int = 10) -> List[Tuple[int, float]]:
         query_features = self._create_item_features(item_ids=[query_item_id], slice=True)
         target_features = self._create_item_features()
 
@@ -170,8 +170,8 @@ class LightFM(BaseModel):
         target_norm = calc_norm(target_vector)
 
         ids, scores = implicit.topk(items=target_vector, query=query_vector, k=top_k, item_norms=target_norm, filter_items=np.array([query_item_id], dtype="int32"), num_threads=self.n_threads)
-        ids = ids.ravel()
-        scores = scores.ravel()
+        ids: np.ndarray = ids.ravel()
+        scores: np.ndarray  = scores.ravel()
 
         # implicit assigns negative infinity to the scores to be fitered out
         # see https://github.com/benfred/implicit/blob/v0.7.2/implicit/cpu/topk.pyx#L54
@@ -181,13 +181,18 @@ class LightFM(BaseModel):
         for i in range(len(ids)):
             if scores[i] <= min_score:
                 ids = ids[:i]
+                scores = scores[:i]
                 break
 
-        # query_norm = calc_norm(query_vector)
-        # scores = scores.ravel() / query_norm
+        # Convert back to cosine similarity from dot product scores
+        query_norm = calc_norm(query_vector)
+        scores = scores / query_norm
 
         # exclude the query item itself
-        return ids[ids != query_item_id].tolist()
+        valid_mask = ids != query_item_id
+        ids = ids[valid_mask]
+        scores = scores[valid_mask]
+        return list(zip(ids, scores)) # ndarray to list of tuples
 
     def _create_user_features(self, user_ids: Optional[List[int]]=None, slice: bool=False) -> csr_matrix:
         """

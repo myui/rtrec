@@ -654,7 +654,7 @@ class SLIMElastic:
         # Extract and return the top-k indices
         return [idx for idx, _ in top_items]
 
-    def similar_items(self, item_id: int, top_k: int=10) -> List[int]:
+    def similar_items(self, item_id: int, top_k: int=10) -> List[Tuple[int, float]]:
         """
         Get the top-K most similar items to a given item.
 
@@ -670,17 +670,16 @@ class SLIMElastic:
 
         # Get the item similarity vector for the given item
         item_similarity: sp.csr_matrix = self.item_similarity[:,item_id]
+
         # Get non-zero indices and their corresponding similarity scores
         indices = item_similarity.indices
         scores = item_similarity.data
-
         # Exclude the query item itself
         valid_mask = indices != item_id
         valid_indices = indices[valid_mask]
         valid_scores = scores[valid_mask]
 
-        # Sort the valid scores in descending order and get the top-K indices
+        # Sort the indices by similarity scores in descending order
+        # return sorted(zip(valid_indices, valid_scores), key=lambda x: x[1], reverse=True)[:top_k]
         top_k_indices = np.argsort(-valid_scores)[:top_k]
-
-        # Return the corresponding item IDs
-        return valid_indices[top_k_indices].tolist()
+        return list(zip(valid_indices[top_k_indices], valid_scores[top_k_indices]))

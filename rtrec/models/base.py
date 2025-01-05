@@ -172,12 +172,13 @@ class BaseModel(ABC):
             results.append(recommended_item_ids)
         return results
 
-    def similar_items(self, query_item: Any, top_k: int = 10) -> List[Any]:
+    def similar_items(self, query_item: Any, top_k: int = 10, ret_scores: bool=False) -> List[Tuple[Any, float]] | List[Any]:
         """
         Find similar items for a list of query items.
         :param query_item: List of query item indices
         :param top_k: Number of top similar items to return for each query item
-        :return: List of top-K similar items for each query item
+        :param ret_scores: Whether to return similarity scores. Defaults to False.
+        :return: List of top-K similar items for each query item with similarity scores. If ret_scores is False, only return similar items.
         """
         query_item_id = self.item_ids.identify(query_item)
         if query_item_id is None:
@@ -187,15 +188,18 @@ class BaseModel(ABC):
         similar_item_ids = self._similar_items(query_item_id, top_k=top_k)
 
         # Resolve item indices to original item values
-        return [self.item_ids.get(item_id) for item_id in similar_item_ids]
+        if ret_scores:
+            return [(self.item_ids.get(item_id), score) for item_id, score in similar_item_ids]
+        else:
+            return [self.item_ids.get(item_id) for item_id, _ in similar_item_ids]
 
     @abstractmethod
-    def _similar_items(self, query_item_id: int, top_k: int = 10) -> List[int]:
+    def _similar_items(self, query_item_id: int, top_k: int = 10) -> List[Tuple[int, float]]:
         """
         Find similar items for a list of query items.
         :param query_item_id: item id to find similar items for
         :param top_k: Number of top similar items to return for each query item
         :param filter_query_items: Whether to filter out items in the query_items list
-        :return: List of top-K similar items for each query item
+        :return: List of top-K similar items for each query item with similarity scores
         """
         raise NotImplementedError("_similar_items method must be implemented in the derived class")
