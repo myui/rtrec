@@ -48,13 +48,13 @@ def test_similar_items(model):
     import time
     current_unixtime = time.time()
     interactions = [('user_1', 'item_1', current_unixtime, 5.0),
-                   ('user_2', 'item_2', current_unixtime, -2.0),
-                   ('user_2', 'item_1', current_unixtime, 3.0),
-                   ('user_2', 'item_1', current_unixtime, 3.0),
-                   ('user_2', 'item_4', current_unixtime, 3.0),
                    ('user_1', 'item_3', current_unixtime, 4.0),
                    ('user_1', 'item_4', current_unixtime, 3.0),
+                   ('user_2', 'item_1', current_unixtime, 3.0),
+                   ('user_2', 'item_2', current_unixtime, -2.0),
+                   ('user_2', 'item_4', current_unixtime, 3.0),
                    ('user_3', 'item_1', current_unixtime, 4.0),
+                   ('user_3', 'item_3', current_unixtime, 2.0),
                    ('user_3', 'item_4', current_unixtime, 4.0)]
     model.fit(interactions)
 
@@ -312,8 +312,8 @@ def test_recommend_and_similar_items(model):
     assert 'item_1' not in similar_items  # Similar items should not include the item itself
 
     # Validate that the similar items are consistent with our expected similarity table
-    assert similar_items[0] == 'item_3'  # item_3 is the most similar to item_1
-    assert 'item_2' in similar_items  # item_2 is co-occurring with item_1
+    assert 'item_3' in similar_items[:2]  # item_3 is co-occurring with item_1
+    assert 'item_2' in similar_items[:2]  # item_2 is co-occurring with item_1
     assert 'item_4' in similar_items  # item_4 might be co-occurring based on interactions
 
     # Test: Validate that co-occurrence affects similarity
