@@ -190,9 +190,9 @@ class LightFM(BaseModel):
 
         # exclude the query item itself
         valid_mask = ids != query_item_id
-        ids = ids[valid_mask]
-        scores = scores[valid_mask]
-        return list(zip(ids, scores)) # ndarray to list of tuples
+        ids = ids[valid_mask].tolist()
+        scores = scores[valid_mask].tolist()
+        return list(zip(ids, scores))
 
     def _create_user_features(self, user_ids: Optional[List[int]]=None, slice: bool=False) -> csr_matrix:
         """

@@ -682,4 +682,6 @@ class SLIMElastic:
         # Sort the indices by similarity scores in descending order
         # return sorted(zip(valid_indices, valid_scores), key=lambda x: x[1], reverse=True)[:top_k]
         top_k_indices = np.argsort(-valid_scores)[:top_k]
-        return list(zip(valid_indices[top_k_indices], valid_scores[top_k_indices]))
+        ids = valid_indices[top_k_indices].tolist()
+        scores = valid_scores[top_k_indices].tolist()
+        return list(zip(ids, scores))
