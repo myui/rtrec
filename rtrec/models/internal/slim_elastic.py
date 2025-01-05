@@ -280,7 +280,7 @@ class SLIMElastic:
         matrix_shape = interaction_matrix.shape
         num_items = matrix_shape[1]
         if self.item_similarity is None:
-            item_similarity = sp.lil_matrix((num_items, num_items))
+            item_similarity = sp.lil_matrix((num_items, num_items), dtype=np.float32)
         else:
             # ensure the item similarity matrix is large enough to accommodate the new items
             item_similarity = self.item_similarity.tolil()
@@ -463,7 +463,7 @@ class SLIMElastic:
 
         num_items = X.shape[1]
         if self.item_similarity is None:
-            item_similarity = sp.lil_matrix((num_items, num_items))
+            item_similarity = sp.lil_matrix((num_items, num_items), dtype=np.float32)
         else:
             # ensure the item similarity matrix is large enough to accommodate the new items
             item_similarity = self.item_similarity.tolil()
@@ -669,10 +669,18 @@ class SLIMElastic:
             raise RuntimeError("Model must be fitted before calling similar_items.")
 
         # Get the item similarity vector for the given item
-        item_similarity = self.item_similarity[:,item_id]
+        item_similarity: sp.csr_matrix = self.item_similarity[:,item_id]
+        # Get non-zero indices and their corresponding similarity scores
+        indices = item_similarity.indices
+        scores = item_similarity.data
 
-        # Get the top-K similar items by sorting the similarity scores in descending order
-        similar_items = np.argsort(item_similarity)[-1:-1-top_k:-1]
+        # Exclude the query item itself
+        valid_mask = indices != item_id
+        valid_indices = indices[valid_mask]
+        valid_scores = scores[valid_mask]
 
-        # exclude the query item itself
-        return similar_items[similar_items != item_id].tolist()
+        # Sort the valid scores in descending order and get the top-K indices
+        top_k_indices = np.argsort(-valid_scores)[:top_k]
+
+        # Return the corresponding item IDs
+        return valid_indices[top_k_indices].tolist()
