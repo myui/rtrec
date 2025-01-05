@@ -21,7 +21,8 @@ class LightFM(BaseModel):
         self.recorded_user_ids = set()
         self.recorded_item_ids = set()
 
-    def fit(self, interactions: Iterable[Tuple[Any, Any, float, float]], update_interaction: bool=False) -> None:
+    @override
+    def fit(self, interactions: Iterable[Tuple[Any, Any, float, float]], update_interaction: bool=False, progress_bar: bool=True) -> None:
         item_id_set, user_id_set = set(), set()
         for user, item, tstamp, rating in interactions:
             try:
@@ -43,7 +44,7 @@ class LightFM(BaseModel):
         assert user_features.shape[0] == num_users
         assert item_features.shape[0] == num_items
         sample_weights = ui_coo if self.model.loss == "warp-kos" else None
-        self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sample_weights, epochs=self.epochs, num_threads=self.n_threads)
+        self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sample_weights, epochs=self.epochs, num_threads=self.n_threads, verbose=progress_bar)
 
     def _record_interactions(self, user_id: int, item_id: int, tstamp: float, rating: float) -> None:
         self.recorded_user_ids.add(user_id)
@@ -59,7 +60,7 @@ class LightFM(BaseModel):
         assert user_features.shape[0] == num_users
         assert item_features.shape[0] == num_items
         sample_weights = ui_coo if self.model.loss == "warp-kos" else None
-        self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sample_weights, epochs=self.epochs, num_threads=self.n_threads)
+        self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sample_weights, epochs=self.epochs, num_threads=self.n_threads, verbose=progress_bar)
 
         # Clear recorded user and item IDs
         self.recorded_user_ids.clear()
@@ -73,7 +74,7 @@ class LightFM(BaseModel):
         assert user_features.shape[0] == num_users
         assert item_features.shape[0] == num_items
         sample_weights = ui_coo if self.model.loss == "warp-kos" else None
-        self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sample_weights, epochs=self.epochs, num_threads=self.n_threads)
+        self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sample_weights, epochs=self.epochs, num_threads=self.n_threads, verbose=progress_bar)
 
     def _recommend(self, user_id: int, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
         user_features = self._create_user_features(user_ids=[user_id], slice=True)
@@ -198,12 +199,12 @@ class LightFM(BaseModel):
         Returns:
             csr_matrix: User features matrix of shape (num_users, num_users + num_features) for the given users.
         """
-        if user_ids is None:
-            num_users = self.interactions.shape[0]
-        else:
+        if slice and user_ids is not None:
             num_users = max(user_ids) + 1
+        else:
+            num_users = self.interactions.shape[0]
 
-        user_features = self.feature_store.build_user_features_matrix(user_ids, num_users=num_users)  # Shape: (len(user_ids), num_features)
+        user_features = self.feature_store.build_user_features_matrix(user_ids, num_users=num_users)  # Shape: (num_users, num_features)
 
         # Create user identity matrix of shape (len(user_ids), num_users) for the given users
         if user_ids is None:
@@ -233,10 +234,10 @@ class LightFM(BaseModel):
         Returns:
             csr_matrix: Item features matrix of shape (num_items, num_items + num_features) for the given items.
         """
-        if item_ids is None:
-            num_items = self.interactions.shape[1]
-        else:
+        if slice and item_ids is not None:
             num_items = max(item_ids) + 1
+        else:
+            num_items = self.interactions.shape[1]
 
         item_features = self.feature_store.build_item_features_matrix(item_ids, num_items=num_items)
 
