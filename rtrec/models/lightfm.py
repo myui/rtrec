@@ -210,7 +210,7 @@ class LightFM(BaseModel):
         if user_ids is None:
             user_identity = sparse.identity(num_users, dtype="float32", format="csr")
         else:
-            rows = list(range(len(user_ids)))
+            rows = user_ids
             cols = user_ids
             data = [1] * len(user_ids)
             user_identity = csr_matrix((data, (rows, cols)), dtype="float32", shape=(num_users, self.interactions.shape[0]))
@@ -245,7 +245,7 @@ class LightFM(BaseModel):
         if item_ids is None:
             item_identity = sparse.identity(num_items, dtype="float32", format="csr")
         else:
-            rows = list(range(len(item_ids)))
+            rows = item_ids
             cols = item_ids
             data = [1] * len(item_ids)
             item_identity = csr_matrix((data, (rows, cols)), dtype="float32", shape=(num_items, self.interactions.shape[1]))
