@@ -37,10 +37,10 @@ class LightFM(BaseModel):
 
         item_ids = list(item_id_set)
         user_ids = list(user_id_set)
-        ui_coo = self.interactions.to_coo(select_users=user_ids, select_items=item_ids)
         user_features = self._create_user_features(user_ids=user_ids)
         item_features = self._create_item_features(item_ids=item_ids)
-        num_users, num_items = self.interactions.shape
+        ui_coo = self.interactions.to_coo(select_users=user_ids, select_items=item_ids)
+        num_users, num_items = ui_coo.shape
         assert user_features.shape[0] == num_users
         assert item_features.shape[0] == num_items
         sample_weights = ui_coo if self.model.loss == "warp-kos" else None
@@ -56,7 +56,7 @@ class LightFM(BaseModel):
         user_features = self._create_user_features(user_ids=user_ids)
         item_features = self._create_item_features(item_ids=item_ids)
         ui_coo = self.interactions.to_coo(select_users=user_ids, select_items=item_ids)
-        num_users, num_items = self.interactions.shape
+        num_users, num_items = ui_coo.shape
         assert user_features.shape[0] == num_users
         assert item_features.shape[0] == num_items
         sample_weights = ui_coo if self.model.loss == "warp-kos" else None
@@ -70,7 +70,7 @@ class LightFM(BaseModel):
         user_features = self._create_user_features()
         item_features = self._create_item_features()
         ui_coo = self.interactions.to_coo()
-        num_users, num_items = self.interactions.shape
+        num_users, num_items = ui_coo.shape
         assert user_features.shape[0] == num_users
         assert item_features.shape[0] == num_items
         sample_weights = ui_coo if self.model.loss == "warp-kos" else None
