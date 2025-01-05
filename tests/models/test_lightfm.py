@@ -62,6 +62,11 @@ def test_similar_items(model):
     # Verify that the similar items are correct
     assert similar_items == ["item_4", "item_3", "item_2"]
 
+    results = model.similar_items('item_1', top_k=5, ret_scores=True)
+    similar_items, scores = map(list, zip(*results)) # Unzip the results
+    assert similar_items == ["item_4", "item_3", "item_2"]
+    assert scores[2] < 0  # item_2 should have a negative score
+
 def test_fit_and_recommend_batch(model):
     import time
     current_unixtime = time.time()
