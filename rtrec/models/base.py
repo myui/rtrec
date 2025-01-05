@@ -115,7 +115,7 @@ class BaseModel(ABC):
         :param user: User index
         :param top_k: Number of top items to recommend
         :param filter_interacted: Whether to filter out items the user has already interacted with
-        :return: List of top-K item indices recommended for the user
+        :return: List of top-K items recommended for the user
         """
 
         user_id = self.user_ids.get_id(user)
@@ -148,7 +148,7 @@ class BaseModel(ABC):
         :param users: List of user indices
         :param top_k: Number of top items to recommend
         :param filter_interacted: Whether to filter out items the user has already interacted with
-        :return: List of top-K item indices recommended for each user
+        :return: List of top-K items recommended for each user
         """
         user_ids = [self.user_ids.get_id(user) for user in users]
         results = self._recommend_batch(user_ids, top_k=top_k, filter_interacted=filter_interacted)
