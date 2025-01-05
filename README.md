@@ -19,7 +19,7 @@ A realtime recommendation system supporting online updates.
 ## Supported Recommendation Algorithims
 
 - Sparse [SLIM](https://ieeexplore.ieee.org/document/6137254) with [time-weighted](https://dl.acm.org/doi/10.1145/1099554.1099689) interactions.
-- [Factorization Machines](https://ieeexplore.ieee.org/document/5694074) using [LightFM](https://github.com/lyst/lightfm) (to appear)
+- [Factorization Machines](https://ieeexplore.ieee.org/document/5694074) using [LightFM](https://github.com/lyst/lightfm)
 
 ## Installation
 
