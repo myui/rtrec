@@ -44,6 +44,24 @@ def test_fit_and_recommend(model):
     # Verify that the recommendations are correct
     assert recommendations == ["item_4", "item_2"]
 
+def test_similar_items(model):
+    import time
+    current_unixtime = time.time()
+    interactions = [('user_1', 'item_1', current_unixtime, 5.0),
+                   ('user_2', 'item_2', current_unixtime, -2.0),
+                   ('user_2', 'item_1', current_unixtime, 3.0),
+                   ('user_2', 'item_1', current_unixtime, 3.0),
+                   ('user_2', 'item_4', current_unixtime, 3.0),
+                   ('user_1', 'item_3', current_unixtime, 4.0),
+                   ('user_1', 'item_4', current_unixtime, 3.0),
+                   ('user_3', 'item_1', current_unixtime, 4.0),
+                   ('user_3', 'item_4', current_unixtime, 4.0)]
+    model.fit(interactions)
+
+    similar_items = model.similar_items('item_1', top_k=5)
+    # Verify that the similar items are correct
+    assert similar_items == ["item_4", "item_3", "item_2"]
+
 def test_fit_and_recommend_batch(model):
     import time
     current_unixtime = time.time()
