@@ -1,4 +1,4 @@
-from typing import List, Optional, Set
+from typing import List, Optional
 from scipy.sparse import csr_matrix
 import numpy as np
 from .collections import SortedSet
@@ -10,6 +10,32 @@ class FeatureStore:
         self.item_features: SortedSet[str] = SortedSet()
         self.user_feature_map: dict[int, List[int]] = {}
         self.item_feature_map: dict[int, List[int]] = {}
+
+    def clear_user_features(self, user_ids: Optional[List[int]] = None) -> None:
+        """
+        Clear user features.
+
+        Parameters:
+            user_ids (Optional[List[int]]): List of user IDs to clear features for. If None, clear all user features.
+        """
+        if user_ids is None:
+            self.user_feature_map.clear()
+        else:
+            for user_id in user_ids:
+                self.user_feature_map.pop(user_id, None)
+
+    def clear_item_features(self, item_ids: Optional[List[int]] = None) -> None:
+        """
+        Clear item features.
+
+        Parameters:
+            item_ids (Optional[List[int]]): List of item IDs to clear features for. If None, clear all item features.
+        """
+        if item_ids is None:
+            self.item_feature_map.clear()
+        else:
+            for item_id in item_ids:
+                self.item_feature_map.pop(item_id, None)
 
     def put_user_feature(self, user_id: int, user_tags: List[str]) -> None:
         """
@@ -83,10 +109,11 @@ class FeatureStore:
         data = np.ones(len(item_feature_ids))
         return csr_matrix((data, (rows, cols)), shape=(1, len(self.item_features)), dtype=np.float32)
 
-    def build_user_features_matrix(self, user_ids: Optional[List[int]]=None, num_users: Optional[int]=None) -> csr_matrix | None:
+    def build_user_features_matrix(self, user_ids: Optional[List[int]]=None, users_tags: Optional[List[List[str]]] = None, num_users: Optional[int]=None) -> csr_matrix | None:
         """
         Parameters:
             user_ids (Optional[List[int]]): List of user IDs to build the user features matrix for.
+            users_tags (Optional[List[List[str]]): List of user tags for each user.
             num_users (Optional[int]): Number of users to build the user features matrix for.
         Returns:
             csr_matrix: User features matrix of shape (n_users, n_features). If no user features are registered, return None.
@@ -105,21 +132,33 @@ class FeatureStore:
                     data.append(1)
                     max_user_id = max(max_user_id, user_id)
         else:
-            for user_id in user_ids:
-                for feature_id in self.user_feature_map.get(user_id, []):
-                    rows.append(user_id)
-                    cols.append(feature_id)
-                    data.append(1)
-                    max_user_id = max(max_user_id, user_id)
+            if users_tags:
+                assert len(user_ids) == len(users_tags), f"Number of user IDs and user tags should be equal. Got {len(user_ids)} user IDs and {len(users_tags)} user tags."
+                for user_id, user_tags in zip(user_ids, users_tags):
+                    for tag in user_tags:
+                        tag_id = self.user_features.index(tag)
+                        if tag_id >= 0:
+                            rows.append(user_id)
+                            cols.append(tag_id)
+                            data.append(1)
+                            max_user_id = max(max_user_id, user_id)
+            else:
+                for user_id in user_ids:
+                    for feature_id in self.user_feature_map.get(user_id, []):
+                        rows.append(user_id)
+                        cols.append(feature_id)
+                        data.append(1)
+                        max_user_id = max(max_user_id, user_id)
 
         if num_users is None:
             num_users = max_user_id + 1
         return csr_matrix((data, (rows, cols)), shape=(num_users, len(self.user_features)), dtype=np.float32)
 
-    def build_item_features_matrix(self, item_ids: Optional[int]=None, num_items: Optional[int]=None) -> csr_matrix | None:
+    def build_item_features_matrix(self, item_ids: Optional[int]=None, items_tags: Optional[List[List[str]]] = None, num_items: Optional[int]=None) -> csr_matrix | None:
         """
         Parameters:
             item_ids (Optional[List[int]]): List of item IDs to build the item features matrix for
+            items_tags (Optional[List[List[str]]): List of item tags for each item
             num_items (Optional[int]): Number of items to build the item features matrix for
         Returns:
             csr_matrix: Item features matrix of shape (n_items, n_features). If no item features are registered, return None.
@@ -138,12 +177,23 @@ class FeatureStore:
                     data.append(1)
                     max_item_id = max(max_item_id, item_id)
         else:
-            for item_id in item_ids:
-                for feature_id in self.item_feature_map.get(item_id, []):
-                    rows.append(item_id)
-                    cols.append(feature_id)
-                    data.append(1)
-                    max_item_id = max(max_item_id, item_id)
+            if items_tags:
+                assert len(item_ids) == len(items_tags), f"Number of item IDs and item tags should be equal. Got {len(item_ids)} item IDs and {len(items_tags)} item tags."
+                for item_id, item_tags in zip(item_ids, items_tags):
+                    for tag in item_tags:
+                        tag_id = self.item_features.index(tag)
+                        if tag_id >= 0:
+                            rows.append(item_id)
+                            cols.append(tag_id)
+                            data.append(1)
+                            max_item_id = max(max_item_id, item_id)
+            else:
+                for item_id in item_ids:
+                    for feature_id in self.item_feature_map.get(item_id, []):
+                        rows.append(item_id)
+                        cols.append(feature_id)
+                        data.append(1)
+                        max_item_id = max(max_item_id, item_id)
 
         if num_items is None:
             num_items = max_item_id + 1

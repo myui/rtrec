@@ -3,7 +3,7 @@ import pandas as pd
 import time
 
 from tqdm import tqdm
-from typing import Dict, Iterator, Tuple, Iterable, Any, List, Self
+from typing import Dict, Iterator, Optional, Tuple, Iterable, Any, List, Self
 
 from .models.base import BaseModel
 from .utils.metrics import compute_scores
@@ -41,12 +41,24 @@ class Recommender:
         :param update_interaction (bool): Whether to update existing interactions. Defaults to False.
         :param parallel (bool): Whether to run the fitting process in parallel. Defaults to False.
         """
-        train_data = train_data[["user", "item", "tstamp", "rating"]]
-
         start_time = time.time()
-        total = math.ceil(len(train_data) / batch_size)
-        for batch in tqdm(generate_batches(train_data, batch_size, as_generator=self.use_generator), total=total, desc="Add interactions"):
+
+        # If train_data contains user_tags and item_tags columns, add them to the model
+        if "user_tags" in train_data.columns:
+            user_tags = train_data[["user", "user_tags"]].drop_duplicates()
+            for user, tags in user_tags.itertuples(index=False, name=None):
+                self.model.register_user_feature(user, tags)
+        if "item_tags" in train_data.columns:
+            item_tags = train_data[["item", "item_tags"]].drop_duplicates()
+            for item, tags in item_tags.itertuples(index=False, name=None):
+                self.model.register_item_feature(item, tags)
+
+        # Add interactions to the model
+        interaction_df = train_data[["user", "item", "tstamp", "rating"]]
+        total = math.ceil(len(interaction_df) / batch_size)
+        for batch in tqdm(generate_batches(interaction_df, batch_size, as_generator=self.use_generator), total=total, desc="Add interactions"):
             self.model.add_interactions(batch, update_interaction=update_interaction, record_interactions=True)
+        # Fit the model
         self.model._fit_recorded(parallel=parallel, progress_bar=True)
         end_time = time.time()
         print(f"Fit completed in {end_time - start_time:.2f} seconds")
@@ -61,53 +73,69 @@ class Recommender:
         :param update_interaction (bool): Whether to update existing interactions. Defaults to False.
         :param parallel (bool): Whether to run the fitting process in parallel. Defaults to True.
         """
-        train_data = train_data[["user", "item", "tstamp", "rating"]]
-
         start_time = time.time()
-        total = math.ceil(len(train_data) / batch_size)
-        for batch in tqdm(generate_batches(train_data, batch_size, as_generator=self.use_generator), total=total, desc="Add interactions"):
+
+        # If train_data contains user_tags and item_tags columns, add them to the model
+        if "user_tags" in train_data.columns:
+            user_tags = train_data[["user", "user_tags"]].drop_duplicates()
+            for user, tags in user_tags.itertuples(index=False, name=None):
+                self.model.register_user_feature(user, tags)
+        if "item_tags" in train_data.columns:
+            item_tags = train_data[["item", "item_tags"]].drop_duplicates()
+            for item, tags in item_tags.itertuples(index=False, name=None):
+                self.model.register_item_feature(item, tags)
+
+        # Add interactions to the model
+        interaction_df = train_data[["user", "item", "tstamp", "rating"]]
+        total = math.ceil(len(interaction_df) / batch_size)
+        for batch in tqdm(generate_batches(interaction_df, batch_size, as_generator=self.use_generator), total=total, desc="Add interactions"):
             self.model.add_interactions(batch, update_interaction=update_interaction)
+        # Fit the model in bulk
         self.model.bulk_fit(parallel=parallel, progress_bar=True)
         end_time = time.time()
         print(f"Fit completed in {end_time - start_time:.2f} seconds")
         print(f"Throughput: {len(train_data) / (end_time - start_time):.2f} samples/sec")
         return self
 
-    def recommend(self, user: Any, top_k: int = 10, filter_interacted: bool = True) -> List[Any]:
+    def recommend(self, user: Any, user_tags: Optional[List[str]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[Any]:
         """
         Recommend top-K items for a given user.
-        :param user: User index
+        :param user: User to recommend items for
+        :param user_tags: List of user tags
         :param top_k: Number of top items to recommend
         :param filter_interacted: Whether to filter out items the user has already interacted with
         :return: List of top-K item indices recommended for the user
         """
-        return self.model.recommend(user, top_k, filter_interacted)
+        return self.model.recommend(user, user_tags, top_k, filter_interacted)
 
-    def recommend_batch(self, users: List[Any], top_k: int = 10, filter_interacted: bool = True) -> List[List[Any]]:
+    def recommend_batch(self, users: List[Any], users_tags: Optional[List[List[str]]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[List[Any]]:
         """
         Recommend top-K items for a list of users.
-        :param users: List of user indices
+        :param users: List of users to recommend items for
+        :param users_tags: List of user tags for each user
         :param top_k: Number of top items to recommend
         :param filter_interacted: Whether to filter out items the user has already interacted with
         :return: List of top-K item indices recommended for each user
         """
-        return self.model.recommend_batch(users, top_k, filter_interacted)
+        return self.model.recommend_batch(users, users_tags, top_k, filter_interacted)
 
-    def similar_items(self, query_items: List[Any], top_k: int = 10, ret_scores: bool=False) -> List[List[Any]] | List[List[Tuple[Any, float]]]:
+    def similar_items(self, query_items: List[Any], query_item_tags: Optional[List[str]] = None, top_k: int = 10, ret_scores: bool=False) -> List[List[Any]] | List[List[Tuple[Any, float]]]:
         """
         Find similar items for a list of query items.
         :param query_items: List of query items
+        :param query_item_tags: List of tags for each query item
         :param top_k: Number of top similar items to return
         :return: List of top-K similar items for each query item
         """
-        return [self.model.similar_items(item, top_k, ret_scores=ret_scores) for item in query_items]
+        return [self.model.similar_items(item, query_item_tags, top_k, ret_scores) for item in query_items]
 
-    def evaluate(self, test_data: pd.DataFrame, recommend_size: int = 10, batch_size=100, filter_interacted: bool = True) -> Dict[str, float]:
+    def evaluate(self, test_data: pd.DataFrame, user_tags: Optional[Dict[Any, List[str]]] = None, recommend_size: int = 10, batch_size=100, filter_interacted: bool = True) -> Dict[str, float]:
         """
         Evaluates the model using batch evaluation metrics on the test data.
 
         Parameters:
             test_data (pd.DataFrame): DataFrame with columns ['user', 'item'] containing ground truth interactions.
+            user_tags (Optional[Dict[Any, List[str]]): Dictionary mapping user IDs to user tags.
             recommend_size (int): Number of items to recommend per user for evaluation.
             batch_size (int): Number of users to evaluate in each batch.
             filter_interacted (bool): Whether to filter out items the user has already interacted with during evaluation.
@@ -125,8 +153,12 @@ class Recommender:
 
             for i in tqdm(range(0, len(users), batch_size)):
                 batch_users = users[i:i + batch_size]
+
+                # Retrieve user tags for the batch, if provided
+                batch_user_tags = [user_tags.get(user, []) for user in batch_users] if user_tags else None
+
                 # Get recommended items for the batch of users
-                batch_results = self.recommend_batch(batch_users, recommend_size, filter_interacted)
+                batch_results = self.recommend_batch(batch_users, batch_user_tags, recommend_size, filter_interacted)
 
                 # Yield recommendations and ground truth for each user in the batch
                 for user, recommended_items in zip(batch_users, batch_results):

@@ -76,8 +76,9 @@ class LightFM(BaseModel):
         sample_weights = ui_coo if self.model.loss == "warp-kos" else None
         self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sample_weights, epochs=self.epochs, num_threads=self.n_threads, verbose=progress_bar)
 
-    def _recommend(self, user_id: int, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
-        user_features = self._create_user_features(user_ids=[user_id], slice=True)
+    def _recommend(self, user_id: int, user_tags: Optional[List[str]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
+        users_tags = [user_tags] if user_tags is not None else None
+        user_features = self._create_user_features(user_ids=[user_id], users_tags=users_tags, slice=True)
         item_features = self._create_item_features()
 
         user_biases, user_embeddings = self.model.get_user_representations(user_features)
@@ -116,8 +117,8 @@ class LightFM(BaseModel):
         return ids.tolist() # ndarray to list
 
     @override
-    def _recommend_batch(self, user_ids: List[int], top_k: int = 10, filter_interacted: bool = True) -> List[List[int]]:
-        user_features = self._create_user_features(user_ids=user_ids, slice=True)
+    def _recommend_batch(self, user_ids: List[int], users_tags: Optional[List[List[str]]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[List[int]]:
+        user_features = self._create_user_features(user_ids=user_ids, users_tags=users_tags, slice=True)
         item_features = self._create_item_features()
 
         user_biases, user_embeddings = self.model.get_user_representations(user_features)
@@ -154,8 +155,9 @@ class LightFM(BaseModel):
             results.append(ids.tolist())
         return results
 
-    def _similar_items(self, query_item_id: int, top_k: int = 10) -> List[Tuple[int, float]]:
-        query_features = self._create_item_features(item_ids=[query_item_id], slice=True)
+    def _similar_items(self, query_item_id: int, query_item_tags: Optional[List[str]] = None, top_k: int = 10) -> List[Tuple[int, float]]:
+        items_tags = [query_item_tags] if query_item_tags is not None else None
+        query_features = self._create_item_features(item_ids=[query_item_id], items_tags=items_tags, slice=True)
         target_features = self._create_item_features()
 
         query_biases, query_embeddings = self.model.get_item_representations(query_features)
@@ -194,12 +196,13 @@ class LightFM(BaseModel):
         scores = scores[valid_mask].tolist()
         return list(zip(ids, scores))
 
-    def _create_user_features(self, user_ids: Optional[List[int]]=None, slice: bool=False) -> csr_matrix:
+    def _create_user_features(self, user_ids: Optional[List[int]]=None, users_tags: Optional[List[List[str]]] = None, slice: bool=False) -> csr_matrix:
         """
         Create user features matrix for the given users.
 
         Parameters:
             user_ids (Optional[List[int]]): List of User IDs to create the user features matrix for.
+            users_tags (Optional[List[List[str]]): List of user tags for each user.
             slice (bool): Whether to slice the user features matrix to the given user IDs.
         Returns:
             csr_matrix: User features matrix of shape (num_users, num_users + num_features) for the given users.
@@ -209,7 +212,7 @@ class LightFM(BaseModel):
         else:
             num_users = self.interactions.shape[0]
 
-        user_features = self.feature_store.build_user_features_matrix(user_ids, num_users=num_users)  # Shape: (num_users, num_features)
+        user_features = self.feature_store.build_user_features_matrix(user_ids, users_tags=users_tags, num_users=num_users)  # Shape: (num_users, num_features)
 
         # Create user identity matrix of shape (len(user_ids), num_users) for the given users
         if user_ids is None:
@@ -229,12 +232,13 @@ class LightFM(BaseModel):
             user_matrix = user_matrix[np.array(user_ids),:]
         return user_matrix
 
-    def _create_item_features(self, item_ids: Optional[List[int]]=None, slice: bool=False) -> csr_matrix:
+    def _create_item_features(self, item_ids: Optional[List[int]]=None, items_tags: Optional[List[List[str]]] = None, slice: bool=False) -> csr_matrix:
         """
         Create item features matrix for the given items.
 
         Parameters:
             item_ids (Optional[List[int]]): List of Item IDs to create the item features matrix for.
+            items_tags (Optional[List[List[str]]): List of item tags for each item
             slice (bool): Whether to slice the item features matrix to the given item IDs.
         Returns:
             csr_matrix: Item features matrix of shape (num_items, num_items + num_features) for the given items.
@@ -244,7 +248,7 @@ class LightFM(BaseModel):
         else:
             num_items = self.interactions.shape[1]
 
-        item_features = self.feature_store.build_item_features_matrix(item_ids, num_items=num_items)
+        item_features = self.feature_store.build_item_features_matrix(item_ids, items_tags=items_tags, num_items=num_items)
 
         # Create item identity matrix of shape (len(item_ids), num_items) for the given items
         if item_ids is None:

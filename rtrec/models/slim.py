@@ -47,10 +47,11 @@ class SLIM(BaseModel):
         interaction_matrix = self.interactions.to_csc()
         self.model.fit(interaction_matrix, parallel=parallel, progress_bar=progress_bar)
 
-    def _recommend(self, user_id: int, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
+    def _recommend(self, user_id: int, user_tags: Optional[List[str]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
         """
         Recommend top-K items for a given user.
         :param user_id: User index
+        :param user_tags: List of user tags
         :param candidate_item_ids: List of candidate item indices
         :param top_k: Number of top items to recommend
         :param filter_interacted: Whether to filter out items the user has already interacted with
@@ -60,10 +61,11 @@ class SLIM(BaseModel):
         dense_output = not self.item_ids.pass_through
         return self.model.recommend(user_id, interaction_matrix, top_k=top_k, filter_interacted=filter_interacted, dense_output=dense_output)
 
-    def _similar_items(self, query_item_id: int, top_k: int = 10) -> List[Tuple[int, float]]:
+    def _similar_items(self, query_item_id: int, query_item_tags: Optional[List[str]] = None, top_k: int = 10) -> List[Tuple[int, float]]:
         """
         Find similar items for a list of query items.
         :param query_item_ids: List of query item indices
+        :param query_item_tags: List of tags for each query item
         :param top_k: Number of top similar items to return for each query item
         :param filter_query_items: Whether to filter out items in the query_items list
         :return: List of top-K similar items for each query item with similarity scores
