@@ -45,11 +45,11 @@ class Recommender:
 
         # If train_data contains user_tags and item_tags columns, add them to the model
         if "user_tags" in train_data.columns:
-            user_tags = train_data[["user", "user_tags"]].drop_duplicates()
+            user_tags = train_data[["user", "user_tags"]]
             for user, tags in user_tags.itertuples(index=False, name=None):
                 self.model.register_user_feature(user, tags)
         if "item_tags" in train_data.columns:
-            item_tags = train_data[["item", "item_tags"]].drop_duplicates()
+            item_tags = train_data[["item", "item_tags"]]
             for item, tags in item_tags.itertuples(index=False, name=None):
                 self.model.register_item_feature(item, tags)
 
@@ -77,11 +77,11 @@ class Recommender:
 
         # If train_data contains user_tags and item_tags columns, add them to the model
         if "user_tags" in train_data.columns:
-            user_tags = train_data[["user", "user_tags"]].drop_duplicates()
+            user_tags = train_data[["user", "user_tags"]]
             for user, tags in user_tags.itertuples(index=False, name=None):
                 self.model.register_user_feature(user, tags)
         if "item_tags" in train_data.columns:
-            item_tags = train_data[["item", "item_tags"]].drop_duplicates()
+            item_tags = train_data[["item", "item_tags"]]
             for item, tags in item_tags.itertuples(index=False, name=None):
                 self.model.register_item_feature(item, tags)
 
