@@ -291,6 +291,6 @@ class UserItemInteractions:
         Retrieves the shape of the interaction matrix.
 
         Returns:
-            tuple[int, int]: The shape of the interaction matrix.
+            tuple[int, int]: The shape of the interaction matrix of the form (n_users, n_items).
         """
         return self.max_user_id + 1, self.max_item_id + 1

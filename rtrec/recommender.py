@@ -30,6 +30,8 @@ class Recommender:
     def fit(
         self,
         train_data: pd.DataFrame,
+        user_tags: Optional[Dict[Any, List[str]]] = None,
+        item_tags: Optional[Dict[Any, List[str]]] = None,
         batch_size: int = 1_000,
         update_interaction: bool = False,
         parallel: bool = False,
@@ -37,20 +39,20 @@ class Recommender:
         """
         Fit the recommender model on the given DataFrame of interactions.
         :param train_data (pd.DataFrame): The DataFrame containing interactions with columns (user, item, tstamp, rating).
+        :param user_tags (Optional[Dict[Any, List[str]]): Dictionary mapping user IDs to user tags.
+        :param item_tags (Optional[Dict[Any, List[str]]): Dictionary mapping item IDs to item tags.
         :param batch_size (int): The number of interactions per mini-batch. Defaults to 1000.
         :param update_interaction (bool): Whether to update existing interactions. Defaults to False.
         :param parallel (bool): Whether to run the fitting process in parallel. Defaults to False.
         """
         start_time = time.time()
 
-        # If train_data contains user_tags and item_tags columns, add them to the model
-        if "user_tags" in train_data.columns:
-            user_tags = train_data[["user", "user_tags"]]
-            for user, tags in user_tags.itertuples(index=False, name=None):
+        # register user and item features
+        if user_tags:
+            for user, tags in tqdm(user_tags.items(), desc="Register user features"):
                 self.model.register_user_feature(user, tags)
-        if "item_tags" in train_data.columns:
-            item_tags = train_data[["item", "item_tags"]]
-            for item, tags in item_tags.itertuples(index=False, name=None):
+        if item_tags:
+            for item, tags in tqdm(item_tags.items(), desc="Register item features"):
                 self.model.register_item_feature(item, tags)
 
         # Add interactions to the model
@@ -65,24 +67,32 @@ class Recommender:
         print(f"Throughput: {len(train_data) / (end_time - start_time):.2f} samples/sec")
         return self
 
-    def bulk_fit(self, train_data: pd.DataFrame, batch_size: int = 1_000, update_interaction: bool=False, parallel: bool=True) -> Self:
+    def bulk_fit(
+            self,
+            train_data: pd.DataFrame,
+            user_tags: Optional[Dict[Any, List[str]]] = None,
+            item_tags: Optional[Dict[Any, List[str]]] = None,
+            batch_size: int = 1_000,
+            update_interaction: bool=False,
+            parallel: bool=True
+    ) -> Self:
         """
         Fit the recommender model on the given DataFrame of interactions in a single batch.
         :param train_data (pd.DataFrame): The DataFrame containing interactions with columns (user, item, tstamp, rating).
+        :param user_tags (Optional[Dict[Any, List[str]]): Dictionary mapping user IDs to user tags.
+        :param item_tags (Optional[Dict[Any, List[str]]): Dictionary mapping item IDs to item tags.
         :param batch_size (int): The number of interactions per mini-batch. Defaults to 1000.
         :param update_interaction (bool): Whether to update existing interactions. Defaults to False.
         :param parallel (bool): Whether to run the fitting process in parallel. Defaults to True.
         """
         start_time = time.time()
 
-        # If train_data contains user_tags and item_tags columns, add them to the model
-        if "user_tags" in train_data.columns:
-            user_tags = train_data[["user", "user_tags"]]
-            for user, tags in user_tags.itertuples(index=False, name=None):
+        # register user and item features
+        if user_tags:
+            for user, tags in tqdm(user_tags.items(), desc="Register user features"):
                 self.model.register_user_feature(user, tags)
-        if "item_tags" in train_data.columns:
-            item_tags = train_data[["item", "item_tags"]]
-            for item, tags in item_tags.itertuples(index=False, name=None):
+        if item_tags:
+            for item, tags in tqdm(item_tags.items(), desc="Register item features"):
                 self.model.register_item_feature(item, tags)
 
         # Add interactions to the model

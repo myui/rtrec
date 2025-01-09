@@ -23,14 +23,14 @@ class BaseModel(ABC):
 
         self.feature_store = FeatureStore()
 
-    def register_user_feature(self, user_id: Any, user_tags: List[str]) -> int:
+    def register_user_feature(self, user: Any, user_tags: List[str]) -> int:
         """
         Register user features in the feature store.
-        :param user_id: User identifier
+        :param user: User to register features for
         :param user_tags: List of user features
         :return: User index
         """
-        user_id = self.user_ids.identify(user_id)
+        user_id = self.user_ids.identify(user)
         self.feature_store.put_user_feature(user_id, user_tags)
         return user_id
 
@@ -41,14 +41,14 @@ class BaseModel(ABC):
         """
         self.feature_store.clear_user_features(user_ids)
 
-    def register_item_feature(self, item_id: Any, item_tags: List[str]) -> int:
+    def register_item_feature(self, item: Any, item_tags: List[str]) -> int:
         """
         Register item features in the feature store.
-        :param item_id: Item identifier
+        :param item_id: Item to register features for
         :param item_tags: List of item features
         :return: Item index
         """
-        item_id = self.item_ids.identify(item_id)
+        item_id = self.item_ids.identify(item)
         self.feature_store.put_item_feature(item_id, item_tags)
         return item_id
 
