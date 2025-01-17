@@ -22,6 +22,8 @@ Check [this example notebook](https://github.com/myui/rtrec/blob/main/notebooks/
 
 All users of 0.1.5 is recommended to update to v0.1.6.
 
+**Full Changelog**: https://github.com/myui/rtrec/compare/v0.1.5...v0.1.6
+
 ### Bug fixes
 
 * Fixed a bug in LightFM models.
