@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 All users of v0.1.6 is recommended to update to v0.1.7.
 LightFM support is now bacame stable.
 
-**Full Changelog**: https://github.com/myui/rtrec/compare/v0.1.6...v0.1.7
+**Full Changelog**: [v0.1.6...v0.1.7](https://github.com/myui/rtrec/compare/v0.1.6...v0.1.7)
 
 ### Major changes
 
@@ -22,7 +22,7 @@ Check [this example notebook](https://github.com/myui/rtrec/blob/main/notebooks/
 
 All users of 0.1.5 is recommended to update to v0.1.6.
 
-**Full Changelog**: https://github.com/myui/rtrec/compare/v0.1.5...v0.1.6
+**Full Changelog**: [v0.1.5...v0.1.6](https://github.com/myui/rtrec/compare/v0.1.5...v0.1.6)
 
 ### Bug fixes
 
