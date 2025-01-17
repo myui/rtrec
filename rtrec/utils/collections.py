@@ -1,57 +1,72 @@
-from bisect import bisect_left
-from typing import Iterable, Optional, Iterator, List, Set, TypeVar
+from typing import Iterable, Optional, TypeVar
 
-T = TypeVar("T")  # A generic type for elements in the SortedSet
+T = TypeVar("T")  # A generic type for elements in the IndexedSet
 
-class SortedSet:
+class IndexedSet:
+    """
+    A data structure that combines the features of a set and a list,
+    allowing fast addition of unique keys and retrieval of their indices.
+    """
     def __init__(self, iterable: Optional[Iterable[T]] = None) -> None:
-        self._list: List[T] = []
-        self._set: Set[T] = set()
+        self._key_to_index = {}  # Maps keys to their indices
+        self._index_to_key = []  # Maintains the order of insertion
         if iterable is not None:
             for item in iterable:
                 self.add(item)
 
-    def add(self, item: T) -> int:
+    def add(self, key: T) -> int:
         """
-        Adds an item to the sorted set if it's not already present and returns its index.
-        If the item is already present, returns its existing index.
-        """
+        Adds a unique key to the set and returns its index.
 
-        if item in self._set:
-            return self.index(item)  # Return the existing index
-        else:
-            index = bisect_left(self._list, item)
-            self._set.add(item)
-            self._list.insert(index, item)
-            return index  # Return the inserted index
-
-    def index(self, item: T) -> int:
-        """
-        Returns the index of the item in the sorted set.
+        Args:
+            key: The key to add.
 
         Returns:
-            int: Index of the item in the sorted set. -(insertion point+1) if the item is not found.
+            int: The index of the key.
         """
-        left, right = 0, len(self._list)
-        while left < right:
-            mid = (left + right) // 2
-            mid_value = self._list[mid]  # Cache self._list[mid] access
-            if mid_value < item:
-                left = mid + 1
-            elif mid_value > item:
-                right = mid
-            else:
-                return mid  # Item found
-        return -(left + 1)  # Item not found, return insertion point
+        if key not in self._key_to_index:
+            # Assign the next available index to the key
+            index = len(self._index_to_key)
+            self._key_to_index[key] = index
+            self._index_to_key.append(key)
+        return self._key_to_index[key]
 
-    def __len__(self) -> int:
-        return len(self._list)
+    def index(self, key: T, default: int = -1) -> int:
+        """
+        Returns the index of a key.
 
-    def __contains__(self, item: T) -> bool:
-        return item in self._set
+        Args:
+            key: The key whose index is to be retrieved.
 
-    def __iter__(self) -> Iterator[T]:
-        return iter(self._list)
+        Returns:
+            int: The index of the key.
 
-    def __repr__(self) -> str:
-        return f"SortedSet({self._list})"
+        Raises:
+            KeyError: If the key is not found in the set.
+        """
+        return self._key_to_index.get(key, default)
+
+    def __len__(self):
+        """Returns the number of keys in the IndexedSet."""
+        return len(self._index_to_key)
+
+    def __contains__(self, key):
+        """Checks if a key exists in the IndexedSet."""
+        return key in self._key_to_index
+
+    def __iter__(self):
+        """Iterates over the keys in the IndexedSet."""
+        return iter(self._index_to_key)
+
+    def __getitem__(self, index):
+        """
+        Gets the key at a given index.
+
+        Args:
+            index: The index to retrieve the key from.
+
+        Returns:
+            The key at the specified index.
+        """
+        return self._index_to_key[index]
+
