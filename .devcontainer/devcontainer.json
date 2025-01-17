@@ -27,7 +27,8 @@
 					"reportUnknownArgumentType": "none",
 					"reportUnknownMemberType": "none"
 				},
-				"jupyter.notebookFileRoot": "${fileDirname}/notebooks"
+				"jupyter.notebookFileRoot": "${fileDirname}/notebooks",
+				"jypyter.debugJustMyCode": false
 			},
 			"extensions": [
 				"GitHub.copilot",
