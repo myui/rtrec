@@ -31,7 +31,6 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --pr
 
 # Install UV
 RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
- && echo "$HOME/.local/bin" >> ~/.bashrc \
  && . ~/.local/bin/env \
  && uv python pin 3.12 \
  && uv venv --python 3.12 \
@@ -41,7 +40,8 @@ RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
 # `/home/td-user/rtrec/target/release/build/proc-macro2-27b8d773934653fd/build-script-build` (signal: 11, SIGSEGV: invalid memory reference)
 # see https://github.com/rust-lang/cargo/issues/10679#issuecomment-1132612876
 RUN git clone https://github.com/myui/rtrec.git && cd rtrec \
-  && . ~/.local/bin/env && uv python pin 3.12 && uv venv --python 3.12 && uv sync
+  && . ~/.local/bin/env && uv python pin 3.12 && uv venv --python 3.12 && uv sync \
+  && uv pip install ipykernel
 
 ENV PYTHONPATH="/home/td-user/rtrec/.venv/lib/python3.12/site-packages"
 
