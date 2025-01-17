@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.7] - 01.17.2005
+
+All users of v0.1.6 is recommended to update to v0.1.7.
+LightFM support is now bacame stable.
+
+**Full Changelog**: https://github.com/myui/rtrec/compare/v0.1.6...v0.1.7
+
+### Major changes
+
+* Supported Context Features (user/item tags) for LightFM model.
+
+Check [this example notebook](https://github.com/myui/rtrec/blob/main/notebooks/rtrec-movielens-with-features.ipynb) how to use user/item tags.
+
 ## [0.1.6] - 01.06.2005
 
 All users of 0.1.5 is recommended to update to v0.1.6.
