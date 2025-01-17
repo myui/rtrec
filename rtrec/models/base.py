@@ -31,7 +31,7 @@ class BaseModel(ABC):
         :return: User index
         """
         user_id = self.user_ids.identify(user)
-        self.feature_store.put_user_feature(user_id, user_tags)
+        self.feature_store.put_user_features(user_id, user_tags)
         return user_id
 
     def clear_user_features(self, user_ids: Optional[List[int]] = None) -> None:
@@ -49,7 +49,7 @@ class BaseModel(ABC):
         :return: Item index
         """
         item_id = self.item_ids.identify(item)
-        self.feature_store.put_item_feature(item_id, item_tags)
+        self.feature_store.put_item_features(item_id, item_tags)
         return item_id
 
     def clear_item_features(self, item_ids: Optional[List[int]] = None) -> None:
