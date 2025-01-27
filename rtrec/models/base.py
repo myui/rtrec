@@ -134,10 +134,7 @@ class BaseModel(ABC):
 
         user_id = self.user_ids.get_id(user)
         if user_id is None:
-            return [] # TODO: return popoular items?
-
-        # Get candidate items for recommendation
-        # candidate_item_ids = self.interactions.get_all_non_interacted_items(user_id) if filter_interacted else self.interactions.get_all_non_negative_items(user_id)
+            return self.interactions.get_hot_items(top_k, filter_interacted=False)
 
         # Get top-K recommendations
         recommended_item_ids = self._recommend(user_id, user_tags=user_tags, top_k=top_k, filter_interacted=filter_interacted)
@@ -185,14 +182,18 @@ class BaseModel(ABC):
             assert len(user_ids) == len(users_tags), f"Number of user tags must match the number of users. Got {len(user_ids)} users and {len(users_tags)} user tags."
             for user_id, user_tags in zip(user_ids, users_tags):
                 if user_id is None:
-                    results.append([]) # TODO: return popoular items?
+                    # Return popular items if user is not found
+                    hot_items = self.interactions.get_hot_items(top_k, filter_interacted=False)
+                    results.append(hot_items)
                     continue
                 recommended_item_ids = self._recommend(user_id, user_tags=user_tags, top_k=top_k, filter_interacted=filter_interacted)
                 results.append(recommended_item_ids)
         else:
             for user_id in user_ids:
                 if user_id is None:
-                    results.append([]) # TODO: return popoular items?
+                    # Return popular items if user is not found
+                    hot_items = self.interactions.get_hot_items(top_k, filter_interacted=False)
+                    results.append(hot_items)
                     continue
                 recommended_item_ids = self._recommend(user_id, top_k=top_k, filter_interacted=filter_interacted)
                 results.append(recommended_item_ids)

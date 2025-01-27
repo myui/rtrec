@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 
 import numpy as np
 from scipy.sparse import csr_matrix, csc_matrix, coo_matrix
+from .lru import LRUFreqSet
 
 class UserItemInteractions:
     def __init__(self, min_value: int = -5, max_value: int = 10, decay_in_days: Optional[int] = None, **kwargs: Any) -> None:
@@ -21,6 +22,7 @@ class UserItemInteractions:
         # Store interactions as a dictionary of dictionaries in shape {user_id: {item_id: (value, timestamp)}}
         self.interactions: defaultdict[int, dict[int, tuple[float, float]]] = defaultdict(dict)
         self.all_item_ids = set()
+        self.hot_items = LRUFreqSet(capacity=100_000)
         assert max_value > min_value, f"max_value should be greater than min_value {max_value} > {min_value}"
         self.min_value = min_value
         self.max_value = max_value
@@ -105,6 +107,8 @@ class UserItemInteractions:
             self.interactions[user_id][item_id] = (new_value, tstamp)
         # Track all unique item IDs
         self.all_item_ids.add(item_id)
+        # Update the hot items cache
+        self.hot_items.add(item_id)
         # Update maximum user and item IDs
         self.max_user_id = max(self.max_user_id, user_id)
         self.max_item_id = max(self.max_item_id, item_id)
@@ -198,6 +202,22 @@ class UserItemInteractions:
         # Return all items with non-negative interaction counts after applying decay
         return [item_id for item_id in self.all_item_ids
                 if self.get_user_item_rating(user_id, item_id, default_rating=0.0) >= 0.0]
+
+    def get_hot_items(self, n: int, user_id: Optional[int]=None, filter_interacted: bool = True) -> List[int]:
+        """
+        Retrieves the top N most interacted items.
+
+        Args:
+            n (int): Number of items to retrieve.
+
+        Returns:
+            List[int]: List of item IDs of the top N most interacted items.
+        """
+        interacted_items = []
+        if filter_interacted:
+            assert user_id is not None, "User ID must be provided to filter interacted items."
+            interacted_items = self.get_user_items(user_id)
+        return list(self.hot_items.get_freq_items(n, exclude_items=interacted_items))
 
     def to_csr(self, select_users: List[int] = None, include_weights: bool = True) -> csr_matrix:
         rows, cols = [], []
