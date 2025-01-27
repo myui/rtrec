@@ -22,7 +22,8 @@ class UserItemInteractions:
         # Store interactions as a dictionary of dictionaries in shape {user_id: {item_id: (value, timestamp)}}
         self.interactions: defaultdict[int, dict[int, tuple[float, float]]] = defaultdict(dict)
         self.all_item_ids = set()
-        self.hot_items = LRUFreqSet(capacity=100_000)
+        n_recent_hot = kwargs.get("n_recent_hot", 100_000)
+        self.hot_items = LRUFreqSet(capacity=n_recent_hot)
         assert max_value > min_value, f"max_value should be greater than min_value {max_value} > {min_value}"
         self.min_value = min_value
         self.max_value = max_value
