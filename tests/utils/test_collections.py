@@ -1,7 +1,6 @@
 import pytest
 
 from rtrec.utils.collections import IndexedSet
-import pytest
 
 def test_add():
     indexed_set = IndexedSet()
