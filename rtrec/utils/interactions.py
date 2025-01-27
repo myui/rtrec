@@ -109,7 +109,8 @@ class UserItemInteractions:
         # Track all unique item IDs
         self.all_item_ids.add(item_id)
         # Update the hot items cache
-        self.hot_items.add(item_id)
+        if delta > 0:
+            self.hot_items.add(item_id)
         # Update maximum user and item IDs
         self.max_user_id = max(self.max_user_id, user_id)
         self.max_item_id = max(self.max_item_id, item_id)
