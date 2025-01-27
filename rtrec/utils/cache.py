@@ -157,7 +157,7 @@ class LRUFreqCache(MutableMapping):
         """
         return f"LRUFreqCache(capacity={self.capacity}, size={len(self.data)})"
 
-    def get_freq_items(self, n: Optional[int] = None) -> Iterator[Tuple[Any, int]]:
+    def get_freq_items(self, n: Optional[int] = None) -> Iterator[Tuple[Any, Any]]:
         """
         Retrieve the top `n` most frequently used items in the cache. If `n` is None,
         return all items sorted by frequency.
@@ -169,5 +169,6 @@ class LRUFreqCache(MutableMapping):
             Iterator[Tuple[Any, int]]: An iterator of (key, frequency) pairs, sorted by frequency in descending order.
         """
         # If n is not specified, return all items sorted by frequency
-        items = sorted(self.data.items(), key=lambda item: item[1][1], reverse=True)
-        return iter(items if n is None else items[:n])
+        sorted_items = sorted(self.data.items(), key=lambda item: item[1][1], reverse=True)
+        for key, (value, _) in (sorted_items if n is None else sorted_items[:n]):
+            yield key, value

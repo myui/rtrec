@@ -36,12 +36,13 @@ def test_update_frequency(cache):
     """Test that frequency is updated when an item is accessed."""
     cache["a"] = "apple"
     cache["b"] = "banana"
+    cache["c"] = "cherry"
 
-    # Access "a" to update its frequency
+    # Update the frequency of "a" by accessing it multiple times
     cache["a"]
 
-    # Add a third item to force eviction
-    cache["c"] = "cherry"
+    # "b" should be evicted because "a" has been accessed more frequently
+    cache["d"] = "date"
 
     # "b" should be evicted because "a" has been accessed more frequently
     assert "b" not in cache
@@ -53,20 +54,27 @@ def test_get_freq_items(cache):
     cache["a"] = "apple"
     cache["b"] = "banana"
     cache["c"] = "cherry"
-    cache["d"] = "date"
 
     # Access some items to update their frequencies
     cache["a"]
     cache["a"]
+
+    # "b" should be evicted because "a" has been accessed more frequently
+    cache["d"] = "date"
+
+    # Access "c" to update its frequency
     cache["c"]
 
     # Get top 2 most frequently used items
     freq_items = list(cache.get_freq_items(2))
-    assert freq_items == [("a", 3), ("c", 1)]
+    assert freq_items == [("a", "apple"), ("c", "cherry")]
 
     # Get all items sorted by frequency
     all_items = list(cache.get_freq_items())
-    assert all_items == [("a", 3), ("c", 1), ("b", 1), ("d", 1)]
+    assert all_items == [("a", "apple"), ("c", "cherry"), ("d", "date")]
+
+    all_items = list(cache.get_freq_items(n=4))
+    assert all_items == [("a", "apple"), ("c", "cherry"), ("d", "date")]
 
 def test_get_with_default(cache):
     """Test the get method with a default value."""
