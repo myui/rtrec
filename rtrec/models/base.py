@@ -133,6 +133,8 @@ class BaseModel(ABC):
         """
 
         user_id = self.user_ids.get_id(user)
+        if self.user_ids.pass_through and user_id > self.interactions.max_user_id:
+            user_id = None
         if user_id is None:
             return self.interactions.get_hot_items(top_k, filter_interacted=False)
 
@@ -163,7 +165,11 @@ class BaseModel(ABC):
         :param filter_interacted: Whether to filter out items the user has already interacted with
         :return: List of top-K items recommended for each user
         """
-        user_ids = [self.user_ids.get_id(user) for user in users]
+        user_ids = [
+            None if self.user_ids.pass_through and (user_id := self.user_ids.get_id(user)) > self.interactions.max_user_id
+            else user_id
+            for user in users
+        ]
         results = self._recommend_batch(user_ids, users_tags=users_tags, top_k=top_k, filter_interacted=filter_interacted)
         return [[self.item_ids.get(item_id) for item_id in internal_ids] for internal_ids in results]
 
