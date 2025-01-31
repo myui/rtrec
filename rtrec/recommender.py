@@ -170,7 +170,7 @@ class Recommender:
                 batch_user_tags = [user_tags.get(user, []) for user in batch_users] if user_tags else None
 
                 # Get recommended items for the batch of users
-                batch_results = self.recommend_batch(batch_users, user_tags = batch_user_tags, top_k=recommend_size, filter_interacted=filter_interacted)
+                batch_results = self.recommend_batch(batch_users, users_tags=batch_user_tags, top_k=recommend_size, filter_interacted=filter_interacted)
 
                 # Yield recommendations and ground truth for each user in the batch
                 for user, recommended_items in zip(batch_users, batch_results):
