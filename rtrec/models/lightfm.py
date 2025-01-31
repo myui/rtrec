@@ -79,7 +79,7 @@ class LightFM(BaseModel):
     def _recommend(self, user_id: int, candidate_item_ids: Optional[List[int]] = None, user_tags: Optional[List[str]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
         users_tags = [user_tags] if user_tags is not None else None
         user_features = self._create_user_features(user_ids=[user_id], users_tags=users_tags, slice=True)
-        item_features = self._create_item_features(item_ids=candidate_item_ids, slice=True)
+        item_features = self._create_item_features(item_ids=candidate_item_ids, slice=False)
 
         user_biases, user_embeddings = self.model.get_user_representations(user_features)
         item_biases, item_embeddings = self.model.get_item_representations(item_features)
@@ -106,6 +106,8 @@ class LightFM(BaseModel):
         # the largest possible negative finite value in float32, which is approximately -3.4028235e+38.
         min_score = -np.finfo(np.float32).max
         # remove ids less than or equal to min_score
+        if candidate_item_ids and len(ids) > len(candidate_item_ids):
+            ids = ids[:len(candidate_item_ids)]
         for i in range(len(ids)):
             if scores[i] <= min_score:
                 ids = ids[:i]
@@ -116,7 +118,7 @@ class LightFM(BaseModel):
     @override
     def _recommend_batch(self, user_ids: List[int], candidate_item_ids: Optional[List[int]] = None, users_tags: Optional[List[List[str]]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[List[int]]:
         user_features = self._create_user_features(user_ids=user_ids, users_tags=users_tags, slice=True)
-        item_features = self._create_item_features(item_ids=candidate_item_ids, slice=True)
+        item_features = self._create_item_features(item_ids=candidate_item_ids, slice=False)
 
         user_biases, user_embeddings = self.model.get_user_representations(user_features)
         item_biases, item_embeddings = self.model.get_item_representations(item_features)
@@ -144,6 +146,8 @@ class LightFM(BaseModel):
         # the largest possible negative finite value in float32, which is approximately -3.4028235e+38.
         min_score = -np.finfo(np.float32).max
         for ids, scores in zip(ids_array, scores_array):
+            if candidate_item_ids and len(ids) > len(candidate_item_ids):
+                ids = ids[:len(candidate_item_ids)]
             # remove ids less than or equal to min_score
             for i in range(len(ids)):
                 if scores[i] <= min_score:
