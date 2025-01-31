@@ -133,12 +133,6 @@ class BaseModel(ABC):
         :return: List of top-K items recommended for the user
         """
 
-        user_id = self.user_ids.get_id(user)
-        if self.user_ids.pass_through and user_id > self.interactions.max_user_id:
-            user_id = None
-        if user_id is None:
-            return self.interactions.get_hot_items(top_k, filter_interacted=False)
-
         candidate_item_ids = None
         if candidate_items is not None:
             candidate_item_ids = [
@@ -148,6 +142,16 @@ class BaseModel(ABC):
             ]
             if len(candidate_item_ids) == 0:
                 candidate_item_ids = None
+
+        user_id = self.user_ids.get_id(user)
+        if self.user_ids.pass_through and user_id > self.interactions.max_user_id:
+            user_id = None
+        if user_id is None:
+            hot_item_ids = self.interactions.get_hot_items(top_k, filter_interacted=False)
+            if candidate_item_ids is not None:
+                # take intersection between hot items and candidate items
+                hot_item_ids = [item_id for item_id in hot_item_ids if item_id in candidate_item_ids]
+            return hot_item_ids
 
         # Get top-K recommendations
         recommended_item_ids = self._recommend(user_id, candidate_item_ids=candidate_item_ids, user_tags=user_tags, top_k=top_k, filter_interacted=filter_interacted)
@@ -208,25 +212,34 @@ class BaseModel(ABC):
         :return: List of top-K item indices recommended for each user
         """
         results = []
+        hot_items = None
         if users_tags: # If user tags are provided
             assert len(user_ids) == len(users_tags), f"Number of user tags must match the number of users. Got {len(user_ids)} users and {len(users_tags)} user tags."
             for user_id, user_tags in zip(user_ids, users_tags):
                 if user_id is None:
                     # Return popular items if user is not found
-                    hot_items = self.interactions.get_hot_items(top_k, filter_interacted=False)
+                    if hot_items is None:
+                        hot_items = self.interactions.get_hot_items(top_k, filter_interacted=False)
+                        if candidate_item_ids is not None:
+                            # take intersection between hot items and candidate items
+                            hot_items = [item_id for item_id in hot_items if item_id in candidate_item_ids]
                     results.append(hot_items)
-                    continue
-                recommended_item_ids = self._recommend(user_id, candidate_item_ids=candidate_item_ids, user_tags=user_tags, top_k=top_k, filter_interacted=filter_interacted)
-                results.append(recommended_item_ids)
+                else:
+                    recommended_item_ids = self._recommend(user_id, candidate_item_ids=candidate_item_ids, user_tags=user_tags, top_k=top_k, filter_interacted=filter_interacted)
+                    results.append(recommended_item_ids)
         else:
             for user_id in user_ids:
                 if user_id is None:
                     # Return popular items if user is not found
-                    hot_items = self.interactions.get_hot_items(top_k, filter_interacted=False)
+                    if hot_items is None:
+                        hot_items = self.interactions.get_hot_items(top_k, filter_interacted=False)
+                        if candidate_item_ids is not None:
+                            # take intersection between hot items and candidate items
+                            hot_items = [item_id for item_id in hot_items if item_id in candidate_item_ids]
                     results.append(hot_items)
-                    continue
-                recommended_item_ids = self._recommend(user_id, candidate_item_ids=candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted)
-                results.append(recommended_item_ids)
+                else:
+                    recommended_item_ids = self._recommend(user_id, candidate_item_ids=candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted)
+                    results.append(recommended_item_ids)
         return results
 
     def similar_items(self, query_item: Any, query_item_tags: Optional[List[str]] = None, top_k: int = 10, ret_scores: bool=False) -> List[Tuple[Any, float]] | List[Any]:
