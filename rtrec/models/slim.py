@@ -47,10 +47,11 @@ class SLIM(BaseModel):
         interaction_matrix = self.interactions.to_csc()
         self.model.fit(interaction_matrix, parallel=parallel, progress_bar=progress_bar)
 
-    def _recommend(self, user_id: int, user_tags: Optional[List[str]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
+    def _recommend(self, user_id: int, candidate_item_ids: Optional[List[int]] = None, user_tags: Optional[List[str]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
         """
         Recommend top-K items for a given user.
         :param user_id: User index
+        :param candidate_item_ids: List of candidate item indices
         :param user_tags: List of user tags
         :param candidate_item_ids: List of candidate item indices
         :param top_k: Number of top items to recommend
@@ -59,7 +60,7 @@ class SLIM(BaseModel):
         """
         interaction_matrix = self.interactions.to_csr(select_users=[user_id])
         dense_output = not self.item_ids.pass_through
-        return self.model.recommend(user_id, interaction_matrix, top_k=top_k, filter_interacted=filter_interacted, dense_output=dense_output)
+        return self.model.recommend(user_id, interaction_matrix, candidate_item_ids=candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted, dense_output=dense_output)
 
     def _similar_items(self, query_item_id: int, query_item_tags: Optional[List[str]] = None, top_k: int = 10) -> List[Tuple[int, float]]:
         """

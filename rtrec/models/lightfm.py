@@ -76,10 +76,10 @@ class LightFM(BaseModel):
         sample_weights = ui_coo if self.model.loss == "warp-kos" else None
         self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sample_weights, epochs=self.epochs, num_threads=self.n_threads, verbose=progress_bar)
 
-    def _recommend(self, user_id: int, user_tags: Optional[List[str]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
+    def _recommend(self, user_id: int, candidate_item_ids: Optional[List[int]] = None, user_tags: Optional[List[str]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
         users_tags = [user_tags] if user_tags is not None else None
         user_features = self._create_user_features(user_ids=[user_id], users_tags=users_tags, slice=True)
-        item_features = self._create_item_features()
+        item_features = self._create_item_features(item_ids=candidate_item_ids, slice=True)
 
         user_biases, user_embeddings = self.model.get_user_representations(user_features)
         item_biases, item_embeddings = self.model.get_item_representations(item_features)
@@ -111,15 +111,12 @@ class LightFM(BaseModel):
                 ids = ids[:i]
                 break
 
-        # query_norm = calc_norm(user_vector)
-        # scores = scores.ravel() / query_norm
-
         return ids.tolist() # ndarray to list
 
     @override
-    def _recommend_batch(self, user_ids: List[int], users_tags: Optional[List[List[str]]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[List[int]]:
+    def _recommend_batch(self, user_ids: List[int], candidate_item_ids: Optional[List[int]] = None, users_tags: Optional[List[List[str]]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[List[int]]:
         user_features = self._create_user_features(user_ids=user_ids, users_tags=users_tags, slice=True)
-        item_features = self._create_item_features()
+        item_features = self._create_item_features(item_ids=candidate_item_ids, slice=True)
 
         user_biases, user_embeddings = self.model.get_user_representations(user_features)
         item_biases, item_embeddings = self.model.get_item_representations(item_features)
