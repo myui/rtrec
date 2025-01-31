@@ -105,11 +105,13 @@ class LightFM(BaseModel):
         # see https://github.com/benfred/implicit/blob/v0.7.2/implicit/cpu/topk.pyx#L54
         # the largest possible negative finite value in float32, which is approximately -3.4028235e+38.
         min_score = -np.finfo(np.float32).max
-        # remove ids less than or equal to min_score
-        if candidate_item_ids and len(ids) > len(candidate_item_ids):
-            ids = ids[:len(candidate_item_ids)]
         for i in range(len(ids)):
-            if scores[i] <= min_score:
+            if candidate_item_ids and ids[i] not in candidate_item_ids:
+                # remove ids not exist in candidate_item_ids
+                ids = ids[:i]
+                break
+            elif scores[i] <= min_score:
+                # remove ids less than or equal to min_score
                 ids = ids[:i]
                 break
 
@@ -146,11 +148,13 @@ class LightFM(BaseModel):
         # the largest possible negative finite value in float32, which is approximately -3.4028235e+38.
         min_score = -np.finfo(np.float32).max
         for ids, scores in zip(ids_array, scores_array):
-            if candidate_item_ids and len(ids) > len(candidate_item_ids):
-                ids = ids[:len(candidate_item_ids)]
-            # remove ids less than or equal to min_score
             for i in range(len(ids)):
-                if scores[i] <= min_score:
+                if candidate_item_ids and ids[i] not in candidate_item_ids:
+                    # remove ids not exist in candidate_item_ids
+                    ids = ids[:i]
+                    break
+                elif scores[i] <= min_score:
+                    # remove ids less than or equal to min_score
                     ids = ids[:i]
                     break
             results.append(ids.tolist())
