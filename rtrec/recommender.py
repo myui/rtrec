@@ -107,27 +107,29 @@ class Recommender:
         print(f"Throughput: {len(train_data) / (end_time - start_time):.2f} samples/sec")
         return self
 
-    def recommend(self, user: Any, user_tags: Optional[List[str]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[Any]:
+    def recommend(self, user: Any, candidate_items: Optional[List[Any]] = None, user_tags: Optional[List[str]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[Any]:
         """
         Recommend top-K items for a given user.
         :param user: User to recommend items for
+        :param candidate_items: List of candidate items to recommend from
         :param user_tags: List of user tags
         :param top_k: Number of top items to recommend
         :param filter_interacted: Whether to filter out items the user has already interacted with
         :return: List of top-K item indices recommended for the user
         """
-        return self.model.recommend(user, user_tags, top_k, filter_interacted)
+        return self.model.recommend(user, candidate_items, user_tags, top_k, filter_interacted)
 
-    def recommend_batch(self, users: List[Any], users_tags: Optional[List[List[str]]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[List[Any]]:
+    def recommend_batch(self, users: List[Any], candidate_items: Optional[List[Any]] = None, users_tags: Optional[List[List[str]]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[List[Any]]:
         """
         Recommend top-K items for a list of users.
         :param users: List of users to recommend items for
+        :param candidate_items: List of candidate items to recommend from
         :param users_tags: List of user tags for each user
         :param top_k: Number of top items to recommend
         :param filter_interacted: Whether to filter out items the user has already interacted with
         :return: List of top-K item indices recommended for each user
         """
-        return self.model.recommend_batch(users, users_tags, top_k, filter_interacted)
+        return self.model.recommend_batch(users, candidate_items, users_tags, top_k, filter_interacted)
 
     def similar_items(self, query_items: List[Any], query_item_tags: Optional[List[str]] = None, top_k: int = 10, ret_scores: bool=False) -> List[List[Any]] | List[List[Tuple[Any, float]]]:
         """
@@ -168,7 +170,7 @@ class Recommender:
                 batch_user_tags = [user_tags.get(user, []) for user in batch_users] if user_tags else None
 
                 # Get recommended items for the batch of users
-                batch_results = self.recommend_batch(batch_users, batch_user_tags, recommend_size, filter_interacted)
+                batch_results = self.recommend_batch(batch_users, user_tags = batch_user_tags, top_k=recommend_size, filter_interacted=filter_interacted)
 
                 # Yield recommendations and ground truth for each user in the batch
                 for user, recommended_items in zip(batch_users, batch_results):

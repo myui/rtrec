@@ -122,10 +122,11 @@ class BaseModel(ABC):
         """
         raise NotImplementedError("bulk_fit method must be implemented in the derived class")
 
-    def recommend(self, user: Any, user_tags: Optional[List[str]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[Any]:
+    def recommend(self, user: Any, candidate_items: Optional[List[Any]] = None, user_tags: Optional[List[str]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[Any]:
         """
         Recommend top-K items for a given user.
         :param user: User to recommend items for
+        :param candidate_items: List of candidate items to recommend from
         :param user_tags: List of user tags
         :param top_k: Number of top items to recommend
         :param filter_interacted: Whether to filter out items the user has already interacted with
@@ -138,17 +139,28 @@ class BaseModel(ABC):
         if user_id is None:
             return self.interactions.get_hot_items(top_k, filter_interacted=False)
 
+        candidate_item_ids = None
+        if candidate_items is not None:
+            candidate_item_ids = [
+                item_id for item in candidate_items
+                if (item_id := self.item_ids.get_id(item)) is not None
+                and (not self.item_ids.pass_through or item_id <= self.interactions.max_item_id)
+            ]
+            if len(candidate_item_ids) == 0:
+                candidate_item_ids = None
+
         # Get top-K recommendations
-        recommended_item_ids = self._recommend(user_id, user_tags=user_tags, top_k=top_k, filter_interacted=filter_interacted)
+        recommended_item_ids = self._recommend(user_id, candidate_item_ids=candidate_item_ids, user_tags=user_tags, top_k=top_k, filter_interacted=filter_interacted)
 
         # Resolve item indices to original item values
         return [self.item_ids.get(item_id) for item_id in recommended_item_ids]
 
     @abstractmethod
-    def _recommend(self, user_id: int, user_tags: Optional[List[str]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
+    def _recommend(self, user_id: int, candidate_item_ids: Optional[List[int]] = None, user_tags: Optional[List[str]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
         """
         Recommend top-K items for a given user.
         :param user_id: User index
+        :param candidate_item_ids: List of candidate item indices to recommend from
         :param user_tags: List of user tags
         :param top_k: Number of top items to recommend
         :param filter_interacted: Whether to filter out items the user has already interacted with
@@ -156,10 +168,11 @@ class BaseModel(ABC):
         """
         raise NotImplementedError("_recommend method must be implemented in the derived class")
 
-    def recommend_batch(self, users: List[Any], users_tags: Optional[List[List[str]]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[List[Any]]:
+    def recommend_batch(self, users: List[Any], candidate_items: Optional[List[Any]] = None, users_tags: Optional[List[List[str]]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[List[Any]]:
         """
         Recommend top-K items for a list of users.
         :param users: List of users to recommend items for
+        :param candidate_items: List of candidate items to recommend from
         :param users_tags: List of user tags
         :param top_k: Number of top items to recommend
         :param filter_interacted: Whether to filter out items the user has already interacted with
@@ -170,13 +183,24 @@ class BaseModel(ABC):
             else user_id
             for user in users
         ]
-        results = self._recommend_batch(user_ids, users_tags=users_tags, top_k=top_k, filter_interacted=filter_interacted)
+        candidate_item_ids = None
+        if candidate_items is not None:
+            candidate_item_ids = [
+                item_id for item in candidate_items
+                if (item_id := self.item_ids.get_id(item)) is not None
+                and (not self.item_ids.pass_through or item_id <= self.interactions.max_item_id)
+            ]
+            if len(candidate_item_ids) == 0:
+                candidate_item_ids = None
+
+        results = self._recommend_batch(user_ids, candidate_item_ids=candidate_item_ids, users_tags=users_tags, top_k=top_k, filter_interacted=filter_interacted)
         return [[self.item_ids.get(item_id) for item_id in internal_ids] for internal_ids in results]
 
-    def _recommend_batch(self, user_ids: List[int], users_tags: Optional[List[List[str]]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[List[int]]:
+    def _recommend_batch(self, user_ids: List[int], candidate_item_ids: Optional[List[int]] = None, users_tags: Optional[List[List[str]]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[List[int]]:
         """
         Recommend top-K items for a list of users.
         :param user_ids: List of user indices
+        :param candidate_item_ids: List of candidate item indices to recommend from
         :param users_tags: List of user tags
         :param interaction_matrix: User-item interaction matrix
         :param top_k: Number of top items to recommend
@@ -192,7 +216,7 @@ class BaseModel(ABC):
                     hot_items = self.interactions.get_hot_items(top_k, filter_interacted=False)
                     results.append(hot_items)
                     continue
-                recommended_item_ids = self._recommend(user_id, user_tags=user_tags, top_k=top_k, filter_interacted=filter_interacted)
+                recommended_item_ids = self._recommend(user_id, candidate_item_ids=candidate_item_ids, user_tags=user_tags, top_k=top_k, filter_interacted=filter_interacted)
                 results.append(recommended_item_ids)
         else:
             for user_id in user_ids:
@@ -201,7 +225,7 @@ class BaseModel(ABC):
                     hot_items = self.interactions.get_hot_items(top_k, filter_interacted=False)
                     results.append(hot_items)
                     continue
-                recommended_item_ids = self._recommend(user_id, top_k=top_k, filter_interacted=filter_interacted)
+                recommended_item_ids = self._recommend(user_id, candidate_item_ids=candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted)
                 results.append(recommended_item_ids)
         return results
 
