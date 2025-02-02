@@ -182,11 +182,13 @@ class BaseModel(ABC):
         :param filter_interacted: Whether to filter out items the user has already interacted with
         :return: List of top-K items recommended for each user
         """
-        user_ids = [
-            None if self.user_ids.pass_through and (user_id := self.user_ids.get_id(user)) > self.interactions.max_user_id
-            else user_id
-            for user in users
-        ]
+        user_ids = []
+        for user in users:
+            uid = self.user_ids.get_id(user)
+            if self.user_ids.pass_through and uid > self.interactions.max_user_id:
+                user_ids.append(None)
+            else:
+                user_ids.append(uid)
         candidate_item_ids = None
         if candidate_items is not None:
             candidate_item_ids = [
