@@ -2,7 +2,6 @@ import logging
 
 from abc import ABC, abstractmethod
 from typing import Any, List, Optional, Tuple, Iterable, Self
-from scipy.sparse import csc_matrix
 
 from rtrec.utils.features import FeatureStore
 from rtrec.utils.identifiers import Identifier
