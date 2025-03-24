@@ -5,7 +5,26 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.7] - 01.17.2005
+## [0.1.8] - 03.24.2025
+
+Minor enhancement release.
+
+### Minor changes
+
+* Revised to return recent hot items for U2I recommendation where user does not have any interaction ([Commit 1f383b7](https://github.com/myui/rtrec/commit/1f383b755093fc9636480bc8166fb68ccff615e8
+))
+
+* Reduced dependency `@override` in typing-extension >= 4.5.0 ([Commit 48125c2](https://github.com/myui/rtrec/commit/48125c25bed0340852cf749587607842cb62b34d))
+
+* Suppported SGD-based optimization for SLIM ([Commit ecf5d29](https://github.com/myui/rtrec/commit/ecf5d2942a8649005b1ffbad87391356e52182f0))
+
+### Bug fixes
+
+* Fixed a corner case bug for handling candidate_item_ids ([Commit f6231ed](https://github.com/myui/rtrec/commit/f6231ed51816a2e1e11954bbad0becfc56992e61))
+
+**Full Changelog**: [v0.1.7...v0.1.8](https://github.com/myui/rtrec/compare/v0.1.7...v0.1.8)
+
+## [0.1.7] - 01.17.2025
 
 All users of v0.1.6 is recommended to update to v0.1.7.
 LightFM support is now bacame stable.
@@ -18,7 +37,7 @@ LightFM support is now bacame stable.
 
 Check [this example notebook](https://github.com/myui/rtrec/blob/main/notebooks/rtrec-movielens-with-features.ipynb) how to use user/item tags.
 
-## [0.1.6] - 01.06.2005
+## [0.1.6] - 01.06.2025
 
 All users of 0.1.5 is recommended to update to v0.1.6.
 
