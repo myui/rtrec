@@ -1,6 +1,8 @@
 from lightfm import LightFM
 from sklearn.base import clone
-from typing import Optional, override
+from typing import Optional
+# require typing-extensions >= 4.5
+# from typing import override
 from scipy.sparse import csr_matrix, coo_matrix
 
 class LightFMWrapper(LightFM):
@@ -41,7 +43,7 @@ class LightFMWrapper(LightFM):
             random_state,
         )
 
-    @override
+    #@override
     def fit_partial(
         self,
         interactions: coo_matrix,

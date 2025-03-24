@@ -1,12 +1,14 @@
 import logging
-from typing import Any, Iterable, List, Optional, Tuple, overload, override
+from typing import Any, Iterable, List, Optional, Tuple
+# require typing-extensions >= 4.5
+# from typing import override
 
 from ..utils.math import calc_norm
 from .base import BaseModel
 from .internal.lightfm_wrapper import LightFMWrapper
 
 from scipy import sparse
-from scipy.sparse import csr_matrix, csc_matrix
+from scipy.sparse import csr_matrix
 import numpy as np
 import implicit.cpu.topk as implicit
 
@@ -21,7 +23,7 @@ class LightFM(BaseModel):
         self.recorded_user_ids = set()
         self.recorded_item_ids = set()
 
-    @override
+    #@override
     def fit(self, interactions: Iterable[Tuple[Any, Any, float, float]], update_interaction: bool=False, progress_bar: bool=True) -> None:
         item_id_set, user_id_set = set(), set()
         for user, item, tstamp, rating in interactions:
@@ -117,7 +119,7 @@ class LightFM(BaseModel):
 
         return ids.tolist() # ndarray to list
 
-    @override
+    #@override
     def _recommend_batch(self, user_ids: List[int], candidate_item_ids: Optional[List[int]] = None, users_tags: Optional[List[List[str]]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[List[int]]:
         user_features = self._create_user_features(user_ids=user_ids, users_tags=users_tags, slice=True)
         item_features = self._create_item_features(item_ids=candidate_item_ids, slice=False)
