@@ -5,6 +5,7 @@ rtrec: Realtime Recommendation Library in Python
 [![Supported Python versions](https://img.shields.io/pypi/pyversions/rtrec.svg?logo=python&logoColor=FFE873)](https://pypi.org/project/rtrec/)
 [![CI status](https://github.com/myui/rtrec/actions/workflows/ci.yml/badge.svg)](https://github.com/myui/rtrec/actions)
 [![Licence](https://img.shields.io/github/license/myui/rtrec.svg)](LICENSE.txt)
+[![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/myui/rtrec/blob/main/notebooks/quickstart_colab.ipynb)
 
 A realtime recommendation system supporting online updates.
 
