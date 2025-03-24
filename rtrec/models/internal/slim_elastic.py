@@ -5,7 +5,7 @@ import numpy as np
 from numpy import ndarray
 from numpy.typing import ArrayLike
 import scipy.sparse as sp
-from sklearn.linear_model import ElasticNet
+from sklearn.linear_model import SGDRegressor, ElasticNet
 import warnings
 from sklearn.exceptions import ConvergenceWarning
 from tqdm import tqdm
@@ -155,11 +155,22 @@ class SLIMElastic:
         Initialize the SLIMElastic model.
         
         Args:
-            alpha (float): Regularization strength.
-            l1_ratio (float): The ratio between L1 and L2 regularization.
-            positive_only (bool): Whether to enforce positive coefficients.
+            config (dict): Configuration parameters for the model
+
+        Configuration:
+            optimizer (str): Optimization method (cd or cg)
+            eta0 (float): Learning rate used only for SGD
+            alpha (float): Regularization strength
+            l1_ratio (float): ElasticNet mixing parameter
+            positive_only (bool): Whether to enforce positive coefficients
+            max_iter (int): Maximum number of iterations
+            tol (float): Tolerance for stopping criteria
+            random_state (int): Random seed
+            nn_feature_selection (int): Number of nearest neighbors for feature
+                selection. If None, all features are used.
         """
-        # self.eta0 = config.get("eta0", 0.001) # Learning rate used only for SGD
+        self.optim_name = config.get("optim", "cd") # optimization method (cd or cg)
+        self.eta0 = config.get("eta0", 0.001) # Learning rate used only for SGD
         self.alpha = config.get("alpha", 0.1) # Regularization strength
         self.l1_ratio = config.get("l1_ratio", 0.1) # mostly for L2 regularization for SLIM
         self.positive_only = config.get("positive_only", True)
@@ -171,8 +182,9 @@ class SLIMElastic:
         # Initialize an empty item similarity matrix (will be computed during fit) of type scipy.sparse.csc_matrix
         self.item_similarity = None
 
-    def get_model(self) -> ElasticNet | FeatureSelectionWrapper:
-        model = ElasticNet(
+    def get_model(self) -> ElasticNet | SGDRegressor | FeatureSelectionWrapper:
+        if self.optim_name == "cd":
+            model = ElasticNet(
                 alpha=self.alpha, # Regularization strength
                 l1_ratio=self.l1_ratio,
                 fit_intercept=False,
@@ -184,6 +196,22 @@ class SLIMElastic:
                 random_state=self.random_state,
                 selection='random', # Randomize the order of features
             )
+        elif self.optim_name == "sgd":
+            model = SGDRegressor(
+                loss="squared_error",
+                penalty="elasticnet",
+                alpha=self.alpha,
+                l1_ratio=self.l1_ratio,
+                fit_intercept=False,
+                max_iter=self.max_iter,
+                tol=self.tol,
+                random_state=self.random_state,
+                learning_rate="invscaling",
+                eta0=self.eta0,
+                average=False,
+            )
+        else:
+            raise ValueError(f"Invalid Optimizer name: {self.optim_name}")
         if self.nn_feature_selection is not None:
             model = FeatureSelectionWrapper(model, n_neighbors=int(self.nn_feature_selection))
         return model
@@ -301,6 +329,8 @@ class SLIMElastic:
                 "tol": self.tol,
                 "random_state": self.random_state,
                 "nn_feature_selection": self.nn_feature_selection,
+                "optim": self.optim_name,
+                "eta0": self.eta0,
             }
 
             # Prepare partial function for multiprocessing
@@ -386,25 +416,10 @@ class SLIMElastic:
 
         results = {}
 
+        model = SLIMElastic._get_model(config)
+
         for j in item_ids:
             y = X.getcol(j).copy()
-
-            # Fit ElasticNet
-            model = ElasticNet(
-                alpha=config["alpha"],
-                l1_ratio=config["l1_ratio"],
-                fit_intercept=False,
-                precompute=True,
-                max_iter=config["max_iter"],
-                copy_X=False,
-                tol=config["tol"],
-                positive=config["positive_only"],
-                random_state=config["random_state"],
-                selection="random",
-            )
-            nn_feature_selection = config.get("nn_feature_selection", None)
-            if nn_feature_selection is not None:
-                model = FeatureSelectionWrapper(model, n_neighbors=int(nn_feature_selection))
 
             # Temporarily zero-out the target column
             X.data[X.indptr[j]:X.indptr[j + 1]] = 0
@@ -424,6 +439,45 @@ class SLIMElastic:
         shared_indptr.close()
 
         return results
+
+    @staticmethod
+    def _get_model(config: dict[str, Any]) -> ElasticNet | SGDRegressor | FeatureSelectionWrapper:        
+        optim_name = config.get("optim", "cd")
+        if optim_name == "cd":
+            model = ElasticNet(
+                alpha=config["alpha"],
+                l1_ratio=config["l1_ratio"],
+                fit_intercept=False,
+                precompute=True,
+                max_iter=config["max_iter"],
+                copy_X=False,
+                tol=config["tol"],
+                positive=config["positive_only"],
+                random_state=config["random_state"],
+                selection="random",
+            )
+        elif optim_name == "sgd":
+            model = SGDRegressor(
+                loss="squared_error",
+                penalty="elasticnet",
+                alpha=config["alpha"],
+                l1_ratio=config["l1_ratio"],
+                fit_intercept=False,
+                max_iter=config["max_iter"],
+                tol=config["tol"],
+                random_state=config["random_state"],
+                learning_rate="invscaling",
+                eta0=config["eta0"],
+                average=False,
+            )
+        else:
+            raise ValueError(f"Invalid Optimizer name: {optim_name}")
+
+        nn_feature_selection = config.get("nn_feature_selection", None)
+        if nn_feature_selection is not None:
+            model = FeatureSelectionWrapper(model, n_neighbors=int(nn_feature_selection))
+
+        return model
 
     def partial_fit(self, interaction_matrix: sp.csr_matrix, user_ids: List[int], parallel: bool=False, progress_bar: bool=False) -> Self:
         """
