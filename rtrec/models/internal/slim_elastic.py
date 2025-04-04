@@ -748,7 +748,7 @@ class SLIMElastic:
             raise RuntimeError("Model must be fitted before calling similar_items.")
 
         # Get the item similarity vector for the given item
-        item_similarity: sp.csr_matrix = self.item_similarity[:,item_id]
+        item_similarity: sp.csc_matrix = self.item_similarity[:,item_id]
 
         # Get non-zero indices and their corresponding similarity scores
         indices = item_similarity.indices
