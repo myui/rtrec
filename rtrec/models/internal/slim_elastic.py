@@ -180,7 +180,7 @@ class SLIMElastic:
         self.nn_feature_selection = config.get("nn_feature_selection", None)
 
         # Initialize an empty item similarity matrix (will be computed during fit) of type scipy.sparse.csc_matrix
-        self.item_similarity = None
+        self.item_similarity: sp.csc_matrix = None
 
     def get_model(self) -> ElasticNet | SGDRegressor | FeatureSelectionWrapper:
         if self.optim_name == "cd":
@@ -613,8 +613,9 @@ class SLIMElastic:
                   candidate_item_ids: Optional[List[int]]=None,
                   top_k: int=10,
                   filter_interacted: bool=True,
-                  dense_output: bool=True
-    ) -> List[int]:
+                  dense_output: bool=True,
+                  ret_scores: bool=False
+    ) -> List[int] | Tuple[List[int], List[float]]:
         """
         Recommend top-K items for a given user.
 
@@ -625,27 +626,36 @@ class SLIMElastic:
             top_k (int): Number of recommendations to return.
             filter_interacted (bool): Whether to exclude items the user has already interacted with. Ignored if candidate_item_ids is provided.
             dense_output (bool): Whether to return dense item IDs at prediction time.
+            ret_scores (bool): Whether to return scores along with recommended items.
 
         Returns:
-            List[int]: List of top-K item indices recommended for the user.
+            List[int] | Tuple[List[int], List[float]]:
+                If ret_scores=False: List of top-K item indices recommended for the user.
+                If ret_scores=True: Tuple of (List of top-K item indices, List of corresponding scores).
         """
         # Get predicted scores for all items for the given user
         if candidate_item_ids is None:
             scores = self.predict(user_id, interaction_matrix, dense_output=dense_output)
             if dense_output:
-                return self._dense_topk_indicies(scores, top_k, user_id, interaction_matrix, filter_interacted)
+                return self._dense_topk_indicies(scores, top_k, user_id, interaction_matrix, filter_interacted, ret_scores)
             else:
-                return self._sparse_topk_indicies(scores, top_k, user_id, interaction_matrix, filter_interacted)
+                return self._sparse_topk_indicies(scores, top_k, user_id, interaction_matrix, filter_interacted, ret_scores)
         else:
             scores = self.predict_selected(user_id, candidate_item_ids, interaction_matrix, dense_output=True)
             scores = scores.ravel()
             assert len(scores) == len(candidate_item_ids), f"Predicted scores must have the same length as candidate_item_ids: {len(scores)} != {len(candidate_item_ids)}"
-            # sort the candidate_item_ids by user_scores and take top-k
-            top_items = [candidate_item_ids[i] for i in np.argsort(scores)[-top_k:][::-1]]
+
+            # Sort the candidate_item_ids by user_scores and take top-k
+            sorted_indices = np.argsort(scores)[-top_k:][::-1]
+            top_items = [candidate_item_ids[i] for i in sorted_indices]
+
+            if ret_scores:
+                top_scores = scores[sorted_indices].tolist()
+                return top_items, top_scores
             return top_items
 
     @staticmethod
-    def _dense_topk_indicies(scores: ndarray, top_k: int, user_id: int, interaction_matrix: sp.csr_matrix, filter_interacted: bool=True) -> List[int]:
+    def _dense_topk_indicies(scores: ndarray, top_k: int, user_id: int, interaction_matrix: sp.csr_matrix, filter_interacted: bool=True, ret_scores: bool=False) -> List[int] | Tuple[List[int], List[float]]:
         """
         Get the top-K indices for a given dense matrix.
 
@@ -655,9 +665,12 @@ class SLIMElastic:
             user_id (int): User index.
             interaction_matrix (csr_matrix): User-item interaction matrix.
             filter_interacted (bool): Whether to filter out items the user has already interacted with.
+            ret_scores (bool): Whether to return scores along with recommended items.
 
         Returns:
-            List[int]: List of top-K indices.
+            List[int] | Tuple[List[int], List[float]]:
+                If ret_scores=False: List of top-K item indices.
+                If ret_scores=True: Tuple of (List of top-K item indices, List of corresponding scores).
         """
         scores = scores.ravel()
         # Exclude items that the user has already interacted with
@@ -674,10 +687,14 @@ class SLIMElastic:
             valid_indices = scores[top_items] != -np.inf
             top_items = top_items[valid_indices]
 
+        if ret_scores:
+            top_scores = scores[valid_indices].tolist()
+            return top_items.tolist(), top_scores # Convert numpy array to list
+
         return top_items.tolist() # Convert numpy array to list
 
     @staticmethod
-    def _sparse_topk_indicies(scores: sp.csr_matrix, top_k: int, user_id: int, interaction_matrix: sp.csr_matrix, filter_interacted: bool=True) -> List[int]:
+    def _sparse_topk_indicies(scores: sp.csr_matrix, top_k: int, user_id: int, interaction_matrix: sp.csr_matrix, filter_interacted: bool=True, ret_scores: bool=False) -> List[int] | Tuple[List[int], List[float]]:
         """
         Get the top-K indices for a given sparse matrix.
 
@@ -685,9 +702,12 @@ class SLIMElastic:
             scores (csr_matrix): Sparse matrix of scores.
             top_k (int): Number of top indices to retrieve.
             filter_interacted (bool): Whether to filter out items the user has already interacted with.
+            ret_scores (bool): Whether to return scores along with recommended items.
 
         Returns:
-            List[int]: List of top-K indices.
+            List[int] | Tuple[List[int], List[float]]:
+                If ret_scores=False: List of top-K indices.
+                If ret_scores=True: Tuple of (List of top-K indices, List of corresponding scores).
             """
         # Extract non-zero scores and their indices from the sparse matrix
         score_data = scores.data.tolist()
@@ -706,6 +726,10 @@ class SLIMElastic:
         top_items = sorted(filtered_scores, key=lambda x: x[1], reverse=True)[:top_k]
 
         # Extract and return the top-k indices
+        if ret_scores:
+            top_indices, top_scores = zip(*top_items)
+            return list(top_indices), list(top_scores)
+
         return [idx for idx, _ in top_items]
 
     def similar_items(self, item_id: int, top_k: int=10) -> List[Tuple[int, float]]:
