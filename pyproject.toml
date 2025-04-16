@@ -44,8 +44,8 @@ dependencies = [
     # Requires Implicit >= 0.6.0 for performance optimizations in matrix factorization
     "implicit>=0.6.0,<1.0.0",
 
-    # Typing-extensions >= 4.0.0 for forward compatibility of typing features across Python versions
-    "typing-extensions>=4.0.0,<5.0.0",
+    # @override requires >=4.5
+    "typing-extensions>=4.5.0,<5.0.0",
 ]
 
 classifiers = [

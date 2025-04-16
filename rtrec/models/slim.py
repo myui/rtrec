@@ -1,7 +1,6 @@
 import logging
 from typing import Any, Iterable, List, Optional, Tuple
-# require typing-extensions >= 4.5
-# from typing import override
+from typing import override
 
 from ..models.internal.slim_elastic import SLIMElastic
 from .base import BaseModel
@@ -13,7 +12,7 @@ class SLIM(BaseModel):
         self.model = SLIMElastic(kwargs)
         self.recorded_item_ids = set()
 
-    #@override
+    @override
     def fit(self, interactions: Iterable[Tuple[Any, Any, float, float]], update_interaction: bool=False, progress_bar: bool=True) -> None:
         item_id_set = set()
         for user, item, tstamp, rating in interactions:
