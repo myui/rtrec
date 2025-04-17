@@ -42,51 +42,6 @@ def minmax_normalize(scores: np.ndarray) -> np.ndarray:
     # Add a small epsilon to avoid division by zero
     return (scores - min_val) / (max_val - min_val + 1e-8)
 
-def ensemble_by_scores(user_id: int, fm_ids: np.ndarray, fm_scores: np.ndarray,
-                slim_ids: List[int], slim_scores: np.ndarray,
-                interaction_counts: Dict[int, Dict[int, int]],
-                topk: int) -> List[int]:
-    """
-    Combine scores from factorization machine (FM) and SLIM models using weighted ensemble.
-    Returns top-k items based on the combined scores.
-
-    Args:
-        user_id (int): The user ID for which recommendations are being made.
-        fm_ids (List[int]): Item IDs from the FM model.
-        fm_scores (np.ndarray): Scores from the FM model.
-        slim_ids (List[int]): Item IDs from the SLIM model.
-        slim_scores (np.ndarray): Scores from the SLIM model.
-        interaction_counts (Dict[int, Dict[int, int]]): Interaction counts for the user-item pairs.
-        topk (int, optional): Number of top items to return.
-
-    Returns:
-        List[int]: top-k score item ids
-    """
-    # Normalize scores from both models
-    fm_scores = minmax_normalize(fm_scores)
-    slim_scores = minmax_normalize(slim_scores)
-
-    # Create a combined scores initialized with FM scores
-    combined_dict = dict(zip(fm_ids, fm_scores))
-
-    # Process SLIM scores
-    for i, item_id in enumerate(slim_ids):
-        # Get interaction count
-        num_contacts = interaction_counts.get(item_id, {}).get(user_id, 0.0)
-
-        # Apply similarity weighting
-        weight = compute_similarity_weight(num_contacts)
-
-        # Add weighted SLIM score
-        combined_dict[item_id] = combined_dict.get(item_id, 0.0) + weight * slim_scores[i]
-
-    # Sort items by score in descending order and get top-k
-    sorted_items = sorted(combined_dict.items(), key=lambda x: x[1], reverse=True)[:topk]
-
-    # Get top-k itemm ids
-    top_ids, _ = zip(*sorted_items)
-    return list(top_ids)
-
 def comb_mnz(fm_ids: np.ndarray, fm_scores: np.ndarray,
              slim_ids: List[int], slim_scores: np.ndarray) -> Dict[int, float]:
     """
@@ -134,7 +89,7 @@ class HybridSlimFM(BaseModel):
         self.recorded_item_ids = set()
         # Initialize SLIM model
         self.slim_model = SLIMElastic(kwargs)
-        # Initialize interaction counts
+        # Initialize interaction counts (> 1); hack to reduce memory usage
         self.interaction_counts: Dict[int, Dict[int, int]] = {} # item_id -> {user_id -> num_contacts}
 
     @override
@@ -177,14 +132,12 @@ class HybridSlimFM(BaseModel):
             try:
                 user_id = self.user_ids.identify(user)
                 item_id = self.item_ids.identify(item)
+                # Increment interaction counts for this user-item pair
+                self._incr_interaction_counts(user_id, item_id)
+                # Add interaction to the model
                 self.interactions.add_interaction(user_id, item_id, tstamp, rating, upsert=update_interaction)
                 if record_interactions:
                     self._record_interactions(user_id, item_id, tstamp, rating)
-                # Increment interaction counts for this user-item pair
-                if item_id not in self.interaction_counts:
-                    self.interaction_counts[item_id] = {}
-                self.interaction_counts[item_id][user_id] = self.interaction_counts[item_id].get(user_id, 0) + 1
-
             except Exception as e:
                 logging.warning(f"Error processing interaction: {e}")
                 continue
@@ -206,7 +159,7 @@ class HybridSlimFM(BaseModel):
         self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sample_weights, epochs=self.epochs, num_threads=self.n_threads, verbose=progress_bar)
 
         # Fit SLIM model
-        self.model.partial_fit_items(ui_coo.tocsc(copy=False), item_ids, parallel=parallel, progress_bar=progress_bar)
+        self.slim_model.partial_fit_items(ui_coo.tocsc(copy=False), item_ids, parallel=parallel, progress_bar=progress_bar)
 
         # Clear recorded user and item IDs
         self.recorded_user_ids.clear()
@@ -274,7 +227,7 @@ class HybridSlimFM(BaseModel):
         dense_output = not self.item_ids.pass_through
         slim_ids, slim_scores = self.slim_model.recommend(user_id, ui_csr, candidate_item_ids=candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted, dense_output=dense_output, ret_scores=True)
 
-        return ensemble_by_scores(user_id, fm_ids, fm_scores, slim_ids, slim_scores, self.interaction_counts, top_k)
+        return self._ensemble_by_scores(user_id, fm_ids, fm_scores, slim_ids, slim_scores, top_k)
 
     @override
     def _recommend_batch(self,
@@ -337,7 +290,7 @@ class HybridSlimFM(BaseModel):
 
             slim_ids, slim_scores = self.slim_model.recommend(user_id, ui_csr, candidate_item_ids=candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted, dense_output=dense_output, ret_scores=True)
             # Combine scores from both models and get top-k item ids
-            top_items = ensemble_by_scores(user_id, fm_ids, fm_scores, slim_ids, slim_scores, self.interaction_counts, top_k)
+            top_items = self._ensemble_by_scores(user_id, fm_ids, fm_scores, slim_ids, slim_scores, top_k)
             results.append(top_items)
         return results
 
@@ -463,3 +416,67 @@ class HybridSlimFM(BaseModel):
         if slice and item_ids is not None:
             item_matrix = item_matrix[np.array(item_ids),:]
         return item_matrix
+
+    def _incr_interaction_counts(self, user_id: int, item_id: int):
+        if self.interactions.has_interaction(user_id, item_id):
+            interactions_for_item = self.interaction_counts.get(item_id, {})
+            cur_count = interactions_for_item.get(user_id, 1)
+            interactions_for_item[user_id] = cur_count + 1 # note start from 2
+            self.interaction_counts[item_id] = interactions_for_item
+
+    def _get_interaction_counts(self, user_id: int, item_id: int) -> int:
+        # First check if we have cached a count > 1
+        interactions_for_item = self.interaction_counts.get(item_id, {})
+        if user_id in interactions_for_item:
+            return interactions_for_item[user_id]
+
+        # Otherwise, check if there's at least one interaction
+        if self.interactions.has_interaction(user_id, item_id):
+            return 1
+
+        # No interactions
+        return 0
+
+    def _ensemble_by_scores(self, user_id: int,
+                    fm_ids: np.ndarray, fm_scores: np.ndarray,
+                    slim_ids: List[int], slim_scores: np.ndarray,
+                    topk: int) -> List[int]:
+        """
+        Combine scores from factorization machine (FM) and SLIM models using weighted ensemble.
+        Returns top-k items based on the combined scores.
+
+        Args:
+            user_id (int): The user ID for which recommendations are being made.
+            fm_ids (List[int]): Item IDs from the FM model.
+            fm_scores (np.ndarray): Scores from the FM model.
+            slim_ids (List[int]): Item IDs from the SLIM model.
+            slim_scores (np.ndarray): Scores from the SLIM model.
+            topk (int, optional): Number of top items to return.
+
+        Returns:
+            List[int]: top-k score item ids
+        """
+        # Normalize scores from both models
+        fm_scores = minmax_normalize(fm_scores)
+        slim_scores = minmax_normalize(slim_scores)
+
+        # Create a combined scores initialized with FM scores
+        combined_dict = dict(zip(fm_ids, fm_scores))
+
+        # Process SLIM scores
+        for i, item_id in enumerate(slim_ids):
+            # Get interaction count
+            num_contacts = self._get_interaction_counts(user_id, item_id)
+
+            # Apply similarity weighting
+            weight = compute_similarity_weight(num_contacts)
+
+            # Add weighted SLIM score
+            combined_dict[item_id] = combined_dict.get(item_id, 0.0) + weight * slim_scores[i]
+
+        # Sort items by score in descending order and get top-k
+        sorted_items = sorted(combined_dict.items(), key=lambda x: x[1], reverse=True)[:topk]
+
+        # Get top-k itemm ids
+        top_ids, _ = zip(*sorted_items)
+        return list(top_ids)

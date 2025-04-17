@@ -115,6 +115,19 @@ class UserItemInteractions:
         self.max_user_id = max(self.max_user_id, user_id)
         self.max_item_id = max(self.max_item_id, item_id)
 
+    def has_interaction(self, user_id: int, item_id: int) -> bool:
+        """
+        Checks if a user-item interaction exists.
+
+        Args:
+            user_id (int): ID of the user.
+            item_id (int): ID of the item.
+
+        Returns:
+            bool: True if the interaction exists, False otherwise.
+        """
+        return item_id in self.interactions.get(user_id, {})
+
     def get_user_item_rating(self, user_id: int, item_id: int, default_rating: float = 0.0) -> float:
         """
         Retrieves the interaction count for a specific user-item pair, applying decay if necessary.
