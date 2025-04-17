@@ -615,7 +615,7 @@ class SLIMElastic:
                   filter_interacted: bool=True,
                   dense_output: bool=True,
                   ret_scores: bool=False
-    ) -> List[int] | Tuple[List[int], List[float]]:
+    ) -> List[int] | Tuple[List[int], ndarray]:
         """
         Recommend top-K items for a given user.
 
@@ -629,7 +629,7 @@ class SLIMElastic:
             ret_scores (bool): Whether to return scores along with recommended items.
 
         Returns:
-            List[int] | Tuple[List[int], List[float]]:
+            List[int] | Tuple[List[int], ndarray]:
                 If ret_scores=False: List of top-K item indices recommended for the user.
                 If ret_scores=True: Tuple of (List of top-K item indices, List of corresponding scores).
         """
@@ -650,8 +650,7 @@ class SLIMElastic:
             top_items = [candidate_item_ids[i] for i in sorted_indices]
 
             if ret_scores:
-                top_scores = scores[sorted_indices].tolist()
-                return top_items, top_scores
+                return top_items, scores[sorted_indices]
             return top_items
 
     @staticmethod
@@ -668,7 +667,7 @@ class SLIMElastic:
             ret_scores (bool): Whether to return scores along with recommended items.
 
         Returns:
-            List[int] | Tuple[List[int], List[float]]:
+            List[int] | Tuple[List[int], ndarray]:
                 If ret_scores=False: List of top-K item indices.
                 If ret_scores=True: Tuple of (List of top-K item indices, List of corresponding scores).
         """
@@ -688,8 +687,7 @@ class SLIMElastic:
             top_items = top_items[valid_indices]
 
         if ret_scores:
-            top_scores = scores[valid_indices].tolist()
-            return top_items.tolist(), top_scores # Convert numpy array to list
+            return top_items.tolist(), scores[valid_indices]
 
         return top_items.tolist() # Convert numpy array to list
 
@@ -705,7 +703,7 @@ class SLIMElastic:
             ret_scores (bool): Whether to return scores along with recommended items.
 
         Returns:
-            List[int] | Tuple[List[int], List[float]]:
+            List[int] | Tuple[List[int], ndarray]:
                 If ret_scores=False: List of top-K indices.
                 If ret_scores=True: Tuple of (List of top-K indices, List of corresponding scores).
             """
@@ -728,20 +726,23 @@ class SLIMElastic:
         # Extract and return the top-k indices
         if ret_scores:
             top_indices, top_scores = zip(*top_items)
-            return list(top_indices), list(top_scores)
+            return list(top_indices), np.array(top_scores, dtype=np.float32)
 
         return [idx for idx, _ in top_items]
 
-    def similar_items(self, item_id: int, top_k: int=10) -> List[Tuple[int, float]]:
+    def similar_items(self, item_id: int, top_k: int=10, ret_ndarrays: bool=False) -> List[Tuple[int, float]] | Tuple[ndarray, ndarray]:
         """
         Get the top-K most similar items to a given item.
 
         Args:
             item_id (int): The item ID (column index in the interaction matrix).
             top_k (int): Number of similar items to retrieve.
+            ret_ndarrays (bool): Whether to return the results as ndarrays or lists.
 
         Returns:
-            List[int]: List of top-K similar item indices
+            List[Tuple[int, float]] | Tuple[ndarray, ndarray]:
+                If ret_ndarrays=False: List of tuples containing item IDs and their similarity scores.
+                If ret_ndarrays=True: Tuple of (ndarray of item IDs, ndarray of similarity scores).
         """
         if self.item_similarity is None:
             raise RuntimeError("Model must be fitted before calling similar_items.")
@@ -760,6 +761,10 @@ class SLIMElastic:
         # Sort the indices by similarity scores in descending order
         # return sorted(zip(valid_indices, valid_scores), key=lambda x: x[1], reverse=True)[:top_k]
         top_k_indices = np.argsort(-valid_scores)[:top_k]
-        ids = valid_indices[top_k_indices].tolist()
-        scores = valid_scores[top_k_indices].tolist()
-        return list(zip(ids, scores))
+
+        if ret_ndarrays:
+            return valid_indices[top_k_indices], valid_scores[top_k_indices]
+        else:
+            ids = valid_indices[top_k_indices].tolist()
+            scores = valid_scores[top_k_indices].tolist()
+            return list(zip(ids, scores))
