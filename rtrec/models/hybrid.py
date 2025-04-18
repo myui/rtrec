@@ -2,8 +2,10 @@ from collections import defaultdict
 import logging
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from typing import override
+from warnings import deprecated
 
 from rtrec.models.internal.slim_elastic import SLIMElastic
+from rtrec.utils.scoring import minmax_normalize
 
 from ..utils.math import calc_norm
 from .base import BaseModel
@@ -27,21 +29,35 @@ def compute_similarity_weight(num_contacts: int) -> float:
     """
     return 2.0 * num_contacts / (num_contacts + 1.0)
 
-def minmax_normalize(scores: np.ndarray) -> np.ndarray:
+def comb_sum(fm_ids: np.ndarray, fm_scores: np.ndarray,
+                slim_ids: List[int], slim_scores: np.ndarray) -> Dict[int, float]:
     """
-    Normalize scores using min-max scaling along a specific axis.
+    CombSUM rank aggregation for two recommendation lists.
 
-    Args:
-        scores (ndarray): The scores to normalize.
+    Parameters:
+        fm_ids (np.ndarray): Item IDs from the FM model.
+        fm_scores (np.ndarray): Scores from the FM model.
+        slim_ids (List[int]): Item IDs from the SLIM model.
+        slim_scores (np.ndarray): Scores from the SLIM model.
 
     Returns:
-        ndarray: The normalized scores with values between 0 and 1.
+        Dict[int, float]: Dictionary containing the aggregated scores for each item.
     """
-    min_val = min(scores)
-    max_val = max(scores)
-    # Add a small epsilon to avoid division by zero
-    return (scores - min_val) / (max_val - min_val + 1e-8)
+    summed_scores = defaultdict(float)
 
+    # Process FM scores
+    for item_id, score in zip(fm_ids, fm_scores):
+        iid = int(item_id)
+        summed_scores[iid] += float(score)
+
+    # Process SLIM scores
+    for item_id, score in zip(slim_ids, slim_scores):
+        iid = int(item_id)
+        summed_scores[iid] += float(score)
+
+    return summed_scores
+
+@deprecated
 def comb_mnz(fm_ids: np.ndarray, fm_scores: np.ndarray,
              slim_ids: List[int], slim_scores: np.ndarray) -> Dict[int, float]:
     """
@@ -340,9 +356,9 @@ class HybridSlimFM(BaseModel):
         # Combine scores from both models
         fm_scores = minmax_normalize(fm_scores)
         slim_scores = minmax_normalize(slim_scores)
-        comb_mnz_scores = comb_mnz(fm_ids, fm_scores, slim_ids, slim_scores)
+        comb_scores = comb_sum(fm_ids, fm_scores, slim_ids, slim_scores)
         # Get top-k item ids
-        sorted_items = sorted(comb_mnz_scores.items(), key=lambda x: x[1], reverse=True)[:top_k]
+        sorted_items = sorted(comb_scores.items(), key=lambda x: x[1], reverse=True)[:top_k]
         return sorted_items
 
     def _create_user_features(self, user_ids: Optional[List[int]]=None, users_tags: Optional[List[List[str]]] = None, slice: bool=False) -> csr_matrix:
