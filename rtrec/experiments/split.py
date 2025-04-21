@@ -3,7 +3,9 @@ from typing import Tuple, Optional
 
 def leave_one_last_item(
         df: pd.DataFrame,
-        sort_by_tstamp: bool = True
+        sort_by_tstamp: bool = True,
+        user_column: str = 'user',
+        tstamp_column: str = 'tstamp'
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Perform a leave-one-last-item split on the dataset.
@@ -17,10 +19,10 @@ def leave_one_last_item(
             - test_df: Test data containing the last interaction per user.
     """
     # Sort the DataFrame by user and timestamp to ensure chronological order
-    df = df.sort_values(by=['user', 'tstamp']).reset_index(drop=True)
+    df = df.sort_values(by=[user_column, tstamp_column]).reset_index(drop=True)
 
     # Get the index of each user's last interaction (to be used in the test set)
-    last_interaction_idx = df.groupby('user').tail(1).index
+    last_interaction_idx = df.groupby(user_column).tail(1).index
 
     # Split the data into train and test sets
     test_df = df.loc[last_interaction_idx].reset_index(drop=True)
@@ -28,15 +30,16 @@ def leave_one_last_item(
 
     # Optionally, sort the final train and test DataFrames by timestamp
     if sort_by_tstamp:
-        train_df = train_df.sort_values(by='tstamp').reset_index(drop=True)
-        test_df = test_df.sort_values(by='tstamp').reset_index(drop=True)
+        train_df = train_df.sort_values(by=tstamp_column).reset_index(drop=True)
+        test_df = test_df.sort_values(by=tstamp_column).reset_index(drop=True)
 
     return train_df, test_df
 
 def temporal_split(
     df: pd.DataFrame,
     test_frac: float = 0.2,
-    timestamp: Optional[float] = None
+    timestamp: Optional[float] = None,
+    tstamp_column: str = 'tstamp'
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Perform a temporal split on the dataset based on either a specified test fraction or timestamp.
@@ -58,12 +61,12 @@ def temporal_split(
     assert 0 < test_frac < 1, f"test_frac must be between 0 and 1: {test_frac}"
 
     # Sort the DataFrame by timestamp to ensure chronological order
-    df = df.sort_values(by='tstamp').reset_index(drop=True)
+    df = df.sort_values(by=tstamp_column).reset_index(drop=True)
 
     if timestamp is not None:
         # Split based on the specified timestamp
-        train_df = df[df['tstamp'] < timestamp].reset_index(drop=True)
-        test_df = df[df['tstamp'] >= timestamp].reset_index(drop=True)
+        train_df = df[df[tstamp_column] < timestamp].reset_index(drop=True)
+        test_df = df[df[tstamp_column] >= timestamp].reset_index(drop=True)
     else:
         # Split based on the specified test fraction
         split_index = int((1 - test_frac) * len(df))
@@ -75,7 +78,9 @@ def temporal_split(
 def temporal_user_split(
     df: pd.DataFrame,
     test_frac: float = 0.2,
-    sort_by_tstamp: bool = True
+    sort_by_tstamp: bool = True,
+    user_column: str = 'user',
+    tstamp_column: str = 'tstamp'
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Perform a temporal split on the dataset for each user individually based on a specified test fraction.
@@ -95,13 +100,13 @@ def temporal_user_split(
     assert 0 < test_frac < 1, "test_frac must be between 0 and 1."
 
     # Sort the DataFrame by user and timestamp to ensure chronological order within each user
-    df = df.sort_values(by=['user', 'tstamp']).reset_index(drop=True)
+    df = df.sort_values(by=[user_column, tstamp_column]).reset_index(drop=True)
 
     train_data = []
     test_data = []
 
     # Split data for each user individually
-    for user, user_df in df.groupby('user'):
+    for user, user_df in df.groupby(user_column):
         # Determine the split point based on the test fraction for the user
         split_index = int((1 - test_frac) * len(user_df))
 
@@ -115,8 +120,8 @@ def temporal_user_split(
 
     # Optionally, sort the final train and test DataFrames by timestamp
     if sort_by_tstamp:
-        train_df = train_df.sort_values(by='tstamp').reset_index(drop=True)
-        test_df = test_df.sort_values(by='tstamp').reset_index(drop=True)
+        train_df = train_df.sort_values(by=tstamp_column).reset_index(drop=True)
+        test_df = test_df.sort_values(by=tstamp_column).reset_index(drop=True)
 
     return train_df, test_df
 
