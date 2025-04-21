@@ -280,7 +280,7 @@ def load_amazon_review_v2(category_name: str = "Music",
                       (if category is "all") category.
     """
     # Base URL and directory setup
-    base_url = "https://datarepo.eng.ucsd.edu/mcauley_group/data/amazon_v2/categoryFilesSmall/"
+    base_url = "http://jmcauley.ucsd.edu/data/amazon_v2/categoryFilesSmall/"
     data_dir = "datasets/amazon_v2"
     os.makedirs(data_dir, exist_ok=True)
 
@@ -299,11 +299,12 @@ def load_amazon_review_v2(category_name: str = "Music",
         local_path = os.path.join(data_dir, file_name)
 
         if not os.path.exists(local_path):
-            print(f"Downloading Amazon {category} dataset...")
+            print(f"Downloading Amazon {category} dataset: {url}")
             urllib.request.urlretrieve(url, local_path)
             print("Download completed.")
 
         # Load the dataset for the specified category
+        print(f"Loading {category} dataset: {local_path}")
         df = pd.read_json(local_path, lines=True)
 
         # Filter columns and rename them
@@ -312,7 +313,7 @@ def load_amazon_review_v2(category_name: str = "Music",
             'reviewerID': 'user',
             'asin': 'item',
             'overall': 'rating',
-            'unixReviewTime': 'timestamp',
+            'unixReviewTime': 'tstamp',
             'image': 'image_url',
         }, inplace=True)
 
@@ -334,7 +335,7 @@ def load_amazon_review_v2(category_name: str = "Music",
         print(f"{category} dataset loaded successfully.")
 
     if sort_by_tstamp:
-        final_df.sort_values(by="timestamp", ascending=True, inplace=True)
+        final_df.sort_values(by="tstamp", ascending=True, inplace=True)
 
     return final_df
 
