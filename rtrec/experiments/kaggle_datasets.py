@@ -3,11 +3,6 @@ import os
 import requests
 import zipfile
 
-import pandas as pd
-import os
-import requests
-import zipfile
-
 from .utils import map_hour_to_period
 
 def load_retailrocket(standardize_schema: bool=True) -> pd.DataFrame:
