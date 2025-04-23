@@ -8,6 +8,8 @@ import os
 
 from datetime import datetime
 
+from .kaggle_datasets import load_retailrocket
+
 def load_movielens(dataset_scale: str, sort_by_tstamp: bool = False, load_user_attributes: bool = False, load_item_attributes: bool = False) -> pd.DataFrame:
     """
     Downloads and loads the specified MovieLens dataset version into a DataFrame with columns
@@ -411,5 +413,7 @@ def load_dataset(name: str) -> pd.DataFrame:
             return load_amazon_electronics_v2()
         case "lastfm_360k":
             return load_lastfm_360k()
+        case "retailrocket":
+            return load_retailrocket()
         case _:
             raise ValueError(f"Dataset '{name}' not found.")
