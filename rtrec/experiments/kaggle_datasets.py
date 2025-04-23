@@ -10,7 +10,7 @@ import zipfile
 
 from .utils import map_hour_to_period
 
-def load_retailrocket():
+def load_retailrocket(standardize_schema: bool=True) -> pd.DataFrame:
     """
     Load the Retail Rocket dataset from a CSV file.
 
@@ -41,8 +41,14 @@ def load_retailrocket():
         print("Extraction complete.")
 
     # Load the dataset
-    print(f"Loading dataset from {events_file_path}...")
-    events = pd.read_csv(events_file_path, sep=",", encoding="utf-8")
+    print(f"Loading dataset from {events_file_path}...!")
+    events = pd.read_csv(events_file_path, sep=",", encoding="utf-8", dtype={
+        'timestamp': 'int64',
+        'visitorid': 'int64',
+        'event': 'category', # 'view', 'addtocart', 'transaction'
+        'itemid': 'int64',
+        'transactionid': 'Int64'  # NaN for non-transaction events
+    }, na_values=[""], keep_default_na=True)
 
     item_props1 = pd.read_csv(os.path.join(data_dir, "item_properties_part1.csv"), sep=",", encoding="utf-8")
     item_props2 = pd.read_csv(os.path.join(data_dir, "item_properties_part2.csv"), sep=",", encoding="utf-8")
@@ -81,6 +87,18 @@ def load_retailrocket():
     merged_events['day_of_week'] = date_time.dt.dayofweek
     merged_events['hour'] = date_time.dt.hour
     merged_events['time_of_day'] = date_time.dt.hour.apply(map_hour_to_period)
-    merged_events['transactionid'] = merged_events['transactionid'].astype(str)
+
+    if standardize_schema:
+        merged_events.rename(columns={
+            'visitorid': 'user',
+            'itemid': 'item',
+            'timestamp': 'tstamp',
+        }, inplace=True)
+        # change view to 1, addtocart to 3, transaction to 5
+        merged_events['rating'] = merged_events['event'].cat.rename_categories({
+            'view': 1,
+            'addtocart': 3,
+            'transaction': 5
+        })
 
     return merged_events
