@@ -2,7 +2,6 @@ from collections import defaultdict
 import logging
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from typing import override
-from warnings import deprecated
 
 from rtrec.models.internal.slim_elastic import SLIMElastic
 from rtrec.utils.scoring import minmax_normalize
@@ -57,7 +56,6 @@ def comb_sum(fm_ids: np.ndarray, fm_scores: np.ndarray,
 
     return summed_scores
 
-@deprecated
 def comb_mnz(fm_ids: np.ndarray, fm_scores: np.ndarray,
              slim_ids: List[int], slim_scores: np.ndarray) -> Dict[int, float]:
     """
