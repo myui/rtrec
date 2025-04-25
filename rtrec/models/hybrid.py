@@ -244,6 +244,13 @@ class HybridSlimFM(BaseModel):
         return self._ensemble_by_scores(user_id, fm_ids, fm_scores, slim_ids, slim_scores, top_k)
 
     @override
+    def handle_unknown_user(self, user: Any) -> Optional[int]:
+        """
+        Handle unknown user in recommend_batch() method.
+        """
+        return 0 # workaround for a cold user problem
+
+    @override
     def _recommend_batch(self,
                          user_ids: List[int],
                          candidate_item_ids: Optional[List[int]] = None,

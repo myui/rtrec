@@ -77,6 +77,13 @@ class LightFM(BaseModel):
         sample_weights = ui_coo if self.model.loss == "warp-kos" else None
         self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sample_weights, epochs=self.epochs, num_threads=self.n_threads, verbose=progress_bar)
 
+    @override
+    def handle_unknown_user(self, user: Any) -> Optional[int]:
+        """
+        Handle unknown user in recommend_batch() method.
+        """
+        return 0 # workaround for a cold user problem
+
     def _recommend(self, user_id: int, candidate_item_ids: Optional[List[int]] = None, user_tags: Optional[List[str]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
         users_tags = [user_tags] if user_tags is not None else None
         user_features = self._create_user_features(user_ids=[user_id], users_tags=users_tags, slice=True)
