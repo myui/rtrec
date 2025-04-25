@@ -17,8 +17,8 @@ class BaseModel(ABC):
         self.interactions = UserItemInteractions(**kwargs)
 
         # Initialize user and item ID mappings
-        self.user_ids = Identifier()
-        self.item_ids = Identifier()
+        self.user_ids = Identifier(**kwargs)
+        self.item_ids = Identifier(**kwargs)
 
         self.feature_store = FeatureStore()
 
@@ -184,8 +184,8 @@ class BaseModel(ABC):
         user_ids = []
         for user in users:
             uid = self.user_ids.get_id(user)
-            if self.user_ids.pass_through and uid > self.interactions.max_user_id:
-                user_ids.append(None)
+            if uid is None or (self.user_ids.pass_through and uid > self.interactions.max_user_id):
+                user_ids.append(self.handle_unknown_user(user))
             else:
                 user_ids.append(uid)
         candidate_item_ids = None
@@ -200,6 +200,14 @@ class BaseModel(ABC):
 
         results = self._recommend_batch(user_ids, candidate_item_ids=candidate_item_ids, users_tags=users_tags, top_k=top_k, filter_interacted=filter_interacted)
         return [[self.item_ids.get(item_id) for item_id in internal_ids] for internal_ids in results]
+
+    def handle_unknown_user(self, user: Any) -> Optional[int]:
+        """
+        Handle the case when a user is not found in the model.
+        :param user: User to handle
+        :return: User index
+        """
+        return None
 
     def _recommend_batch(self, user_ids: List[int], candidate_item_ids: Optional[List[int]] = None, users_tags: Optional[List[List[str]]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[List[int]]:
         """

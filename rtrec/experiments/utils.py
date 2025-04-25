@@ -27,3 +27,21 @@ def n_core_filter(df: pd.DataFrame, columns: List[str], min_count: int = 10) -> 
 
     # Filter the DataFrame based on the accumulated mask
     return df[mask]
+
+def map_hour_to_period(hour: int) -> str:
+    if 0 <= hour < 4:
+        return 'midnight'
+    elif 4 <= hour < 8:
+        return 'early morning'
+    elif 8 <= hour < 12:
+        return 'morning'
+    elif 12 <= hour < 14:
+        return 'noon'
+    elif 14 <= hour < 17:
+        return 'afternoon'
+    elif 17 <= hour < 20:
+        return 'evening'
+    elif 20 <= hour < 24:
+        return 'night'
+    else:
+        return 'unknown'

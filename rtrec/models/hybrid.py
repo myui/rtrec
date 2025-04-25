@@ -2,7 +2,6 @@ from collections import defaultdict
 import logging
 from typing import Any, Dict, Iterable, List, Optional, Tuple
 from typing import override
-from warnings import deprecated
 
 from rtrec.models.internal.slim_elastic import SLIMElastic
 from rtrec.utils.scoring import minmax_normalize
@@ -57,7 +56,6 @@ def comb_sum(fm_ids: np.ndarray, fm_scores: np.ndarray,
 
     return summed_scores
 
-@deprecated
 def comb_mnz(fm_ids: np.ndarray, fm_scores: np.ndarray,
              slim_ids: List[int], slim_scores: np.ndarray) -> Dict[int, float]:
     """
@@ -244,6 +242,13 @@ class HybridSlimFM(BaseModel):
         slim_ids, slim_scores = self.slim_model.recommend(user_id, ui_csr, candidate_item_ids=candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted, dense_output=dense_output, ret_scores=True)
 
         return self._ensemble_by_scores(user_id, fm_ids, fm_scores, slim_ids, slim_scores, top_k)
+
+    @override
+    def handle_unknown_user(self, user: Any) -> Optional[int]:
+        """
+        Handle unknown user in recommend_batch() method.
+        """
+        return 0 # workaround for a cold user problem
 
     @override
     def _recommend_batch(self,
