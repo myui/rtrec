@@ -687,7 +687,7 @@ class SLIMElastic:
             top_items = top_items[valid_indices]
 
         if ret_scores:
-            return top_items.tolist(), scores[valid_indices]
+            return top_items.tolist(), scores[top_items]
 
         return top_items.tolist() # Convert numpy array to list
 
