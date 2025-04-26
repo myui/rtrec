@@ -5,6 +5,37 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.9] - 04.26.2025
+
+This release adds support for additional datasets, introduces a new hybrid model, and includes several improvements and bug fixes.
+
+### Major changes
+
+* Added new HybridSlimFM model combining FM (content-based) with SLIM (collaborative filtering) ([Commit 1189a57](https://github.com/myui/rtrec/commit/1189a57175bb74b21823faf047932489a09d8bfe))
+* Added support for H&M Kaggle dataset ([Commit 6f1daa7](https://github.com/myui/rtrec/commit/6f1daa785e997f872c467f254bc5c148548f10b3))
+* Added support for RetailRocket dataset ([Commit 6f1daa7](https://github.com/myui/rtrec/commit/6f1daa785e997f872c467f254bc5c148548f10b3))
+
+### Improvements
+
+* Added handle_unknown_user hook for handling cold start users in LightFM ([Commit 6f1daa7](https://github.com/myui/rtrec/commit/6f1daa785e997f872c467f254bc5c148548f10b3))
+* Added force_identify option to control identity handling ([Commit 6f1daa7](https://github.com/myui/rtrec/commit/6f1daa785e997f872c467f254bc5c148548f10b3))
+* Added user_column and tstamp_column arguments for flexible schema handling ([Commit ebb2579](https://github.com/myui/rtrec/commit/ebb2579d0b1dd41f874076cf959002626dfafb85))
+* Supported ret_scores argument in recommend() method ([Commit 24a44e6](https://github.com/myui/rtrec/commit/24a44e656a860f9206f340cef74a01fabfc4d280))
+* Improved memory usage in interaction_counts ([Commit fb02997](https://github.com/myui/rtrec/commit/fb02997ed46dd3e2a4deef0f412bac6790cc9c27))
+
+### Bug fixes
+
+* Fixed a bug when slicing scores ([Commit 6f1daa7](https://github.com/myui/rtrec/commit/6f1daa785e997f872c467f254bc5c148548f10b3))
+* Fixed URL for Amazon dataset ([Commit 673f02e](https://github.com/myui/rtrec/commit/673f02e17b45ba7b82a31c42a24ba9e05de821e9))
+* Fixed type hint issues ([Commit 2a7a69f](https://github.com/myui/rtrec/commit/2a7a69f12a59c6ccae3c7d6e0d76e2d3faacf076))
+
+### Other changes
+
+* Re-enabled @override decorator ([Commit ed97524](https://github.com/myui/rtrec/commit/ed9752413b21fba8186cb7fd2b3284f0284a6ec9))
+* Removed deprecated functionality ([Commit 6f1daa7](https://github.com/myui/rtrec/commit/6f1daa785e997f872c467f254bc5c148548f10b3))
+
+**Full Changelog**: [v0.1.8...v0.1.9](https://github.com/myui/rtrec/compare/v0.1.8...v0.1.9)
+
 ## [0.1.8] - 03.24.2025
 
 Minor enhancement release.
