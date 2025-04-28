@@ -128,7 +128,9 @@ def temporal_user_split(
 def random_split(
     df: pd.DataFrame,
     test_frac: float = 0.2,
-    random_seed: Optional[int] = None
+    random_seed: Optional[int] = None,
+    sort_by_tstamp: bool = False,
+    tstamp_column: str = 'tstamp'
 ) -> Tuple[pd.DataFrame, pd.DataFrame]:
     """
     Perform a random split on the dataset based on a specified test fraction.
@@ -137,6 +139,8 @@ def random_split(
         df (pd.DataFrame): A pandas DataFrame with columns ['user', 'item', 'tstamp', 'rating'].
         test_frac (float): The proportion of data to include in the test set, between 0 and 1. Default is 0.2.
         random_seed (Optional[int]): The random seed for reproducibility.
+        tstamp_column (str): The column name for the timestamp. Default is 'tstamp'.
+        sort_by_tstamp (bool): Whether to sort the resulting DataFrames by timestamp. Default is False.
 
     Returns:
         Tuple[pd.DataFrame, pd.DataFrame]: A tuple containing the training and test DataFrames.
@@ -155,5 +159,10 @@ def random_split(
     # Split the data into train and test sets
     train_df = df.iloc[test_size:].reset_index(drop=True)
     test_df = df.iloc[:test_size].reset_index(drop=True)
+
+    # Optionally, sort the final train and test DataFrames by timestamp
+    if sort_by_tstamp:
+        train_df = train_df.sort_values(by=tstamp_column).reset_index(drop=True)
+        test_df = test_df.sort_values(by=tstamp_column).reset_index(drop=True)
 
     return train_df, test_df
