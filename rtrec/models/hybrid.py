@@ -316,6 +316,9 @@ class HybridSlimFM(BaseModel):
         # Create zero matrix for identity since cold users have no history
         users = sparse.csr_matrix((num_rows, num_hot_users), dtype="float32")
 
+        num_user_features = self.model.user_embeddings.shape[0] - num_hot_users
+        assert num_user_features > 0, f"num_user_features should be greater than 0, but got {num_user_features}"
+
         # create user features matrix of shape (num_rows, num_hot_items) from users_tags
         rows, cols, data = [], [], []
         user_features = self.feature_store.user_features
@@ -324,12 +327,12 @@ class HybridSlimFM(BaseModel):
                 tag_id = user_features.index(tag)
                 if tag_id < 0:
                     continue
+                if tag_id >= num_user_features:
+                    continue # ignore not learned features
                 rows.append(row_id)
                 cols.append(tag_id)
                 data.append(1)
 
-        num_user_features = self.model.user_embeddings.shape[0] - num_hot_users
-        assert num_user_features > 0, f"num_user_features should be greater than 0, but got {num_user_features}"
         features = csr_matrix((data, (rows, cols)), shape=(num_rows, num_user_features), dtype="float32") # Shape: (num_rows, num_hot_items)
 
         # Horizontal stack the identity matrix and the features matrix
