@@ -11,6 +11,24 @@ class FeatureStore:
         self.user_feature_map: dict[int, List[int]] = {}
         self.item_feature_map: dict[int, List[int]] = {}
 
+    def num_user_features(self) -> int:
+        """
+        Get the number of user features.
+
+        Returns:
+            int: Number of user features
+        """
+        return len(self.user_features)
+
+    def num_item_features(self) -> int:
+        """
+        Get the number of item features.
+
+        Returns:
+            int: Number of item features
+        """
+        return len(self.item_features)
+
     def clear_user_features(self, user_ids: Optional[List[int]] = None) -> None:
         """
         Clear user features.

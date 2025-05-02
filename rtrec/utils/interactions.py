@@ -218,12 +218,12 @@ class UserItemInteractions:
         return [item_id for item_id in self.all_item_ids
                 if self.get_user_item_rating(user_id, item_id, default_rating=0.0) >= 0.0]
 
-    def get_hot_items(self, n: int, user_id: Optional[int]=None, filter_interacted: bool = True) -> List[int]:
+    def get_hot_items(self, n: Optional[int] = None, user_id: Optional[int]=None, filter_interacted: bool = True) -> List[int]:
         """
         Retrieves the top N most interacted items.
 
         Args:
-            n (int): Number of items to retrieve.
+            n (Optional[int]): Number of most recent items to consider (default is None).
 
         Returns:
             List[int]: List of item IDs of the top N most interacted items.
