@@ -15,18 +15,21 @@ from scipy.sparse import csr_matrix
 import numpy as np
 import implicit.cpu.topk as implicit
 
-def compute_similarity_weight(num_contacts: int) -> float:
+def compute_similarity_weight(num_contacts: int, max_val: float=2.0, k: float=1.0) -> float:
     """
     Compute the similarity weighting factor based on the number of user-item interactions.
 
     Args:
         num_contacts (int): Number of user-item interactions.
+        max_val (float): Maximum value for the similarity weighting factor.
+        k (float): Scaling factor that controls the rate of increase of the similarity weighting factor.
 
     Returns:
         float: Similarity weighting factor between 0 and 2.
         The factor approaches 2 as the number of contacts increases.
+        0 if there are no contacts, 1 if there is one contact, and close to 2 if there are many contacts by default.
     """
-    return 2.0 * num_contacts / (num_contacts + 1.0)
+    return max_val * num_contacts / (num_contacts + k)
 
 def comb_sum(fm_ids: np.ndarray, fm_scores: np.ndarray,
                 slim_ids: List[int], slim_scores: np.ndarray) -> Dict[int, float]:
