@@ -5,6 +5,29 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 05.04.2025
+
+This release introduces architectural improvements to the recommendation system core, with a focus on separating recommendation logic for hot and cold users.
+
+### Major Changes
+
+* Separated recommendation logic for hot and cold users ([04bcae3](https://github.com/myui/rtrec/commit/04bcae38f52c6d95541d4097edaf37c8e16745c3))
+* Added a notebook demonstrating Hybrid model for H&M fashion recommendations ([64a5da2](https://github.com/myui/rtrec/commit/64a5da2850b5e21fbd2d2947c0996ed1f967d33a))
+
+### Minor Changes
+
+* Added sort_by_tstamp option for time-based recommendation ordering ([18e1e34](https://github.com/myui/rtrec/commit/18e1e342f983915f952513dfe851c370c1c9f6d0))
+
+### Bug Fixes
+
+* Fixed corner case for handling not yet learned features ([2801a65](https://github.com/myui/rtrec/commit/2801a65e240082caa295c94579b3c08fe9ed716c))
+
+### Breaking Changes
+
+* Redesigned recommendation batch processing with separate paths for cold and hot users, which may require updates to custom model implementations
+
+**Full Changelog**: [v0.1.9...v0.2.0](https://github.com/myui/rtrec/compare/v0.1.9...v0.2.0)
+
 ## [0.1.9] - 04.26.2025
 
 This release adds support for additional datasets, introduces a new hybrid model, and includes several improvements and bug fixes.
