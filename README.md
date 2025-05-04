@@ -15,12 +15,15 @@ A realtime recommendation system supporting online updates.
 - ⚡️ Fast implementation (>=190k samples/sec training on laptop).
 - ◍ efficient sparse data support.
 - 🕑 decaying weights of user-item interactions based on recency.
+- 🔄 [Hybrid CF(Collaborative-Filtering)/CB(Content-based) model](https://github.com/myui/rtrec/blob/main/notebooks/h-and-m.ipynb) for cold-start users.
 - ![Rust](https://avatars.githubusercontent.com/u/5430905?s=20&v=4) experimental [Rust implementation](https://github.com/myui/rtrec/tree/rust)
+
 
 ## Supported Recommendation Algorithims
 
 - Sparse [SLIM](https://ieeexplore.ieee.org/document/6137254) with [time-weighted](https://dl.acm.org/doi/10.1145/1099554.1099689) interactions.
 - [Factorization Machines](https://ieeexplore.ieee.org/document/5694074) using [LightFM](https://github.com/lyst/lightfm)
+- Hybrid model of SLIM (CF) and Factorization Machines (CB). Based on the number of user-item interactions, balances prediction weights between CF and CB.
 
 ## Installation
 
