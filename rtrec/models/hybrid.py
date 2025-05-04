@@ -248,10 +248,98 @@ class HybridSlimFM(BaseModel):
         """
         Handle unknown user in recommend_batch() method.
         """
-        return 0 # workaround for a cold user problem
+        # workaround for a cold user problem
+        return 0
 
     @override
-    def _recommend_batch(self,
+    def _recommend_cold_batch(self, user_ids: List[Optional[int]], candidate_item_ids: Optional[List[int]] = None, users_tags: Optional[List[List[str]]] = None, top_k: int = 10) -> List[List[int]]:
+        """
+        For cold users, recommend hot items based on the FM model as there is no user-item interactions.
+        """
+        if users_tags is None or len(self.feature_store.user_features) == 0 and len(self.feature_store.item_features) == 0:
+            # Return hot items for cold users if no features are registered
+            if candidate_item_ids is None:
+                hot_items = self.interactions.get_hot_items(top_k, filter_interacted=False)
+            else:
+                all_hot_items = self.interactions.get_hot_items(filter_interacted=False)
+                # take intersection between hot items and candidate items
+                hot_items = []
+                for item_id in all_hot_items:
+                    if item_id in candidate_item_ids:
+                        hot_items.append(item_id)
+                        if len(hot_items) >= top_k:
+                            break
+            return [hot_items for _ in user_ids]
+
+        if candidate_item_ids is None:
+            candidate_item_ids = self.interactions.get_hot_items(filter_interacted=False)
+
+        user_features = self._cold_user_features(users_tags=users_tags)
+        item_features = self._create_item_features(item_ids=candidate_item_ids, slice=False)
+
+        user_biases, user_embeddings = self.model.get_user_representations(user_features)
+        item_biases, item_embeddings = self.model.get_item_representations(item_features)
+        if self.use_bias:
+            # Note np.ones for dot product with item biases
+            user_vector = np.hstack((user_biases[:, np.newaxis], np.ones((user_biases.size, 1)), user_embeddings), dtype=np.float32)
+            # Note np.ones for dot product with user biases
+            item_vector = np.hstack((np.ones((item_biases.size, 1)), item_biases[:, np.newaxis], item_embeddings), dtype=np.float32)
+        else:
+            user_vector = user_embeddings
+            item_vector = item_embeddings
+
+        ids_array, scores_array = implicit.topk(items=item_vector, query=user_vector, k=top_k, num_threads=self.n_threads)
+        assert len(ids_array) == len(user_ids)
+
+        results = []
+        # implicit assigns negative infinity to the scores to be fitered out
+        # see https://github.com/benfred/implicit/blob/v0.7.2/implicit/cpu/topk.pyx#L54
+        # the largest possible negative finite value in float32, which is approximately -3.4028235e+38.
+        min_score = -np.finfo(np.float32).max
+        for fm_ids, fm_scores in zip(ids_array, scores_array):
+            for i in range(len(fm_ids)):
+                if candidate_item_ids and fm_ids[i] not in candidate_item_ids:
+                    # remove ids not exist in candidate_item_ids
+                    fm_ids = fm_ids[:i]
+                    break
+                elif fm_scores[i] <= min_score:
+                    # remove ids less than or equal to min_score
+                    fm_ids = fm_ids[:i]
+                    break
+            results.append(fm_ids.tolist())
+        return results
+
+    def _cold_user_features(self, users_tags: List[List[str]]) -> csr_matrix:
+        num_rows = len(users_tags)
+        num_hot_users = self.interactions.shape[0]
+
+        # Create zero matrix for identity since cold users have no history
+        users = sparse.csr_matrix((num_rows, num_hot_users), dtype="float32")
+
+        num_user_features = self.model.user_embeddings.shape[0] - num_hot_users
+        assert num_user_features > 0, f"num_user_features should be greater than 0, but got {num_user_features}"
+
+        # create user features matrix of shape (num_rows, num_hot_items) from users_tags
+        rows, cols, data = [], [], []
+        user_features = self.feature_store.user_features
+        for row_id, user_tags in enumerate(users_tags):
+            for tag in user_tags:
+                tag_id = user_features.index(tag)
+                if tag_id < 0:
+                    continue
+                if tag_id >= num_user_features:
+                    continue # ignore not learned features
+                rows.append(row_id)
+                cols.append(tag_id)
+                data.append(1)
+
+        features = csr_matrix((data, (rows, cols)), shape=(num_rows, num_user_features), dtype="float32") # Shape: (num_rows, num_hot_items)
+
+        # Horizontal stack the identity matrix and the features matrix
+        return sparse.hstack((users, features), format="csr")
+
+    @override
+    def _recommend_hot_batch(self,
                          user_ids: List[int],
                          candidate_item_ids: Optional[List[int]] = None,
                          users_tags: Optional[List[List[str]]] = None,
@@ -269,7 +357,7 @@ class HybridSlimFM(BaseModel):
             ]
             return result
 
-        user_features = self._create_user_features(user_ids=user_ids, users_tags=users_tags, slice=True)
+        user_features = self._create_user_features(user_ids, users_tags=users_tags, slice=True)
         item_features = self._create_item_features(item_ids=candidate_item_ids, slice=False)
 
         user_biases, user_embeddings = self.model.get_user_representations(user_features)

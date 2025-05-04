@@ -77,13 +77,6 @@ class LightFM(BaseModel):
         sample_weights = ui_coo if self.model.loss == "warp-kos" else None
         self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sample_weights, epochs=self.epochs, num_threads=self.n_threads, verbose=progress_bar)
 
-    @override
-    def handle_unknown_user(self, user: Any) -> Optional[int]:
-        """
-        Handle unknown user in recommend_batch() method.
-        """
-        return 0 # workaround for a cold user problem
-
     def _recommend(self, user_id: int, candidate_item_ids: Optional[List[int]] = None, user_tags: Optional[List[str]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
         users_tags = [user_tags] if user_tags is not None else None
         user_features = self._create_user_features(user_ids=[user_id], users_tags=users_tags, slice=True)
@@ -126,7 +119,83 @@ class LightFM(BaseModel):
         return ids.tolist() # ndarray to list
 
     @override
-    def _recommend_batch(self, user_ids: List[int], candidate_item_ids: Optional[List[int]] = None, users_tags: Optional[List[List[str]]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[List[int]]:
+    def handle_unknown_user(self, user: Any) -> Optional[int]:
+        """
+        Handle unknown user in recommend_batch() method.
+        """
+        return 0 # workaround for a cold user problem
+
+    @override
+    def _recommend_cold_batch(self, user_ids: List[Optional[int]], candidate_item_ids: Optional[List[int]] = None, users_tags: Optional[List[List[str]]] = None, top_k: int = 10) -> List[List[int]]:
+        if candidate_item_ids is None:
+            candidate_item_ids = self.interactions.get_hot_items(filter_interacted=False)
+
+        user_features = self._cold_user_features(users_tags=users_tags)
+        item_features = self._create_item_features(item_ids=candidate_item_ids, slice=False)
+
+        user_biases, user_embeddings = self.model.get_user_representations(user_features)
+        item_biases, item_embeddings = self.model.get_item_representations(item_features)
+        if self.use_bias:
+            # Note np.ones for dot product with item biases
+            user_vector = np.hstack((user_biases[:, np.newaxis], np.ones((user_biases.size, 1)), user_embeddings), dtype=np.float32)
+            # Note np.ones for dot product with user biases
+            item_vector = np.hstack((np.ones((item_biases.size, 1)), item_biases[:, np.newaxis], item_embeddings), dtype=np.float32)
+        else:
+            user_vector = user_embeddings
+            item_vector = item_embeddings
+
+        ids_array, scores_array = implicit.topk(items=item_vector, query=user_vector, k=top_k, num_threads=self.n_threads)
+        assert len(ids_array) == len(user_ids)
+
+        results = []
+        # implicit assigns negative infinity to the scores to be fitered out
+        # see https://github.com/benfred/implicit/blob/v0.7.2/implicit/cpu/topk.pyx#L54
+        # the largest possible negative finite value in float32, which is approximately -3.4028235e+38.
+        min_score = -np.finfo(np.float32).max
+        for ids, scores in zip(ids_array, scores_array):
+            for i in range(len(ids)):
+                if candidate_item_ids and ids[i] not in candidate_item_ids:
+                    # remove ids not exist in candidate_item_ids
+                    ids = ids[:i]
+                    break
+                elif scores[i] <= min_score:
+                    # remove ids less than or equal to min_score
+                    ids = ids[:i]
+                    break
+            results.append(ids.tolist())
+        return results
+
+    def _cold_user_features(self, users_tags: List[List[str]]) -> csr_matrix:
+        num_rows = len(users_tags)
+        num_hot_users = self.interactions.shape[0]
+
+        # Create zero matrix for identity since cold users have no history
+        users = sparse.csr_matrix((num_rows, num_hot_users), dtype="float32")
+
+        num_user_features = self.model.user_embeddings.shape[0] - num_hot_users
+        assert num_user_features > 0, f"num_user_features should be greater than 0, but got {num_user_features}"
+
+        # create user features matrix of shape (num_rows, num_hot_items) from users_tags
+        rows, cols, data = [], [], []
+        user_features = self.feature_store.user_features
+        for row_id, user_tags in enumerate(users_tags):
+            for tag in user_tags:
+                tag_id = user_features.index(tag)
+                if tag_id < 0:
+                    continue
+                if tag_id >= num_user_features:
+                    continue # ignore not learned features
+                rows.append(row_id)
+                cols.append(tag_id)
+                data.append(1)
+
+        features = csr_matrix((data, (rows, cols)), shape=(num_rows, num_user_features), dtype="float32") # Shape: (num_rows, num_hot_items)
+
+        # Horizontal stack the identity matrix and the features matrix
+        return sparse.hstack((users, features), format="csr")
+
+    @override
+    def _recommend_hot_batch(self, user_ids: List[int], candidate_item_ids: Optional[List[int]] = None, users_tags: Optional[List[List[str]]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[List[int]]:
         user_features = self._create_user_features(user_ids=user_ids, users_tags=users_tags, slice=True)
         item_features = self._create_item_features(item_ids=candidate_item_ids, slice=False)
 

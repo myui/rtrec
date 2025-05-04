@@ -181,13 +181,22 @@ class BaseModel(ABC):
         :param filter_interacted: Whether to filter out items the user has already interacted with
         :return: List of top-K items recommended for each user
         """
-        user_ids = []
-        for user in users:
+        # Track indices of cold-start users
+        cold_user_ids: List[Optional[int]] = []
+        cold_indices = []
+        # Track indices of existing users
+        hot_user_ids: List[int] = []
+        hot_indices = []
+
+        for i, user in enumerate(users):
             uid = self.user_ids.get_id(user)
             if uid is None or (self.user_ids.pass_through and uid > self.interactions.max_user_id):
-                user_ids.append(self.handle_unknown_user(user))
+                cold_user_ids.append(self.handle_unknown_user(user))
+                cold_indices.append(i)
             else:
-                user_ids.append(uid)
+                hot_user_ids.append(uid)
+                hot_indices.append(i)
+
         candidate_item_ids = None
         if candidate_items is not None:
             candidate_item_ids = [
@@ -198,8 +207,52 @@ class BaseModel(ABC):
             if len(candidate_item_ids) == 0:
                 candidate_item_ids = None
 
-        results = self._recommend_batch(user_ids, candidate_item_ids=candidate_item_ids, users_tags=users_tags, top_k=top_k, filter_interacted=filter_interacted)
-        return [[self.item_ids.get(item_id) for item_id in internal_ids] for internal_ids in results]
+        if len(cold_user_ids) == 0:
+            # If there are no cold-start users, proceed with batch recommendation
+            results = self._recommend_hot_batch(hot_user_ids, candidate_item_ids=candidate_item_ids, users_tags=users_tags, top_k=top_k, filter_interacted=filter_interacted)
+            return [[self.item_ids.get(item_id) for item_id in internal_ids] for internal_ids in results]
+
+        # Initialize results list
+        results = [None] * len(users)
+
+        # Handle cold-start users
+        if cold_indices:
+            cold_user_tags = None
+            if users_tags:
+                cold_user_tags = [users_tags[i] for i in cold_indices]
+
+            # Get recommendations for cold-start user
+            cold_results = self._recommend_cold_batch(
+                cold_user_ids,
+                candidate_item_ids=candidate_item_ids,
+                users_tags=cold_user_tags,
+                top_k=top_k
+            )
+
+            # Map results back to original positions and convert item ids to original items
+            for i, orig_idx in enumerate(cold_indices):
+                results[orig_idx] = [self.item_ids.get(item_id) for item_id in cold_results[i]]
+
+        # Handle existing users
+        if hot_indices:
+            hot_users_tags = None
+            if users_tags:
+                hot_users_tags = [users_tags[i] for i in hot_indices]
+
+            # Get recommendations for hot users
+            hot_results = self._recommend_hot_batch(
+                hot_user_ids,
+                candidate_item_ids=candidate_item_ids,
+                users_tags=hot_users_tags,
+                top_k=top_k,
+                filter_interacted=filter_interacted
+            )
+
+            # Map results back to original positions and convert item ids to original items
+            for i, orig_idx in enumerate(hot_indices):
+                results[orig_idx] = [self.item_ids.get(item_id) for item_id in hot_results[i]]
+
+        return results
 
     def handle_unknown_user(self, user: Any) -> Optional[int]:
         """
@@ -209,7 +262,25 @@ class BaseModel(ABC):
         """
         return None
 
-    def _recommend_batch(self, user_ids: List[int], candidate_item_ids: Optional[List[int]] = None, users_tags: Optional[List[List[str]]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[List[int]]:
+    def _recommend_cold_batch(self, user_ids: List[Optional[int]], candidate_item_ids: Optional[List[int]] = None, users_tags: Optional[List[List[str]]] = None, top_k: int = 10) -> List[List[int]]:
+        """
+        Get recommendations for cold-start users (users not in the model).
+        By default, it returns the most popular items.
+
+        Args:
+        :param user_ids: List of user indices
+        :param candidate_item_ids: List of candidate item indices to recommend from
+        :param users_tags: List of user tags
+        :param top_k: Number of top items to recommend
+        :return: List of top-K item indices recommended for each user
+        """
+        hot_items = self.interactions.get_hot_items(top_k, filter_interacted=False)
+        if candidate_item_ids is not None:
+            # take intersection between hot items and candidate items
+            hot_items = [item_id for item_id in hot_items if item_id in candidate_item_ids]
+        return [hot_items for _ in user_ids]
+
+    def _recommend_hot_batch(self, user_ids: List[int], candidate_item_ids: Optional[List[int]] = None, users_tags: Optional[List[List[str]]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[List[int]]:
         """
         Recommend top-K items for a list of users.
         :param user_ids: List of user indices
@@ -221,34 +292,15 @@ class BaseModel(ABC):
         :return: List of top-K item indices recommended for each user
         """
         results = []
-        hot_items = None
         if users_tags: # If user tags are provided
             assert len(user_ids) == len(users_tags), f"Number of user tags must match the number of users. Got {len(user_ids)} users and {len(users_tags)} user tags."
             for user_id, user_tags in zip(user_ids, users_tags):
-                if user_id is None:
-                    # Return popular items if user is not found
-                    if hot_items is None:
-                        hot_items = self.interactions.get_hot_items(top_k, filter_interacted=False)
-                        if candidate_item_ids is not None:
-                            # take intersection between hot items and candidate items
-                            hot_items = [item_id for item_id in hot_items if item_id in candidate_item_ids]
-                    results.append(hot_items)
-                else:
-                    recommended_item_ids = self._recommend(user_id, candidate_item_ids=candidate_item_ids, user_tags=user_tags, top_k=top_k, filter_interacted=filter_interacted)
-                    results.append(recommended_item_ids)
+                recommended_item_ids = self._recommend(user_id, candidate_item_ids=candidate_item_ids, user_tags=user_tags, top_k=top_k, filter_interacted=filter_interacted)
+                results.append(recommended_item_ids)
         else:
             for user_id in user_ids:
-                if user_id is None:
-                    # Return popular items if user is not found
-                    if hot_items is None:
-                        hot_items = self.interactions.get_hot_items(top_k, filter_interacted=False)
-                        if candidate_item_ids is not None:
-                            # take intersection between hot items and candidate items
-                            hot_items = [item_id for item_id in hot_items if item_id in candidate_item_ids]
-                    results.append(hot_items)
-                else:
-                    recommended_item_ids = self._recommend(user_id, candidate_item_ids=candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted)
-                    results.append(recommended_item_ids)
+                recommended_item_ids = self._recommend(user_id, candidate_item_ids=candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted)
+                results.append(recommended_item_ids)
         return results
 
     def similar_items(self, query_item: Any, query_item_tags: Optional[List[str]] = None, top_k: int = 10, ret_scores: bool=False) -> List[Tuple[Any, float]] | List[Any]:
