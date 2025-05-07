@@ -98,9 +98,10 @@ class HybridSlimFM(BaseModel):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-        self.epochs = kwargs.get("epochs", 10)
-        self.n_threads = kwargs.get("n_threads", 1)
-        self.use_bias = kwargs.get("use_bias", True)
+        self.epochs = int(kwargs.get("epochs", 10))
+        self.n_threads = int(kwargs.get("n_threads", 1))
+        self.use_bias = bool(kwargs.get("use_bias", True))
+        self.similarity_weight_factor = float(kwargs.get("similarity_weight_factor", 1.0))
         self.model = LightFMWrapper(**kwargs)
         self.recorded_user_ids = set()
         self.recorded_item_ids = set()
@@ -581,7 +582,7 @@ class HybridSlimFM(BaseModel):
             num_contacts = self._get_interaction_counts(user_id, item_id)
 
             # Apply similarity weighting
-            weight = compute_similarity_weight(num_contacts)
+            weight = compute_similarity_weight(num_contacts, k=self.similarity_weight_factor)
 
             # Add weighted SLIM score
             combined_dict[item_id] = combined_dict.get(item_id, 0.0) + weight * slim_scores[i]
