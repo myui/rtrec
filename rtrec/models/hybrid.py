@@ -15,7 +15,7 @@ from scipy.sparse import csr_matrix
 import numpy as np
 import implicit.cpu.topk as implicit
 
-def compute_similarity_weight(num_contacts: int, max_val: float=2.0, k: float=1.0) -> float:
+def compute_similarity_weight(num_contacts: int, max_val: float=2.0, k: float=2.0) -> float:
     """
     Compute the similarity weighting factor based on the number of user-item interactions.
 
@@ -101,7 +101,7 @@ class HybridSlimFM(BaseModel):
         self.epochs = int(kwargs.get("epochs", 10))
         self.n_threads = int(kwargs.get("n_threads", 1))
         self.use_bias = bool(kwargs.get("use_bias", True))
-        self.similarity_weight_factor = float(kwargs.get("similarity_weight_factor", 1.0))
+        self.similarity_weight_factor = float(kwargs.get("similarity_weight_factor", 2.0))
         self.model = LightFMWrapper(**kwargs)
         self.recorded_user_ids = set()
         self.recorded_item_ids = set()
