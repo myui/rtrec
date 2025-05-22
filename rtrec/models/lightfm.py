@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Iterable, List, Optional, Tuple
+from typing import Any, Iterable, List, Optional, Tuple, Self
 from typing import override
 
 from ..utils.math import calc_norm
@@ -41,7 +41,7 @@ class LightFM(BaseModel):
         user_features = self._create_user_features(user_ids=user_ids)
         item_features = self._create_item_features(item_ids=item_ids)
         ui_coo = self.interactions.to_coo(select_users=user_ids, select_items=item_ids)
-        num_users, num_items = ui_coo.shape
+        num_users, num_items = ui_coo.shape # type: ignore
         assert user_features.shape[0] == num_users
         assert item_features.shape[0] == num_items
         sample_weights = ui_coo if self.model.loss == "warp-kos" else None
@@ -51,7 +51,7 @@ class LightFM(BaseModel):
         self.recorded_user_ids.add(user_id)
         self.recorded_item_ids.add(item_id)
 
-    def _fit_recorded(self, parallel: bool=False, progress_bar: bool=True) -> None:
+    def _fit_recorded(self, parallel: bool=False, progress_bar: bool=True) -> Self:
         user_ids = list(self.recorded_user_ids)
         item_ids = list(self.recorded_item_ids)
         user_features = self._create_user_features(user_ids=user_ids)
@@ -66,8 +66,9 @@ class LightFM(BaseModel):
         # Clear recorded user and item IDs
         self.recorded_user_ids.clear()
         self.recorded_item_ids.clear()
+        return self
 
-    def bulk_fit(self, parallel: bool=False, progress_bar: bool=True) -> None:
+    def bulk_fit(self, parallel: bool=False, progress_bar: bool=True) -> Self:
         user_features = self._create_user_features()
         item_features = self._create_item_features()
         ui_coo = self.interactions.to_coo()
@@ -76,6 +77,7 @@ class LightFM(BaseModel):
         assert item_features.shape[0] == num_items
         sample_weights = ui_coo if self.model.loss == "warp-kos" else None
         self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sample_weights, epochs=self.epochs, num_threads=self.n_threads, verbose=progress_bar)
+        return self
 
     def _recommend(self, user_id: int, candidate_item_ids: Optional[List[int]] = None, user_tags: Optional[List[str]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
         users_tags = [user_tags] if user_tags is not None else None

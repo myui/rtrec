@@ -4,12 +4,12 @@ import boto3
 from botocore.exceptions import ClientError
 import signal
 from typing import List, Dict, Set
-from rtrec.models import Fast_SLIM_MSE as SlimMSE
+from rtrec.models import SLIM
 
 kinesis_client = boto3.client('kinesis')
 training_lock = asyncio.Lock()
 
-recommender = SlimMSE(alpha=0.1, beta=1.0, lambda1=0.0002, lambda2=0.0001, min_value=-5, max_value=10)
+recommender = SLIM(alpha=0.1, beta=1.0, lambda1=0.0002, lambda2=0.0001, min_value=-5, max_value=10)
 
 async def fetch_shard_data(stream_name: str, stop_event: asyncio.Event, active_tasks: Dict[str, asyncio.Task]):
     """Continuously discover shards and manage tasks for them."""

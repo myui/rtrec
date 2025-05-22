@@ -34,8 +34,8 @@ class CSRMatrixWrapper:
         return self.csr_matrix
 
     @property
-    def shape(self) -> tuple:
-        return self.csr_matrix.shape
+    def shape(self) -> Tuple[int, int]:
+        return self.csr_matrix.shape # type: ignore
     
     def get_col(self, j: int) -> sp.csc_matrix:
         """
@@ -81,8 +81,8 @@ class CSCMatrixWrapper:
         return self.csc_matrix
 
     @property
-    def shape(self) -> tuple:
-        return self.csc_matrix.shape
+    def shape(self) -> Tuple[int, int]:
+        return self.csc_matrix.shape # type: ignore
     
     def get_col(self, j: int, copy: bool = True) -> sp.spmatrix:
         """

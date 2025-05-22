@@ -6,8 +6,8 @@ from .collections import IndexedSet
 class FeatureStore:
 
     def __init__(self):
-        self.user_features: IndexedSet[str] = IndexedSet()
-        self.item_features: IndexedSet[str] = IndexedSet()
+        self.user_features: IndexedSet = IndexedSet()
+        self.item_features: IndexedSet = IndexedSet()
         self.user_feature_map: dict[int, List[int]] = {}
         self.item_feature_map: dict[int, List[int]] = {}
 
@@ -175,7 +175,7 @@ class FeatureStore:
             num_users = max_user_id + 1
         return csr_matrix((data, (rows, cols)), shape=(num_users, len(self.user_features)), dtype=np.float32)
 
-    def build_item_features_matrix(self, item_ids: Optional[int]=None, items_tags: Optional[List[List[str]]] = None, num_items: Optional[int]=None) -> csr_matrix | None:
+    def build_item_features_matrix(self, item_ids: Optional[List[int]]=None, items_tags: Optional[List[List[str]]] = None, num_items: Optional[int]=None) -> csr_matrix | None:
         """
         Parameters:
             item_ids (Optional[List[int]]): List of item IDs to build the item features matrix for

@@ -1,6 +1,6 @@
 from collections import defaultdict
 import logging
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Self, Tuple
 from typing import override
 
 from rtrec.models.internal.slim_elastic import SLIMElastic
@@ -183,7 +183,7 @@ class HybridSlimFM(BaseModel):
         self.recorded_user_ids.clear()
         self.recorded_item_ids.clear()
 
-    def bulk_fit(self, parallel: bool=False, progress_bar: bool=True) -> None:
+    def bulk_fit(self, parallel: bool=False, progress_bar: bool=True) -> Self:
         user_features = self._create_user_features()
         item_features = self._create_item_features()
         ui_coo = self.interactions.to_coo()
@@ -195,6 +195,7 @@ class HybridSlimFM(BaseModel):
         # Fit SLIM model
         ui_csc = ui_coo.tocsc(copy=False)
         self.slim_model.fit(ui_csc, parallel=parallel, progress_bar=progress_bar)
+        return self
 
     def _recommend(self, user_id: int, candidate_item_ids: Optional[List[int]] = None, user_tags: Optional[List[str]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
         if len(self.feature_store.user_features) == 0 and len(self.feature_store.item_features) == 0:

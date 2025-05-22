@@ -1,6 +1,6 @@
 from collections import OrderedDict
 from collections.abc import MutableSet
-from typing import Any, Iterator, List, Optional
+from typing import Any, Iterator, List, Optional, override
 
 class LRUFreqSet(MutableSet):
     def __init__(self, capacity: int):
@@ -16,24 +16,26 @@ class LRUFreqSet(MutableSet):
         self.capacity = capacity
         self.data: OrderedDict[Any, int] = OrderedDict()  # key -> frequency
 
-    def add(self, key: Any) -> None:
+    @override
+    def add(self, value: Any) -> None:
         """
         Add a key to the set or update its frequency if it already exists.
 
         Parameters:
             key (Any): The key to add or update.
         """
-        if key in self.data:
+        if value in self.data:
             # Update frequency and mark as recently used
-            freq = self.data.pop(key)
-            self.data[key] = freq + 1
+            freq = self.data.pop(value)
+            self.data[value] = freq + 1
         else:
             # Evict the least recently used item if at capacity
             if len(self.data) >= self.capacity:
                 self.data.popitem(last=False)
-            self.data[key] = 1
+            self.data[value] = 1
 
-    def discard(self, key: Any) -> None:
+    @override
+    def discard(self, value: Any) -> None:
         """
         Remove a key from the set if it exists.
 
@@ -43,9 +45,9 @@ class LRUFreqSet(MutableSet):
         Raises:
             KeyError: If the key is not found in the set.
         """
-        if key not in self.data:
-            raise KeyError(key)
-        self.data.pop(key)
+        if value not in self.data:
+            raise KeyError(value)
+        self.data.pop(value)
 
     def __contains__(self, key: Any) -> bool:
         """
