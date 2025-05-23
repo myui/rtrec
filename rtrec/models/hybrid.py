@@ -492,8 +492,8 @@ class HybridSlimFM(BaseModel):
             user_matrix = sparse.hstack((user_identity, user_features), format="csr")
 
         if slice and user_ids is not None:
-            user_matrix = user_matrix[np.array(user_ids),:]
-        return user_matrix
+            user_matrix = user_matrix[np.array(user_ids),:] # type: ignore
+        return user_matrix # type: ignore
 
     def _create_item_features(self, item_ids: Optional[List[int]]=None, items_tags: Optional[List[List[str]]] = None, slice: bool=False) -> csr_matrix:
         """
@@ -528,8 +528,8 @@ class HybridSlimFM(BaseModel):
             item_matrix = sparse.hstack((item_identity, item_features), format="csr")
 
         if slice and item_ids is not None:
-            item_matrix = item_matrix[np.array(item_ids),:]
-        return item_matrix
+            item_matrix = item_matrix[np.array(item_ids),:] # type: ignore
+        return item_matrix # type: ignore
 
     def _incr_interaction_counts(self, user_id: int, item_id: int):
         if self.interactions.has_interaction(user_id, item_id):

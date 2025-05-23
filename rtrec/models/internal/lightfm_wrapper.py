@@ -98,18 +98,20 @@ class LightFMWrapper(LightFM):
         no_components = self.no_components
         no_user_features, no_item_features = interactions.shape  # default
 
-        if hasattr(user_features, "shape"):
+        if user_features is not None and hasattr(user_features, "shape"):
             no_user_features = user_features.shape[-1]
-        if hasattr(item_features, "shape"):
+        if item_features is not None and hasattr(item_features, "shape"):
             no_item_features = item_features.shape[-1]
 
         if (
-            no_user_features == self.user_embeddings.shape[0]
-            and no_item_features == self.item_embeddings.shape[0]
+            self.user_embeddings is not None and  # Check if user_embeddings is initialized
+            no_user_features == self.user_embeddings.shape[0] and
+            self.item_embeddings is not None and  # Check if item_embeddings is initialized (partially covered by _check_initialized)
+            no_item_features == self.item_embeddings.shape[0]
         ):
             return self
 
-        new_model = clone(self)
+        new_model = clone(self) # type: ignore
         new_model._initialize(no_components, no_item_features, no_user_features)
 
         # update all attributes from self._check_initialized

@@ -115,12 +115,12 @@ class CSCMatrixWrapper:
             The new values for the column.
         """
         start, end = self.csc_matrix.indptr[j], self.csc_matrix.indptr[j+1]
-        assert len(values) == end - start, f"Values must have the same length as the column: {len(values)} != {end - start}"
+        assert len(values) == end - start, f"Values must have the same length as the column: {len(values)} != {end - start}" # type: ignore
         self.csc_matrix.data[start:end] = values
 
 class FeatureSelectionWrapper:
 
-    def __init__(self, model: ElasticNet, n_neighbors: int = 30):
+    def __init__(self, model: ElasticNet | SGDRegressor, n_neighbors: int = 30):
         assert n_neighbors > 0, f"n_neighbors must be a positive integer: {n_neighbors}"
         self.model = model
         self.n_neighbors = n_neighbors
@@ -180,7 +180,7 @@ class SLIMElastic:
         self.nn_feature_selection = config.get("nn_feature_selection", None)
 
         # Initialize an empty item similarity matrix (will be computed during fit) of type scipy.sparse.csc_matrix
-        self.item_similarity: sp.csc_matrix = None
+        self.item_similarity: Optional[sp.csc_matrix] = None
 
     def get_model(self) -> ElasticNet | SGDRegressor | FeatureSelectionWrapper:
         if self.optim_name == "cd":
@@ -252,14 +252,14 @@ class SLIMElastic:
                 y = X.get_col(j)
 
                 # Set the target item column to 0
-                X.set_col(j, np.zeros_like(y.data))
+                X.set_col(j, np.zeros_like(y.data)) # type: ignore
 
                 # Fit the model
-                model.fit(X.matrix, y.toarray().ravel())
+                model.fit(X.matrix, y.toarray().ravel()) # type: ignore
 
                 # Update the item similarity matrix with new coefficients (weights for each user-item interaction)
                 # item_similarity[:, j] = model.coef_
-                for i, value in zip(model.sparse_coef_.indices, model.sparse_coef_.data):
+                for i, value in zip(model.sparse_coef_.indices, model.sparse_coef_.data): # type: ignore
                     item_similarity[i, j] = value
 
                 # Reattach the item column after training
@@ -286,7 +286,8 @@ class SLIMElastic:
             Self: The fitted SLIM ElasticNet model.
         """
         if num_workers is None:
-            num_workers = int(os.cpu_count() * 0.7)  # Default to 70% of available CPU cores
+            cpu_count = os.cpu_count()
+            num_workers = int((cpu_count or 4) * 0.7)  # Default to 70% of available CPU cores, or 2 if count is unknown
 
         if not isinstance(interaction_matrix, sp.csc_matrix):
             raise ValueError("Interaction matrix must be in CSC format for parallel processing.")
@@ -306,7 +307,7 @@ class SLIMElastic:
         shm_dtypes = (interaction_matrix.data.dtype, interaction_matrix.indices.dtype, interaction_matrix.indptr.dtype)
 
         matrix_shape = interaction_matrix.shape
-        num_items = matrix_shape[1]
+        num_items = matrix_shape[1] # type: ignore
         if self.item_similarity is None:
             item_similarity = sp.lil_matrix((num_items, num_items), dtype=np.float32)
         else:
@@ -339,14 +340,15 @@ class SLIMElastic:
                 shared_data_name = shared_data.name,
                 shared_indices_name = shared_indices.name,
                 shared_indptr_name = shared_indptr.name,
-                shm_shapes = shm_shapes,
+                shm_shapes = shm_shapes, # type: ignore
                 shm_dtypes = shm_dtypes,
-                matrix_shape = matrix_shape,
+                matrix_shape = matrix_shape, # type: ignore
                 config = config,
             )
 
             # Prepare batches of item indices using np.array_split
-            item_chunks = np.array_split(item_ids, int(num_items / chunk_size))
+            num_chunks = max(1, int(len(item_ids) / chunk_size)) # type: ignore
+            item_chunks = np.array_split(item_ids, num_chunks) # type: ignore
 
             # Use multiprocessing with imap_unordered
             with Pool(processes=num_workers) as pool:
@@ -491,7 +493,7 @@ class SLIMElastic:
         """        
         user_items = set()
         for user_id in user_ids:
-            user_items.update(interaction_matrix[user_id, :].indices.tolist())
+            user_items.update(interaction_matrix[user_id, :].indices.tolist()) # type: ignore
         return self.partial_fit_items(interaction_matrix, list(user_items), progress_bar)
 
     def partial_fit_items(self, interaction_matrix: sp.csc_matrix | sp.csr_matrix, updated_items: List[int], parallel: bool=False, progress_bar: bool=False) -> Self:
@@ -549,7 +551,7 @@ class SLIMElastic:
         self.item_similarity = item_similarity.tocsc(copy=False)
         return self
 
-    def predict(self, user_id: int, interaction_matrix: sp.csr_matrix, dense_output: bool=True) -> ndarray:
+    def predict(self, user_id: int, interaction_matrix: sp.csr_matrix, dense_output: bool=True) -> ndarray | sp.spmatrix:
         """
         Compute the predicted scores for a specific user across all items.
 
@@ -559,7 +561,9 @@ class SLIMElastic:
             dense_output (bool): Whether to return a dense output.
 
         Returns:
-            numpy.ndarray: Predicted scores for the user across all items of shape (n_items,)
+            numpy.ndarray | scipy.sparse.spmatrix: Predicted scores for the user across all items of shape (n_items,)
+                If dense_output=True, returns a numpy.ndarray.
+                If dense_output=False, returns a scipy.sparse.spmatrix.
         """
         if self.item_similarity is None:
             raise RuntimeError("Model must be fitted before calling predict.")
@@ -568,7 +572,7 @@ class SLIMElastic:
         # and the item similarity matrix
         return safe_sparse_dot(interaction_matrix[user_id, :], self.item_similarity, dense_output=dense_output)
 
-    def predict_selected(self, user_id: int, item_ids: List[int], interaction_matrix: sp.csr_matrix, dense_output: bool=True) -> ndarray:
+    def predict_selected(self, user_id: int, item_ids: List[int], interaction_matrix: sp.csr_matrix, dense_output: bool=True) -> ndarray | sp.spmatrix:
         """
         Compute the predicted scores for a specific user and a subset of items.
 
@@ -579,7 +583,9 @@ class SLIMElastic:
             dense_output (bool): Whether to return a dense output.
 
         Returns:
-            numpy.ndarray: Predicted scores for the user and selected items of shape (len(item_ids),)
+            numpy.ndarray | scipy.sparse.spmatrix: Predicted scores for the user and selected items of shape (len(item_ids),)
+                If dense_output=True, returns a numpy.ndarray.
+                If dense_output=False, returns a scipy.sparse.spmatrix.
         """
         if self.item_similarity is None:
             raise RuntimeError("Model must be fitted before calling predict_selected.")
@@ -589,7 +595,7 @@ class SLIMElastic:
         # return interaction_matrix[user_id, :].dot(self.item_similarity[:, item_ids])
         return safe_sparse_dot(interaction_matrix[user_id, :], self.item_similarity[:, item_ids], dense_output=dense_output)
 
-    def predict_all(self, interaction_matrix: sp.csr_matrix, dense_output: bool=True) -> ndarray | sp.csr_matrix:
+    def predict_all(self, interaction_matrix: sp.csr_matrix, dense_output: bool=True) -> ndarray | sp.spmatrix:
         """
         Compute the predicted scores for all users and items.
 
@@ -598,7 +604,7 @@ class SLIMElastic:
             dense_output (bool): Whether to return a dense output.
 
         Returns:
-            numpy.ndarray | scipy.sparse.csr_matrix: Predicted scores for all users and items.
+            numpy.ndarray | scipy.sparse.spmatrix: Predicted scores for all users and items.
         """
         if self.item_similarity is None:
             raise RuntimeError("Model must be fitted before calling predict_all.")
@@ -635,13 +641,13 @@ class SLIMElastic:
         """
         # Get predicted scores for all items for the given user
         if candidate_item_ids is None:
-            scores = self.predict(user_id, interaction_matrix, dense_output=dense_output)
+            scores = self.predict(user_id, interaction_matrix, dense_output=dense_output) # type: ignore
             if dense_output:
                 return self._dense_topk_indicies(scores, top_k, user_id, interaction_matrix, filter_interacted, ret_scores)
             else:
-                return self._sparse_topk_indicies(scores, top_k, user_id, interaction_matrix, filter_interacted, ret_scores)
+                return self._sparse_topk_indicies(scores, top_k, user_id, interaction_matrix, filter_interacted, ret_scores) # type: ignore
         else:
-            scores = self.predict_selected(user_id, candidate_item_ids, interaction_matrix, dense_output=True)
+            scores: ndarray = self.predict_selected(user_id, candidate_item_ids, interaction_matrix, dense_output=True) # type: ignore
             scores = scores.ravel()
             assert len(scores) == len(candidate_item_ids), f"Predicted scores must have the same length as candidate_item_ids: {len(scores)} != {len(candidate_item_ids)}"
 
@@ -654,7 +660,7 @@ class SLIMElastic:
             return top_items
 
     @staticmethod
-    def _dense_topk_indicies(scores: ndarray, top_k: int, user_id: int, interaction_matrix: sp.csr_matrix, filter_interacted: bool=True, ret_scores: bool=False) -> List[int] | Tuple[List[int], List[float]]:
+    def _dense_topk_indicies(scores: ndarray, top_k: int, user_id: int, interaction_matrix: sp.csr_matrix, filter_interacted: bool=True, ret_scores: bool=False) -> List[int] | Tuple[List[int], ndarray]:
         """
         Get the top-K indices for a given dense matrix.
 
@@ -674,7 +680,7 @@ class SLIMElastic:
         scores = scores.ravel()
         # Exclude items that the user has already interacted with
         if filter_interacted:
-            interacted_items = interaction_matrix[user_id, :].indices
+            interacted_items = interaction_matrix[user_id, :].indices # type: ignore
             scores[interacted_items] = -np.inf  # Exclude interacted items by setting scores to -inf
 
         # Get the top-K items by sorting the predicted scores in descending order
@@ -687,12 +693,12 @@ class SLIMElastic:
             top_items = top_items[valid_indices]
 
         if ret_scores:
-            return top_items.tolist(), scores[top_items]
+            return top_items.tolist(), scores[top_items] # type: ignore
 
-        return top_items.tolist() # Convert numpy array to list
+        return top_items.tolist() # type: ignore # Convert numpy array to list
 
     @staticmethod
-    def _sparse_topk_indicies(scores: sp.csr_matrix, top_k: int, user_id: int, interaction_matrix: sp.csr_matrix, filter_interacted: bool=True, ret_scores: bool=False) -> List[int] | Tuple[List[int], List[float]]:
+    def _sparse_topk_indicies(scores: sp.csr_matrix, top_k: int, user_id: int, interaction_matrix: sp.csr_matrix, filter_interacted: bool=True, ret_scores: bool=False) -> List[int] | Tuple[List[int], ndarray]:
         """
         Get the top-K indices for a given sparse matrix.
 
@@ -713,12 +719,12 @@ class SLIMElastic:
 
         if filter_interacted:
             # Filter out scores for interacted items
-            interacted_items = set(interaction_matrix[user_id].indices.tolist())
+            interacted_items = set(interaction_matrix[user_id].indices.tolist()) # type: ignore
             filtered_scores = [
-                (idx, score) for idx, score in zip(score_indices, score_data) if idx not in interacted_items
+                (idx, score) for idx, score in zip(score_indices, score_data) if idx not in interacted_items # type: ignore
             ]
         else:
-            filtered_scores = [(idx, score) for idx, score in zip(score_indices, score_data)]
+            filtered_scores = [(idx, score) for idx, score in zip(score_indices, score_data)] # type: ignore
 
         # Sort by score in descending order
         top_items = sorted(filtered_scores, key=lambda x: x[1], reverse=True)[:top_k]
@@ -760,11 +766,11 @@ class SLIMElastic:
 
         # Sort the indices by similarity scores in descending order
         # return sorted(zip(valid_indices, valid_scores), key=lambda x: x[1], reverse=True)[:top_k]
-        top_k_indices = np.argsort(-valid_scores)[:top_k]
+        top_k_indices = np.argsort(np.negative(valid_scores))[:top_k]
 
         if ret_ndarrays:
             return valid_indices[top_k_indices], valid_scores[top_k_indices]
         else:
             ids = valid_indices[top_k_indices].tolist()
             scores = valid_scores[top_k_indices].tolist()
-            return list(zip(ids, scores))
+            return list(zip(ids, scores)) # type: ignore
