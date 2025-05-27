@@ -22,7 +22,7 @@ class LRUFreqSet(MutableSet):
         Add a key to the set or update its frequency if it already exists.
 
         Parameters:
-            key (Any): The key to add or update.
+            value (Any): The key to add or update.
         """
         if value in self.data:
             # Update frequency and mark as recently used
