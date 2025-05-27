@@ -6,8 +6,8 @@ from .collections import IndexedSet
 class FeatureStore:
 
     def __init__(self):
-        self.user_features: IndexedSet = IndexedSet()
-        self.item_features: IndexedSet = IndexedSet()
+        self.user_features: IndexedSet[str] = IndexedSet[str]()
+        self.item_features: IndexedSet[str] = IndexedSet[str]()
         self.user_feature_map: dict[int, List[int]] = {}
         self.item_feature_map: dict[int, List[int]] = {}
 
