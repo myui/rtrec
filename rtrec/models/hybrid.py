@@ -1,6 +1,6 @@
 from collections import defaultdict
 import logging
-from typing import Any, Dict, Iterable, List, Optional, Tuple
+from typing import Any, Dict, Iterable, List, Optional, Self, Tuple
 from typing import override
 
 from rtrec.models.internal.slim_elastic import SLIMElastic
@@ -183,7 +183,7 @@ class HybridSlimFM(BaseModel):
         self.recorded_user_ids.clear()
         self.recorded_item_ids.clear()
 
-    def bulk_fit(self, parallel: bool=False, progress_bar: bool=True) -> None:
+    def bulk_fit(self, parallel: bool=False, progress_bar: bool=True) -> Self:
         user_features = self._create_user_features()
         item_features = self._create_item_features()
         ui_coo = self.interactions.to_coo()
@@ -195,6 +195,7 @@ class HybridSlimFM(BaseModel):
         # Fit SLIM model
         ui_csc = ui_coo.tocsc(copy=False)
         self.slim_model.fit(ui_csc, parallel=parallel, progress_bar=progress_bar)
+        return self
 
     def _recommend(self, user_id: int, candidate_item_ids: Optional[List[int]] = None, user_tags: Optional[List[str]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
         if len(self.feature_store.user_features) == 0 and len(self.feature_store.item_features) == 0:
@@ -491,8 +492,8 @@ class HybridSlimFM(BaseModel):
             user_matrix = sparse.hstack((user_identity, user_features), format="csr")
 
         if slice and user_ids is not None:
-            user_matrix = user_matrix[np.array(user_ids),:]
-        return user_matrix
+            user_matrix = user_matrix[np.array(user_ids),:] # type: ignore
+        return user_matrix # type: ignore
 
     def _create_item_features(self, item_ids: Optional[List[int]]=None, items_tags: Optional[List[List[str]]] = None, slice: bool=False) -> csr_matrix:
         """
@@ -527,8 +528,8 @@ class HybridSlimFM(BaseModel):
             item_matrix = sparse.hstack((item_identity, item_features), format="csr")
 
         if slice and item_ids is not None:
-            item_matrix = item_matrix[np.array(item_ids),:]
-        return item_matrix
+            item_matrix = item_matrix[np.array(item_ids),:] # type: ignore
+        return item_matrix # type: ignore
 
     def _incr_interaction_counts(self, user_id: int, item_id: int):
         if self.interactions.has_interaction(user_id, item_id):

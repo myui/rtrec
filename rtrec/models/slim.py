@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Iterable, List, Optional, Tuple
+from typing import Any, Iterable, List, Optional, Tuple, Self
 from typing import override
 
 from ..models.internal.slim_elastic import SLIMElastic
@@ -13,7 +13,7 @@ class SLIM(BaseModel):
         self.recorded_item_ids = set()
 
     @override
-    def fit(self, interactions: Iterable[Tuple[Any, Any, float, float]], update_interaction: bool=False, progress_bar: bool=True) -> None:
+    def fit(self, interactions: Iterable[Tuple[Any, Any, float, float]], update_interaction: bool=False, progress_bar: bool=True) -> Self:
         item_id_set = set()
         for user, item, tstamp, rating in interactions:
             try:
@@ -27,17 +27,19 @@ class SLIM(BaseModel):
         item_ids = list(item_id_set)
         interaction_matrix = self.interactions.to_csc(item_ids)
         self.model.partial_fit_items(interaction_matrix, item_ids, progress_bar=progress_bar)
+        return self
 
     def _record_interactions(self, user_id: int, item_id: int, tstamp: float, rating: float) -> None:
         self.recorded_item_ids.add(item_id)
 
-    def _fit_recorded(self, parallel: bool=False, progress_bar: bool=True) -> None:
+    def _fit_recorded(self, parallel: bool=False, progress_bar: bool=True) -> Self:
         item_ids = list(self.recorded_item_ids)
         interaction_matrix = self.interactions.to_csc(item_ids)
         self.model.partial_fit_items(interaction_matrix, item_ids, parallel=parallel, progress_bar=progress_bar)
         self.recorded_item_ids.clear()
+        return self
 
-    def bulk_fit(self, parallel: bool=False, progress_bar: bool=True) -> None:
+    def bulk_fit(self, parallel: bool=False, progress_bar: bool=True) -> Self:
         """
         Fit the recommender model on the given interaction matrix.
         :param interaction_matrix: Sparse interaction matrix
@@ -46,6 +48,7 @@ class SLIM(BaseModel):
         """
         interaction_matrix = self.interactions.to_csc()
         self.model.fit(interaction_matrix, parallel=parallel, progress_bar=progress_bar)
+        return self
 
     def _recommend(self, user_id: int, candidate_item_ids: Optional[List[int]] = None, user_tags: Optional[List[str]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
         """

@@ -4,7 +4,7 @@ import argparse
 from .datasets import load_dataset
 from .split import leave_one_last_item, random_split, temporal_split, temporal_user_split
 from ..recommender import Recommender
-from ..models import Fast_SLIM_MSE, SLIM_MSE
+from ..models import SLIM, LightFM, HybridSlimFM
 
 def run_experiment(
     dataset_name: str,model_name: str, split_method: str = "temporal", epochs: int = 10, batch_size: int = 1000
@@ -40,15 +40,17 @@ def run_experiment(
         raise ValueError(f"Unsupported split method: {split_method}")
 
     # Initialize and train the recommender
-    if model_name == "fast_slim_mse":
-        model = Fast_SLIM_MSE()
-    elif model_name == "slim_mse":
-        model = SLIM_MSE()
+    if model_name == "slim":
+        model = SLIM(epochs=epochs, random_seed=43)
+    elif model_name == "lightfm":
+        model = LightFM(epochs=epochs, random_seed=43)
+    elif model_name == "hybrid_slimfm":
+        model = HybridSlimFM(epochs=epochs, random_seed=43)
     else:
         raise ValueError(f"Unsupported model: {model_name}")
 
     recommender = Recommender(model)
-    recommender.fit(train_data, epochs=epochs, batch_size=batch_size, random_seed=43)
+    recommender.fit(train_data, batch_size=batch_size)
 
     # Evaluate the recommender
     return recommender.evaluate(test_data)

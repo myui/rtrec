@@ -1,5 +1,5 @@
 import logging
-from typing import Any, Iterable, List, Optional, Tuple
+from typing import Any, Iterable, List, Optional, Tuple, Self
 from typing import override
 
 from ..utils.math import calc_norm
@@ -41,9 +41,9 @@ class LightFM(BaseModel):
         user_features = self._create_user_features(user_ids=user_ids)
         item_features = self._create_item_features(item_ids=item_ids)
         ui_coo = self.interactions.to_coo(select_users=user_ids, select_items=item_ids)
-        num_users, num_items = ui_coo.shape
-        assert user_features.shape[0] == num_users
-        assert item_features.shape[0] == num_items
+        num_users, num_items = ui_coo.shape # type: ignore
+        assert user_features.shape[0] == num_users # type: ignore
+        assert item_features.shape[0] == num_items # type: ignore
         sample_weights = ui_coo if self.model.loss == "warp-kos" else None
         self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sample_weights, epochs=self.epochs, num_threads=self.n_threads, verbose=progress_bar)
 
@@ -51,31 +51,33 @@ class LightFM(BaseModel):
         self.recorded_user_ids.add(user_id)
         self.recorded_item_ids.add(item_id)
 
-    def _fit_recorded(self, parallel: bool=False, progress_bar: bool=True) -> None:
+    def _fit_recorded(self, parallel: bool=False, progress_bar: bool=True) -> Self:
         user_ids = list(self.recorded_user_ids)
         item_ids = list(self.recorded_item_ids)
         user_features = self._create_user_features(user_ids=user_ids)
         item_features = self._create_item_features(item_ids=item_ids)
         ui_coo = self.interactions.to_coo(select_users=user_ids, select_items=item_ids)
-        num_users, num_items = ui_coo.shape
-        assert user_features.shape[0] == num_users
-        assert item_features.shape[0] == num_items
+        num_users, num_items = ui_coo.shape # type: ignore
+        assert user_features.shape[0] == num_users # type: ignore
+        assert item_features.shape[0] == num_items # type: ignore
         sample_weights = ui_coo if self.model.loss == "warp-kos" else None
         self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sample_weights, epochs=self.epochs, num_threads=self.n_threads, verbose=progress_bar)
 
         # Clear recorded user and item IDs
         self.recorded_user_ids.clear()
         self.recorded_item_ids.clear()
+        return self
 
-    def bulk_fit(self, parallel: bool=False, progress_bar: bool=True) -> None:
+    def bulk_fit(self, parallel: bool=False, progress_bar: bool=True) -> Self:
         user_features = self._create_user_features()
         item_features = self._create_item_features()
         ui_coo = self.interactions.to_coo()
-        num_users, num_items = ui_coo.shape
-        assert user_features.shape[0] == num_users
-        assert item_features.shape[0] == num_items
+        num_users, num_items = ui_coo.shape # type: ignore
+        assert user_features.shape[0] == num_users # type: ignore
+        assert item_features.shape[0] == num_items # type: ignore
         sample_weights = ui_coo if self.model.loss == "warp-kos" else None
         self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sample_weights, epochs=self.epochs, num_threads=self.n_threads, verbose=progress_bar)
+        return self
 
     def _recommend(self, user_id: int, candidate_item_ids: Optional[List[int]] = None, user_tags: Optional[List[str]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[int]:
         users_tags = [user_tags] if user_tags is not None else None
@@ -86,9 +88,9 @@ class LightFM(BaseModel):
         item_biases, item_embeddings = self.model.get_item_representations(item_features)
         if self.use_bias:
             # Note np.ones for dot product with item biases
-            user_vector = np.hstack((user_biases[:, np.newaxis], np.ones((user_biases.size, 1)), user_embeddings), dtype=np.float32)
+            user_vector = np.hstack((user_biases[:, np.newaxis], np.ones((user_biases.size, 1)), user_embeddings), dtype=np.float32) # type: ignore
             # Note np.ones for dot product with user biases
-            item_vector = np.hstack((np.ones((item_biases.size, 1)), item_biases[:, np.newaxis], item_embeddings), dtype=np.float32)
+            item_vector = np.hstack((np.ones((item_biases.size, 1)), item_biases[:, np.newaxis], item_embeddings), dtype=np.float32) # type: ignore
         else:
             user_vector = user_embeddings
             item_vector = item_embeddings
@@ -96,7 +98,7 @@ class LightFM(BaseModel):
         filter_items = None
         if filter_interacted:
             ui_csr = self.interactions.to_csr(select_users=[user_id], include_weights=False)
-            filter_items = ui_csr[user_id:].indices
+            filter_items = ui_csr[user_id:].indices # type: ignore
 
         ids, scores = implicit.topk(items=item_vector, query=user_vector, k=top_k, filter_items=filter_items, num_threads=self.n_threads)
         ids = ids.ravel()
@@ -130,6 +132,9 @@ class LightFM(BaseModel):
         if candidate_item_ids is None:
             candidate_item_ids = self.interactions.get_hot_items(filter_interacted=False)
 
+        if users_tags is None:
+            users_tags = [[] for _ in range(len(user_ids))]
+
         user_features = self._cold_user_features(users_tags=users_tags)
         item_features = self._create_item_features(item_ids=candidate_item_ids, slice=False)
 
@@ -137,9 +142,9 @@ class LightFM(BaseModel):
         item_biases, item_embeddings = self.model.get_item_representations(item_features)
         if self.use_bias:
             # Note np.ones for dot product with item biases
-            user_vector = np.hstack((user_biases[:, np.newaxis], np.ones((user_biases.size, 1)), user_embeddings), dtype=np.float32)
+            user_vector = np.hstack((user_biases[:, np.newaxis], np.ones((user_biases.size, 1)), user_embeddings), dtype=np.float32) # type: ignore
             # Note np.ones for dot product with user biases
-            item_vector = np.hstack((np.ones((item_biases.size, 1)), item_biases[:, np.newaxis], item_embeddings), dtype=np.float32)
+            item_vector = np.hstack((np.ones((item_biases.size, 1)), item_biases[:, np.newaxis], item_embeddings), dtype=np.float32) # type: ignore
         else:
             user_vector = user_embeddings
             item_vector = item_embeddings
@@ -172,7 +177,7 @@ class LightFM(BaseModel):
         # Create zero matrix for identity since cold users have no history
         users = sparse.csr_matrix((num_rows, num_hot_users), dtype="float32")
 
-        num_user_features = self.model.user_embeddings.shape[0] - num_hot_users
+        num_user_features = self.model.user_embeddings.shape[0] - num_hot_users # type: ignore
         assert num_user_features > 0, f"num_user_features should be greater than 0, but got {num_user_features}"
 
         # create user features matrix of shape (num_rows, num_hot_items) from users_tags
@@ -192,7 +197,7 @@ class LightFM(BaseModel):
         features = csr_matrix((data, (rows, cols)), shape=(num_rows, num_user_features), dtype="float32") # Shape: (num_rows, num_hot_items)
 
         # Horizontal stack the identity matrix and the features matrix
-        return sparse.hstack((users, features), format="csr")
+        return sparse.hstack((users, features), format="csr") # type: ignore
 
     @override
     def _recommend_hot_batch(self, user_ids: List[int], candidate_item_ids: Optional[List[int]] = None, users_tags: Optional[List[List[str]]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[List[int]]:
@@ -203,9 +208,9 @@ class LightFM(BaseModel):
         item_biases, item_embeddings = self.model.get_item_representations(item_features)
         if self.use_bias:
             # Note np.ones for dot product with item biases
-            user_vector = np.hstack((user_biases[:, np.newaxis], np.ones((user_biases.size, 1)), user_embeddings), dtype=np.float32)
+            user_vector = np.hstack((user_biases[:, np.newaxis], np.ones((user_biases.size, 1)), user_embeddings), dtype=np.float32) # type: ignore
             # Note np.ones for dot product with user biases
-            item_vector = np.hstack((np.ones((item_biases.size, 1)), item_biases[:, np.newaxis], item_embeddings), dtype=np.float32)
+            item_vector = np.hstack((np.ones((item_biases.size, 1)), item_biases[:, np.newaxis], item_embeddings), dtype=np.float32) # type: ignore
         else:
             user_vector = user_embeddings
             item_vector = item_embeddings
@@ -245,12 +250,14 @@ class LightFM(BaseModel):
         query_biases, query_embeddings = self.model.get_item_representations(query_features)
         target_biases, target_embeddings = self.model.get_item_representations(target_features)
         if self.use_bias:
-            query_vector = np.hstack((query_biases[:, np.newaxis], query_embeddings), dtype=np.float32)
-            target_vector = np.hstack((target_biases[:, np.newaxis], target_embeddings), dtype=np.float32)
+            query_vector = np.hstack((query_biases[:, np.newaxis], query_embeddings), dtype=np.float32) # type: ignore
+            target_vector = np.hstack((target_biases[:, np.newaxis], target_embeddings), dtype=np.float32) # type: ignore
         else:
             query_vector = query_embeddings
             target_vector = target_embeddings
 
+        if target_vector is None:
+            raise ValueError("target_vector is None, cannot compute norm.")
         target_norm = calc_norm(target_vector)
 
         ids, scores = implicit.topk(items=target_vector, query=query_vector, k=top_k, item_norms=target_norm, filter_items=np.array([query_item_id], dtype="int32"), num_threads=self.n_threads)
@@ -269,13 +276,15 @@ class LightFM(BaseModel):
                 break
 
         # Convert back to cosine similarity from dot product scores
+        if query_vector is None:
+            raise ValueError("query_vector is None, cannot compute norm.")
         query_norm = calc_norm(query_vector)
         scores = scores / query_norm
 
         # exclude the query item itself
         valid_mask = ids != query_item_id
-        ids = ids[valid_mask].tolist()
-        scores = scores[valid_mask].tolist()
+        ids = ids[valid_mask].tolist() # type: ignore
+        scores = scores[valid_mask].tolist() # type: ignore
         return list(zip(ids, scores))
 
     def _create_user_features(self, user_ids: Optional[List[int]]=None, users_tags: Optional[List[List[str]]] = None, slice: bool=False) -> csr_matrix:
@@ -311,8 +320,8 @@ class LightFM(BaseModel):
             user_matrix = sparse.hstack((user_identity, user_features), format="csr")
 
         if slice and user_ids is not None:
-            user_matrix = user_matrix[np.array(user_ids),:]
-        return user_matrix
+            user_matrix = user_matrix[np.array(user_ids),:] # type: ignore
+        return user_matrix # type: ignore
 
     def _create_item_features(self, item_ids: Optional[List[int]]=None, items_tags: Optional[List[List[str]]] = None, slice: bool=False) -> csr_matrix:
         """
@@ -347,5 +356,5 @@ class LightFM(BaseModel):
             item_matrix = sparse.hstack((item_identity, item_features), format="csr")
 
         if slice and item_ids is not None:
-            item_matrix = item_matrix[np.array(item_ids),:]
-        return item_matrix
+            item_matrix = item_matrix[np.array(item_ids),:] # type: ignore
+        return item_matrix # type: ignore

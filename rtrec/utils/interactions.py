@@ -234,7 +234,7 @@ class UserItemInteractions:
             interacted_items = self.get_user_items(user_id)
         return list(self.hot_items.get_freq_items(n, exclude_items=interacted_items))
 
-    def to_csr(self, select_users: List[int] = None, include_weights: bool = True) -> csr_matrix:
+    def to_csr(self, select_users: Optional[List[int]] = None, include_weights: bool = True) -> csr_matrix:
         rows, cols = [], []
 
         if include_weights:
@@ -266,7 +266,7 @@ class UserItemInteractions:
             data = np.ones(len(rows), dtype="int32")
             return csr_matrix((data, (rows, cols)), shape=(self.max_user_id + 1, self.max_item_id + 1), dtype="int32")
 
-    def to_csc(self, select_items: List[int] = None) -> csc_matrix:
+    def to_csc(self, select_items: Optional[List[int]] = None) -> csc_matrix:
         rows, cols, data = [], [], []
 
         for user, inner_dict in self.interactions.items():
@@ -280,7 +280,7 @@ class UserItemInteractions:
         # Create the csc_matrix
         return csc_matrix((data, (rows, cols)), shape=(self.max_user_id + 1, self.max_item_id + 1), dtype="float32")
 
-    def to_coo(self, select_users: List[int] = None, select_items: List[int] = None) -> coo_matrix:
+    def to_coo(self, select_users: Optional[List[int]] = None, select_items: Optional[List[int]] = None) -> coo_matrix:
         rows, cols, data = [], [], []
 
         if select_users is None:

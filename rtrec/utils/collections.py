@@ -1,8 +1,8 @@
-from typing import Iterable, Optional, TypeVar
+from typing import Generic, Iterable, Optional, TypeVar
 
 T = TypeVar("T")  # A generic type for elements in the IndexedSet
 
-class IndexedSet:
+class IndexedSet(Generic[T]):
     """
     A data structure that combines the features of a set and a list,
     allowing fast addition of unique keys and retrieval of their indices.

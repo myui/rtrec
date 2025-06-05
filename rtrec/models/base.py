@@ -143,8 +143,11 @@ class BaseModel(ABC):
                 candidate_item_ids = None
 
         user_id = self.user_ids.get_id(user)
-        if self.user_ids.pass_through and user_id > self.interactions.max_user_id:
-            user_id = None
+        if user_id is not None:
+            if self.user_ids.pass_through and user_id > self.interactions.max_user_id:
+                # If user_id is greater than max_user_id, treat it as a cold-start user
+                user_id = None
+
         if user_id is None:
             hot_item_ids = self.interactions.get_hot_items(top_k, filter_interacted=False)
             if candidate_item_ids is not None:
@@ -252,7 +255,7 @@ class BaseModel(ABC):
             for i, orig_idx in enumerate(hot_indices):
                 results[orig_idx] = [self.item_ids.get(item_id) for item_id in hot_results[i]]
 
-        return results
+        return results # type: ignore
 
     def handle_unknown_user(self, user: Any) -> Optional[int]:
         """
