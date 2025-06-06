@@ -23,7 +23,7 @@ class LightFM(BaseModel):
         self.recorded_item_ids = set()
 
     @override
-    def fit(self, interactions: Iterable[Tuple[Any, Any, float, float]], update_interaction: bool=False, progress_bar: bool=True) -> None:
+    def fit(self, interactions: Iterable[Tuple[Any, Any, float, float]], update_interaction: bool=False, progress_bar: bool=True) -> Self:
         item_id_set, user_id_set = set(), set()
         for user, item, tstamp, rating in interactions:
             try:
@@ -46,6 +46,7 @@ class LightFM(BaseModel):
         assert item_features.shape[0] == num_items # type: ignore
         sample_weights = ui_coo if self.model.loss == "warp-kos" else None
         self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sample_weights, epochs=self.epochs, num_threads=self.n_threads, verbose=progress_bar)
+        return self
 
     def _record_interactions(self, user_id: int, item_id: int, tstamp: float, rating: float) -> None:
         self.recorded_user_ids.add(user_id)

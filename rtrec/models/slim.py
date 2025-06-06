@@ -2,6 +2,8 @@ import logging
 from typing import Any, Iterable, List, Optional, Tuple, Self
 from typing import override
 
+from numpy import ndarray
+
 from ..models.internal.slim_elastic import SLIMElastic
 from .base import BaseModel
 
@@ -65,7 +67,7 @@ class SLIM(BaseModel):
         dense_output = not self.item_ids.pass_through
         return self.model.recommend(user_id, interaction_matrix, candidate_item_ids=candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted, dense_output=dense_output)
 
-    def _similar_items(self, query_item_id: int, query_item_tags: Optional[List[str]] = None, top_k: int = 10) -> List[Tuple[int, float]]:
+    def _similar_items(self, query_item_id: int, query_item_tags: Optional[List[str]] = None, top_k: int = 10) -> List[Tuple[int, float]] | Tuple[ndarray, ndarray]:
         """
         Find similar items for a list of query items.
         :param query_item_ids: List of query item indices

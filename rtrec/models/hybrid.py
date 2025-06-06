@@ -111,7 +111,7 @@ class HybridSlimFM(BaseModel):
         self.interaction_counts: Dict[int, Dict[int, int]] = {} # item_id -> {user_id -> num_contacts}
 
     @override
-    def fit(self, interactions: Iterable[Tuple[Any, Any, float, float]], update_interaction: bool=False, progress_bar: bool=True) -> None:
+    def fit(self, interactions: Iterable[Tuple[Any, Any, float, float]], update_interaction: bool=False, progress_bar: bool=True) -> Self:
         item_id_set, user_id_set = set(), set()
         for user, item, tstamp, rating in interactions:
             try:
@@ -129,13 +129,14 @@ class HybridSlimFM(BaseModel):
         user_features = self._create_user_features(user_ids=user_ids)
         item_features = self._create_item_features(item_ids=item_ids)
         ui_coo = self.interactions.to_coo(select_users=user_ids, select_items=item_ids)
-        num_users, num_items = ui_coo.shape
-        assert user_features.shape[0] == num_users
-        assert item_features.shape[0] == num_items
+        num_users, num_items = ui_coo.shape # type: ignore
+        assert user_features.shape[0] == num_users # type: ignore
+        assert item_features.shape[0] == num_items # type: ignore
         sample_weights = ui_coo if self.model.loss == "warp-kos" else None
         self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sample_weights, epochs=self.epochs, num_threads=self.n_threads, verbose=progress_bar)
         # Fit SLIM model
-        self.slim_model.partial_fit_items(ui_coo.tocsc(copy=False), item_ids, progress_bar=progress_bar)
+        self.slim_model.partial_fit_items(ui_coo.tocsc(copy=False), item_ids, progress_bar=progress_bar) # type: ignore
+        return self
 
     @override
     def add_interactions(self, interactions, update_interaction = False, record_interactions = False):
@@ -164,32 +165,33 @@ class HybridSlimFM(BaseModel):
         self.recorded_user_ids.add(user_id)
         self.recorded_item_ids.add(item_id)
 
-    def _fit_recorded(self, parallel: bool=False, progress_bar: bool=True) -> None:
+    def _fit_recorded(self, parallel: bool=False, progress_bar: bool=True) -> Self:
         user_ids = list(self.recorded_user_ids)
         item_ids = list(self.recorded_item_ids)
         user_features = self._create_user_features(user_ids=user_ids)
         item_features = self._create_item_features(item_ids=item_ids)
         ui_coo = self.interactions.to_coo(select_users=user_ids, select_items=item_ids)
-        num_users, num_items = ui_coo.shape
+        num_users, num_items = ui_coo.shape # type: ignore
         assert user_features.shape[0] == num_users
         assert item_features.shape[0] == num_items
         sample_weights = ui_coo if self.model.loss == "warp-kos" else None
         self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sample_weights, epochs=self.epochs, num_threads=self.n_threads, verbose=progress_bar)
 
         # Fit SLIM model
-        self.slim_model.partial_fit_items(ui_coo.tocsc(copy=False), item_ids, parallel=parallel, progress_bar=progress_bar)
+        self.slim_model.partial_fit_items(ui_coo.tocsc(copy=False), item_ids, parallel=parallel, progress_bar=progress_bar) # type: ignore
 
         # Clear recorded user and item IDs
         self.recorded_user_ids.clear()
         self.recorded_item_ids.clear()
+        return self
 
     def bulk_fit(self, parallel: bool=False, progress_bar: bool=True) -> Self:
         user_features = self._create_user_features()
         item_features = self._create_item_features()
         ui_coo = self.interactions.to_coo()
-        num_users, num_items = ui_coo.shape
-        assert user_features.shape[0] == num_users
-        assert item_features.shape[0] == num_items
+        num_users, num_items = ui_coo.shape # type: ignore
+        assert user_features.shape[0] == num_users # type: ignore
+        assert item_features.shape[0] == num_items # type: ignore
         sample_weights = ui_coo if self.model.loss == "warp-kos" else None
         self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sample_weights, epochs=self.epochs, num_threads=self.n_threads, verbose=progress_bar)
         # Fit SLIM model
@@ -213,9 +215,9 @@ class HybridSlimFM(BaseModel):
         item_biases, item_embeddings = self.model.get_item_representations(item_features) # item_biases: shape (num_items, 1), item_embeddings: shape (num_items, num_features)
         if self.use_bias:
             # Note np.ones for dot product with item biases
-            user_vector = np.hstack((user_biases[:, np.newaxis], np.ones((user_biases.size, 1)), user_embeddings), dtype=np.float32)
+            user_vector = np.hstack((user_biases[:, np.newaxis], np.ones((user_biases.size, 1)), user_embeddings), dtype=np.float32) # type: ignore
             # Note np.ones for dot product with user biases
-            item_vector = np.hstack((np.ones((item_biases.size, 1)), item_biases[:, np.newaxis], item_embeddings), dtype=np.float32)
+            item_vector = np.hstack((np.ones((item_biases.size, 1)), item_biases[:, np.newaxis], item_embeddings), dtype=np.float32) # type: ignore
         else:
             user_vector = user_embeddings
             item_vector = item_embeddings
@@ -223,7 +225,7 @@ class HybridSlimFM(BaseModel):
         ui_csr = self.interactions.to_csr(select_users=[user_id], include_weights=True)
         filter_items = None
         if filter_interacted:
-            filter_items = ui_csr[user_id:].indices
+            filter_items = ui_csr[user_id:].indices # type: ignore
 
         fm_ids, fm_scores = implicit.topk(items=item_vector, query=user_vector, k=top_k, filter_items=filter_items, num_threads=self.n_threads)
         fm_ids = fm_ids.ravel()
@@ -286,9 +288,9 @@ class HybridSlimFM(BaseModel):
         item_biases, item_embeddings = self.model.get_item_representations(item_features)
         if self.use_bias:
             # Note np.ones for dot product with item biases
-            user_vector = np.hstack((user_biases[:, np.newaxis], np.ones((user_biases.size, 1)), user_embeddings), dtype=np.float32)
+            user_vector = np.hstack((user_biases[:, np.newaxis], np.ones((user_biases.size, 1)), user_embeddings), dtype=np.float32) # type: ignore
             # Note np.ones for dot product with user biases
-            item_vector = np.hstack((np.ones((item_biases.size, 1)), item_biases[:, np.newaxis], item_embeddings), dtype=np.float32)
+            item_vector = np.hstack((np.ones((item_biases.size, 1)), item_biases[:, np.newaxis], item_embeddings), dtype=np.float32) # type: ignore
         else:
             user_vector = user_embeddings
             item_vector = item_embeddings
@@ -341,7 +343,7 @@ class HybridSlimFM(BaseModel):
         features = csr_matrix((data, (rows, cols)), shape=(num_rows, num_user_features), dtype="float32") # Shape: (num_rows, num_hot_items)
 
         # Horizontal stack the identity matrix and the features matrix
-        return sparse.hstack((users, features), format="csr")
+        return sparse.hstack((users, features), format="csr") # type: ignore
 
     @override
     def _recommend_hot_batch(self,
@@ -369,9 +371,9 @@ class HybridSlimFM(BaseModel):
         item_biases, item_embeddings = self.model.get_item_representations(item_features)
         if self.use_bias:
             # Note np.ones for dot product with item biases
-            user_vector = np.hstack((user_biases[:, np.newaxis], np.ones((user_biases.size, 1)), user_embeddings), dtype=np.float32)
+            user_vector = np.hstack((user_biases[:, np.newaxis], np.ones((user_biases.size, 1)), user_embeddings), dtype=np.float32) # type: ignore
             # Note np.ones for dot product with user biases
-            item_vector = np.hstack((np.ones((item_biases.size, 1)), item_biases[:, np.newaxis], item_embeddings), dtype=np.float32)
+            item_vector = np.hstack((np.ones((item_biases.size, 1)), item_biases[:, np.newaxis], item_embeddings), dtype=np.float32) # type: ignore
         else:
             user_vector = user_embeddings
             item_vector = item_embeddings
@@ -416,12 +418,13 @@ class HybridSlimFM(BaseModel):
         query_biases, query_embeddings = self.model.get_item_representations(query_features)
         target_biases, target_embeddings = self.model.get_item_representations(target_features)
         if self.use_bias:
-            query_vector = np.hstack((query_biases[:, np.newaxis], query_embeddings), dtype=np.float32)
-            target_vector = np.hstack((target_biases[:, np.newaxis], target_embeddings), dtype=np.float32)
+            query_vector = np.hstack((query_biases[:, np.newaxis], query_embeddings), dtype=np.float32) # type: ignore
+            target_vector = np.hstack((target_biases[:, np.newaxis], target_embeddings), dtype=np.float32) # type: ignore
         else:
             query_vector = query_embeddings
             target_vector = target_embeddings
 
+        assert target_vector is not None, "target_vector should not be None"
         target_norm = calc_norm(target_vector)
 
         fm_ids, fm_scores = implicit.topk(items=target_vector, query=query_vector, k=top_k, item_norms=target_norm, filter_items=np.array([query_item_id], dtype="int32"), num_threads=self.n_threads)
@@ -440,6 +443,7 @@ class HybridSlimFM(BaseModel):
                 break
 
         # Convert back to cosine similarity from dot product scores
+        assert query_vector is not None, "query_vector should not be None"
         query_norm = calc_norm(query_vector)
         fm_scores = fm_scores / query_norm
 
