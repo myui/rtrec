@@ -433,7 +433,7 @@ class SLIMElastic:
             X.data[X.indptr[j]:X.indptr[j + 1]] = y.data
 
             # Collect results
-            results[j] = (model.sparse_coef_.indices, model.sparse_coef_.data)
+            results[j] = (model.sparse_coef_.indices, model.sparse_coef_.data) # type: ignore
 
         # Close shared memory
         shared_data.close()
@@ -541,7 +541,7 @@ class SLIMElastic:
 
                 # Update the item similarity matrix with new coefficients (weights for each user-item interaction)
                 # self.item_similarity[:, j] = model.coef_
-                for i, value in zip(model.sparse_coef_.indices, model.sparse_coef_.data):
+                for i, value in zip(model.sparse_coef_.indices, model.sparse_coef_.data): # type: ignore
                     item_similarity[i, j] = value
 
                 # Reattach the item column after training
