@@ -63,7 +63,7 @@ class Recommender:
             # sort interactions by timestamp ascending order
             interaction_df.sort_values("tstamp", ascending=True, inplace=True)
         total = math.ceil(len(interaction_df) / batch_size)
-        for batch in tqdm(generate_batches(interaction_df, batch_size, as_generator=self.use_generator), total=total, desc="Add interactions"):
+        for batch in tqdm(Recommender.generate_batches(interaction_df, batch_size, as_generator=self.use_generator), total=total, desc="Add interactions"):
             self.model.add_interactions(batch, update_interaction=update_interaction, record_interactions=True)
         # Fit the model
         self.model._fit_recorded(parallel=parallel, progress_bar=True)
@@ -108,7 +108,7 @@ class Recommender:
             # sort interactions by timestamp ascending order inplace
             interaction_df.sort_values("tstamp", ascending=True, inplace=True)
         total = math.ceil(len(interaction_df) / batch_size)
-        for batch in tqdm(generate_batches(interaction_df, batch_size, as_generator=self.use_generator), total=total, desc="Add interactions"):
+        for batch in tqdm(Recommender.generate_batches(interaction_df, batch_size, as_generator=self.use_generator), total=total, desc="Add interactions"):
             self.model.add_interactions(batch, update_interaction=update_interaction)
         # Fit the model in bulk
         self.model.bulk_fit(parallel=parallel, progress_bar=True)
@@ -190,25 +190,25 @@ class Recommender:
         # Compute and return the evaluation metrics using the generator
         return compute_scores(generate_evaluation_pairs(), recommend_size)
 
-@staticmethod
-def generate_batches(df: pd.DataFrame, batch_size: int = 1_000, as_generator: bool = False) -> Iterator[Iterable[Tuple[int, int, int, float]]]:
-    """
-    Converts a DataFrame to an iterable of mini-batches.
+    @staticmethod
+    def generate_batches(df: pd.DataFrame, batch_size: int = 1_000, as_generator: bool = False) -> Iterator[Iterable[Tuple[int, int, int, float]]]:
+        """
+        Converts a DataFrame to an iterable of mini-batches.
 
-    Parameters:
-        df (pd.DataFrame): The DataFrame to convert to mini-batches.
-        batch_size (int): The number of rows per mini-batch.
-        as_generator (bool): Whether to return a generator or a list of mini-batches.
+        Parameters:
+            df (pd.DataFrame): The DataFrame to convert to mini-batches.
+            batch_size (int): The number of rows per mini-batch.
+            as_generator (bool): Whether to return a generator or a list of mini-batches.
 
-    Returns:
-        Iterator[Iterable[Tuple[int, int, int, float]]]: An iterator of mini-batches.
-    """
-    num_rows = len(df)
-    if as_generator:
-        for start in range(0, num_rows, batch_size):
-            batch = df.iloc[start:start + batch_size]
-            yield batch.itertuples(index=False, name=None)
-    else:
-        for start in range(0, num_rows, batch_size):
-            batch = df.iloc[start:start + batch_size]
-            yield list(batch.itertuples(index=False, name=None))
+        Returns:
+            Iterator[Iterable[Tuple[int, int, int, float]]]: An iterator of mini-batches.
+        """
+        num_rows = len(df)
+        if as_generator:
+            for start in range(0, num_rows, batch_size):
+                batch = df.iloc[start:start + batch_size]
+                yield batch.itertuples(index=False, name=None)
+        else:
+            for start in range(0, num_rows, batch_size):
+                batch = df.iloc[start:start + batch_size]
+                yield list(batch.itertuples(index=False, name=None))
