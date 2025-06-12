@@ -14,7 +14,7 @@ class PersistentCache:
         self.filename = filename
         self.cache_size = cache_size
         self.pickle_protocol = pickle_protocol
-        self.lru_cache = OrderedDict()  # In-memory cache
+        self.lru_cache: OrderedDict[str, Any] = OrderedDict()  # In-memory cache
         # flag='n' always create a new, empty database, open for reading and writing.
         self.store = shelve.open(self.filename, flag='n', protocol=pickle_protocol, writeback=False)
         self.size = 0  # Total size, counting both LRU cache and disk storage
