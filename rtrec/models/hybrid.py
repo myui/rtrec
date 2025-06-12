@@ -1,7 +1,11 @@
-from collections import defaultdict
 import logging
-from typing import Any, Dict, Iterable, List, Optional, Self, Tuple
-from typing import override
+from collections import defaultdict
+from typing import Any, Dict, Iterable, List, Optional, Self, Tuple, override
+
+import implicit.cpu.topk as implicit
+import numpy as np
+from scipy import sparse
+from scipy.sparse import csr_matrix
 
 from rtrec.models.internal.slim_elastic import SLIMElastic
 from rtrec.utils.scoring import minmax_normalize
@@ -10,10 +14,6 @@ from ..utils.math import calc_norm
 from .base import BaseModel
 from .internal.lightfm_wrapper import LightFMWrapper
 
-from scipy import sparse
-from scipy.sparse import csr_matrix
-import numpy as np
-import implicit.cpu.topk as implicit
 
 def compute_similarity_weight(num_contacts: int, max_val: float=2.0, k: float=2.0) -> float:
     """
@@ -172,7 +172,9 @@ class HybridSlimFM(BaseModel):
         item_features = self._create_item_features(item_ids=item_ids)
         ui_coo = self.interactions.to_coo(select_users=user_ids, select_items=item_ids)
         num_users, num_items = ui_coo.shape # type: ignore
+        assert user_features.shape is not None, "user_features should not be None"
         assert user_features.shape[0] == num_users
+        assert item_features.shape is not None, "item_features should not be None"
         assert item_features.shape[0] == num_items
         sample_weights = ui_coo if self.model.loss == "warp-kos" else None
         self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sample_weights, epochs=self.epochs, num_threads=self.n_threads, verbose=progress_bar)
@@ -598,3 +600,53 @@ class HybridSlimFM(BaseModel):
         # Get top-k itemm ids
         top_ids, _ = zip(*sorted_items)
         return list(top_ids)
+
+    def _serialize(self) -> dict:
+        """
+        Serialize the HybridSlimFM model state to a dictionary.
+        :return: Dictionary containing model state
+        """
+        return {
+            'model': self.model,
+            'slim_model': self.slim_model,
+            'interactions': self.interactions,
+            'user_ids': self.user_ids,
+            'item_ids': self.item_ids,
+            'feature_store': self.feature_store,
+            'epochs': self.epochs,
+            'n_threads': self.n_threads,
+            'use_bias': self.use_bias,
+            'similarity_weight_factor': self.similarity_weight_factor,
+            # 'recorded_user_ids': list(self.recorded_user_ids),
+            # 'recorded_item_ids': list(self.recorded_item_ids),
+            'interaction_counts': self.interaction_counts
+        }
+
+    @classmethod
+    def _deserialize(cls, data: dict) -> Self:
+        """
+        Deserialize the HybridSlimFM model state from a dictionary.
+        :param data: Dictionary containing model state
+        :return: HybridSlimFM model instance
+        """
+        # Create instance with the right configuration
+        kwargs = {
+            'epochs': data['epochs'],
+            'n_threads': data['n_threads'],
+            'use_bias': data['use_bias'],
+            'similarity_weight_factor': data['similarity_weight_factor']
+        }
+        instance = cls(**kwargs)
+
+        # Restore model state
+        instance.model = data['model']
+        instance.slim_model = data['slim_model']
+        instance.interactions = data['interactions']
+        instance.user_ids = data['user_ids']
+        instance.item_ids = data['item_ids']
+        instance.feature_store = data['feature_store']
+        # instance.recorded_user_ids = set(data['recorded_user_ids'])
+        # instance.recorded_item_ids = set(data['recorded_item_ids'])
+        instance.interaction_counts = data['interaction_counts']
+
+        return instance

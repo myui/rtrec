@@ -1,13 +1,16 @@
 import logging
-
+import pickle
 from abc import ABC, abstractmethod
-from typing import Any, List, Optional, Tuple, Iterable, Self
+from io import BytesIO
+from typing import Any, Iterable, List, Optional, Self, Tuple, Union
 
 from numpy import ndarray
 
 from rtrec.utils.features import FeatureStore
 from rtrec.utils.identifiers import Identifier
 from rtrec.utils.interactions import UserItemInteractions
+
+FileLike = Union[BytesIO, Any]
 
 class BaseModel(ABC):
     def __init__(self, **kwargs: Any):
@@ -341,3 +344,52 @@ class BaseModel(ABC):
         :return: List of top-K similar items for each query item with similarity scores
         """
         raise NotImplementedError("_similar_items method must be implemented in the derived class")
+
+    def save(self, f: FileLike) -> int:
+        """
+        Save the model to a file-like object.
+        :param f: File-like object to save the model to
+        :return: Number of bytes written
+        """
+        data = self._serialize()
+        serialized_data = pickle.dumps(data, protocol=pickle.HIGHEST_PROTOCOL)
+        return f.write(serialized_data)
+
+    @classmethod
+    def load(cls, f: FileLike) -> Self:
+        """
+        Load the model from a file-like object.
+        :param f: File-like object to load the model from
+        :return: Loaded model instance
+        """
+        serialized_data = f.read()
+        data = pickle.loads(serialized_data)
+        return cls._deserialize(data)
+
+    @classmethod
+    def loads(cls, data: bytes) -> Self:
+        """
+        Load the model from serialized bytes.
+        :param data: Serialized model data
+        :return: Loaded model instance
+        """
+        buffer = BytesIO(data)
+        return cls.load(buffer)
+
+    @abstractmethod
+    def _serialize(self) -> dict:
+        """
+        Serialize the model state to a dictionary.
+        :return: Dictionary containing model state
+        """
+        raise NotImplementedError("_serialize method must be implemented in the derived class")
+
+    @classmethod
+    @abstractmethod
+    def _deserialize(cls, data: dict) -> Self:
+        """
+        Deserialize the model state from a dictionary.
+        :param data: Dictionary containing model state
+        :return: Model instance
+        """
+        raise NotImplementedError("_deserialize method must be implemented in the derived class")
