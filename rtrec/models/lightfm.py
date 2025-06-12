@@ -1,15 +1,15 @@
 import logging
-from typing import Any, Iterable, List, Optional, Tuple, Self
-from typing import override
+from typing import Any, Iterable, List, Optional, Self, Tuple, override
+
+import implicit.cpu.topk as implicit
+import numpy as np
+from scipy import sparse
+from scipy.sparse import csr_matrix
 
 from ..utils.math import calc_norm
 from .base import BaseModel
 from .internal.lightfm_wrapper import LightFMWrapper
 
-from scipy import sparse
-from scipy.sparse import csr_matrix
-import numpy as np
-import implicit.cpu.topk as implicit
 
 class LightFM(BaseModel):
 
@@ -287,6 +287,50 @@ class LightFM(BaseModel):
         ids = ids[valid_mask].tolist() # type: ignore
         scores = scores[valid_mask].tolist() # type: ignore
         return list(zip(ids, scores))
+
+    def _serialize(self) -> dict:
+        """
+        Serialize the LightFM model state to a dictionary.
+        :return: Dictionary containing model state
+        """
+        return {
+            'model': self.model,
+            'interactions': self.interactions,
+            'user_ids': self.user_ids,
+            'item_ids': self.item_ids,
+            'feature_store': self.feature_store,
+            'epochs': self.epochs,
+            'n_threads': self.n_threads,
+            'use_bias': self.use_bias,
+            # 'recorded_user_ids': list(self.recorded_user_ids),
+            # 'recorded_item_ids': list(self.recorded_item_ids)
+        }
+
+    @classmethod
+    def _deserialize(cls, data: dict) -> Self:
+        """
+        Deserialize the LightFM model state from a dictionary.
+        :param data: Dictionary containing model state
+        :return: LightFM model instance
+        """
+        # Create instance with the right configuration
+        kwargs = {
+            'epochs': data['epochs'],
+            'n_threads': data['n_threads'],
+            'use_bias': data['use_bias']
+        }
+        instance = cls(**kwargs)
+
+        # Restore model state
+        instance.model = data['model']
+        instance.interactions = data['interactions']
+        instance.user_ids = data['user_ids']
+        instance.item_ids = data['item_ids']
+        instance.feature_store = data['feature_store']
+        # instance.recorded_user_ids = set(data['recorded_user_ids'])
+        # instance.recorded_item_ids = set(data['recorded_item_ids'])
+
+        return instance
 
     def _create_user_features(self, user_ids: Optional[List[int]]=None, users_tags: Optional[List[List[str]]] = None, slice: bool=False) -> csr_matrix:
         """

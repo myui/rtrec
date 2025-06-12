@@ -1,11 +1,11 @@
 import logging
-from typing import Any, Iterable, List, Optional, Tuple, Self
-from typing import override
+from typing import Any, Iterable, List, Optional, Self, Tuple, override
 
 from numpy import ndarray
 
 from ..models.internal.slim_elastic import SLIMElastic
 from .base import BaseModel
+
 
 class SLIM(BaseModel):
 
@@ -77,3 +77,37 @@ class SLIM(BaseModel):
         :return: List of top-K similar items for each query item with similarity scores
         """
         return self.model.similar_items(query_item_id, top_k=top_k)
+
+    def _serialize(self) -> dict:
+        """
+        Serialize the SLIM model state to a dictionary.
+        :return: Dictionary containing model state
+        """
+        return {
+            'model': self.model,
+            'interactions': self.interactions,
+            'user_ids': self.user_ids,
+            'item_ids': self.item_ids,
+            'feature_store': self.feature_store,
+            # 'recorded_item_ids': list(self.recorded_item_ids)
+        }
+
+    @classmethod
+    def _deserialize(cls, data: dict) -> Self:
+        """
+        Deserialize the SLIM model state from a dictionary.
+        :param data: Dictionary containing model state
+        :return: SLIM model instance
+        """
+        # Create instance with empty kwargs first
+        instance = cls()
+
+        # Restore model state
+        instance.model = data['model']
+        instance.interactions = data['interactions']
+        instance.user_ids = data['user_ids']
+        instance.item_ids = data['item_ids']
+        instance.feature_store = data['feature_store']
+        # instance.recorded_item_ids = set(data['recorded_item_ids'])
+
+        return instance
