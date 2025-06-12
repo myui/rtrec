@@ -225,6 +225,7 @@ class SLIMElastic:
             parallel (bool): Whether to use parallel processing for fitting.
             progress_bar (bool): Whether to show a progress bar during training.
         """
+        X: CSCMatrixWrapper | CSRMatrixWrapper
         if isinstance(interaction_matrix, sp.csc_matrix):
             if parallel:
                 return self.fit_in_parallel(interaction_matrix, progress_bar=progress_bar)
@@ -506,6 +507,7 @@ class SLIMElastic:
             parallel (bool): Whether to use parallel processing for fitting.
             progress_bar (bool): Whether to show a progress bar during training.
         """
+        X: CSCMatrixWrapper | CSRMatrixWrapper
         if isinstance(interaction_matrix, sp.csc_matrix):
             if parallel:
                 return self.fit_in_parallel(interaction_matrix, item_ids=np.array(updated_items), progress_bar=progress_bar)
