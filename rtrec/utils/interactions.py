@@ -1,6 +1,7 @@
 from collections import defaultdict
 from typing import List, Optional, Any
-import time, math
+import time
+import math
 import logging
 from datetime import datetime, timezone
 
@@ -21,7 +22,7 @@ class UserItemInteractions:
         """
         # Store interactions as a dictionary of dictionaries in shape {user_id: {item_id: (value, timestamp)}}
         self.interactions: defaultdict[int, dict[int, tuple[float, float]]] = defaultdict(dict)
-        self.all_item_ids = set()
+        self.all_item_ids: set[int] = set()
         n_recent_hot = kwargs.get("n_recent_hot", 100_000)
         self.hot_items = LRUFreqSet(capacity=n_recent_hot)
         assert max_value > min_value, f"max_value should be greater than min_value {max_value} > {min_value}"
