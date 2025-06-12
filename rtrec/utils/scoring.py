@@ -41,7 +41,7 @@ def weighted_borda(rankings: List[List[int]], weights: List[float]) -> Dict[int,
         raise ValueError("Number of rankings must match number of weights")
 
     # Initialize scores dictionary
-    borda_scores = defaultdict(float)
+    borda_scores: Dict[int, float] = defaultdict(float)
 
     # Process each ranking list
     for ranking, weight in zip(rankings, weights):
