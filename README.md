@@ -28,7 +28,16 @@ A realtime recommendation system supporting online updates.
 ## Installation
 
 ```bash
+# using pip
 pip install rtrec
+pip install rtrec[serving]
+
+# using uv
+uv add rtrec
+uv sync --no-extra serving
+
+uv add rtrec[serving]
+uv sync --extra serving
 ```
 
 ## Usage
