@@ -334,7 +334,7 @@ class BaseModel(ABC):
             return [self.item_ids.get(item_id) for item_id, _ in similar_item_ids]
 
     @abstractmethod
-    def _similar_items(self, query_item_id: int,  query_item_tags: Optional[List[str]] = None, top_k: int = 10) -> List[Tuple[int, float]] | Tuple[ndarray, ndarray]:
+    def _similar_items(self, query_item_id: int, query_item_tags: Optional[List[str]] = None, top_k: int = 10) -> List[Tuple[int, float]]:
         """
         Find similar items for a list of query items.
         :param query_item_id: item id to find similar items for
