@@ -1,6 +1,9 @@
 from typing import List
+
 import pytest
+
 from rtrec.utils.lru import LRUFreqSet
+
 
 @pytest.fixture
 def lru_set():

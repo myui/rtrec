@@ -1,16 +1,19 @@
-import pytest
 from math import log2
+
+import pytest
+
 from rtrec.utils.metrics import (
+    auc,
+    average_precision,
+    f1_score,
+    hit,
+    ndcg,
     precision,
     recall,
-    f1_score,
-    ndcg,
-    hit,
     reciprocal_rank,
-    average_precision,
-    auc,
     true_positives,
 )
+
 
 @pytest.mark.parametrize("ranked_list, ground_truth, k, expected", [
     ([1, 3, 2, 6], [1, 2, 4], 4, 0.7039),

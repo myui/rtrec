@@ -4,8 +4,6 @@ from abc import ABC, abstractmethod
 from io import BytesIO
 from typing import Any, Iterable, List, Optional, Self, Tuple, Union
 
-from numpy import ndarray
-
 from rtrec.utils.features import FeatureStore
 from rtrec.utils.identifiers import Identifier
 from rtrec.utils.interactions import UserItemInteractions
@@ -217,11 +215,11 @@ class BaseModel(ABC):
 
         if len(cold_user_ids) == 0:
             # If there are no cold-start users, proceed with batch recommendation
-            results = self._recommend_hot_batch(hot_user_ids, candidate_item_ids=candidate_item_ids, users_tags=users_tags, top_k=top_k, filter_interacted=filter_interacted)
-            return [[self.item_ids.get(item_id) for item_id in internal_ids] for internal_ids in results]
+            batch_results = self._recommend_hot_batch(hot_user_ids, candidate_item_ids=candidate_item_ids, users_tags=users_tags, top_k=top_k, filter_interacted=filter_interacted)
+            return [[self.item_ids.get(item_id) for item_id in internal_ids] for internal_ids in batch_results]
 
         # Initialize results list
-        results = [None] * len(users)
+        results: list[list[int]] = [[] for _ in range(len(users))]
 
         # Handle cold-start users
         if cold_indices:
@@ -334,7 +332,7 @@ class BaseModel(ABC):
             return [self.item_ids.get(item_id) for item_id, _ in similar_item_ids]
 
     @abstractmethod
-    def _similar_items(self, query_item_id: int,  query_item_tags: Optional[List[str]] = None, top_k: int = 10) -> List[Tuple[int, float]] | Tuple[ndarray, ndarray]:
+    def _similar_items(self, query_item_id: int, query_item_tags: Optional[List[str]] = None, top_k: int = 10) -> List[Tuple[int, float]]:
         """
         Find similar items for a list of query items.
         :param query_item_id: item id to find similar items for

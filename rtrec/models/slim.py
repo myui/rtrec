@@ -1,8 +1,6 @@
 import logging
 from typing import Any, Iterable, List, Optional, Self, Tuple, override
 
-from numpy import ndarray
-
 from ..models.internal.slim_elastic import SLIMElastic
 from .base import BaseModel
 
@@ -65,9 +63,9 @@ class SLIM(BaseModel):
         """
         interaction_matrix = self.interactions.to_csr(select_users=[user_id])
         dense_output = not self.item_ids.pass_through
-        return self.model.recommend(user_id, interaction_matrix, candidate_item_ids=candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted, dense_output=dense_output)
+        return self.model.recommend(user_id, interaction_matrix, candidate_item_ids=candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted, dense_output=dense_output, ret_scores=False)  # type: ignore
 
-    def _similar_items(self, query_item_id: int, query_item_tags: Optional[List[str]] = None, top_k: int = 10) -> List[Tuple[int, float]] | Tuple[ndarray, ndarray]:
+    def _similar_items(self, query_item_id: int, query_item_tags: Optional[List[str]] = None, top_k: int = 10) -> List[Tuple[int, float]]:
         """
         Find similar items for a list of query items.
         :param query_item_ids: List of query item indices
@@ -76,7 +74,7 @@ class SLIM(BaseModel):
         :param filter_query_items: Whether to filter out items in the query_items list
         :return: List of top-K similar items for each query item with similarity scores
         """
-        return self.model.similar_items(query_item_id, top_k=top_k)
+        return self.model.similar_items(query_item_id, top_k=top_k, ret_ndarrays=False) # type: ignore
 
     def _serialize(self) -> dict:
         """

@@ -45,7 +45,7 @@ def comb_sum(fm_ids: np.ndarray, fm_scores: np.ndarray,
     Returns:
         Dict[int, float]: Dictionary containing the aggregated scores for each item.
     """
-    summed_scores = defaultdict(float)
+    summed_scores: Dict[int, float] = defaultdict(float)
 
     # Process FM scores
     for item_id, score in zip(fm_ids, fm_scores):
@@ -73,8 +73,8 @@ def comb_mnz(fm_ids: np.ndarray, fm_scores: np.ndarray,
     Returns:
         Dict[int, float]: Dictionary containing the aggregated scores for each item.
     """
-    summed_scores = defaultdict(float)
-    item_counts = defaultdict(int)
+    summed_scores: Dict[int, float] = defaultdict(float)
+    item_counts: Dict[int, int] = defaultdict(int)
 
     # Process FM scores
     for item_id, score in zip(fm_ids, fm_scores):
@@ -198,6 +198,9 @@ class HybridSlimFM(BaseModel):
         self.model.fit_partial(ui_coo, user_features, item_features, sample_weight=sample_weights, epochs=self.epochs, num_threads=self.n_threads, verbose=progress_bar)
         # Fit SLIM model
         ui_csc = ui_coo.tocsc(copy=False)
+        # Ensure we have a csc_matrix, not csc_array
+        if not isinstance(ui_csc, sparse.csc_matrix):
+            ui_csc = sparse.csc_matrix(ui_csc)
         self.slim_model.fit(ui_csc, parallel=parallel, progress_bar=progress_bar)
         return self
 
@@ -207,7 +210,7 @@ class HybridSlimFM(BaseModel):
             interaction_matrix = self.interactions.to_csr(select_users=[user_id])
             dense_output = not self.item_ids.pass_through
             result = self.slim_model.recommend(user_id, interaction_matrix, candidate_item_ids=candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted, dense_output=dense_output)
-            return result
+            return result # type: ignore
 
         users_tags = [user_tags] if user_tags is not None else None
         user_features = self._create_user_features(user_ids=[user_id], users_tags=users_tags, slice=True)
@@ -250,7 +253,7 @@ class HybridSlimFM(BaseModel):
         dense_output = not self.item_ids.pass_through
         slim_ids, slim_scores = self.slim_model.recommend(user_id, ui_csr, candidate_item_ids=candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted, dense_output=dense_output, ret_scores=True)
 
-        return self._ensemble_by_scores(user_id, fm_ids, fm_scores, slim_ids, slim_scores, top_k)
+        return self._ensemble_by_scores(user_id, fm_ids, fm_scores, slim_ids, slim_scores, top_k) # type: ignore
 
     @override
     def handle_unknown_user(self, user: Any) -> Optional[int]:
@@ -325,6 +328,8 @@ class HybridSlimFM(BaseModel):
         # Create zero matrix for identity since cold users have no history
         users = sparse.csr_matrix((num_rows, num_hot_users), dtype="float32")
 
+        if self.model.user_embeddings is None:
+            raise ValueError("Model user_embeddings is None")
         num_user_features = self.model.user_embeddings.shape[0] - num_hot_users
         assert num_user_features > 0, f"num_user_features should be greater than 0, but got {num_user_features}"
 
@@ -361,10 +366,10 @@ class HybridSlimFM(BaseModel):
             interaction_matrix = self.interactions.to_csr(select_users=user_ids)
             dense_output = not self.item_ids.pass_through
             result = [
-                self.slim_model.recommend(user_id, interaction_matrix, candidate_item_ids=candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted, dense_output=dense_output)
+                self.slim_model.recommend(user_id, interaction_matrix, candidate_item_ids=candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted, dense_output=dense_output, ret_scores=False)
                 for user_id in user_ids
             ]
-            return result
+            return result # type: ignore
 
         user_features = self._create_user_features(user_ids, users_tags=users_tags, slice=True)
         item_features = self._create_item_features(item_ids=candidate_item_ids, slice=False)
@@ -408,7 +413,7 @@ class HybridSlimFM(BaseModel):
 
             slim_ids, slim_scores = self.slim_model.recommend(user_id, ui_csr, candidate_item_ids=candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted, dense_output=dense_output, ret_scores=True)
             # Combine scores from both models and get top-k item ids
-            top_items = self._ensemble_by_scores(user_id, fm_ids, fm_scores, slim_ids, slim_scores, top_k)
+            top_items = self._ensemble_by_scores(user_id, fm_ids, fm_scores, slim_ids, slim_scores, top_k) # type: ignore
             results.append(top_items)
         return results
 
@@ -429,9 +434,9 @@ class HybridSlimFM(BaseModel):
         assert target_vector is not None, "target_vector should not be None"
         target_norm = calc_norm(target_vector)
 
-        fm_ids, fm_scores = implicit.topk(items=target_vector, query=query_vector, k=top_k, item_norms=target_norm, filter_items=np.array([query_item_id], dtype="int32"), num_threads=self.n_threads)
-        fm_ids: np.ndarray = fm_ids.ravel()
-        fm_scores: np.ndarray  = fm_scores.ravel()
+        fm_ids_raw, fm_scores_raw = implicit.topk(items=target_vector, query=query_vector, k=top_k, item_norms=target_norm, filter_items=np.array([query_item_id], dtype="int32"), num_threads=self.n_threads)
+        fm_ids: np.ndarray = fm_ids_raw.ravel()
+        fm_scores: np.ndarray = fm_scores_raw.ravel()
 
         # implicit assigns negative infinity to the scores to be fitered out
         # see https://github.com/benfred/implicit/blob/v0.7.2/implicit/cpu/topk.pyx#L54
@@ -456,11 +461,14 @@ class HybridSlimFM(BaseModel):
 
         # Get SLIM similar items
         slim_ids, slim_scores = self.slim_model.similar_items(query_item_id, top_k=top_k, ret_ndarrays=True)
+        assert isinstance(slim_ids, np.ndarray), "slim_ids should be a numpy array"
+        assert isinstance(slim_scores, np.ndarray), "slim_scores should be a numpy array"
 
         # Combine scores from both models
         fm_scores = minmax_normalize(fm_scores)
         slim_scores = minmax_normalize(slim_scores)
-        comb_scores = comb_sum(fm_ids, fm_scores, slim_ids, slim_scores)
+        slim_ids_list = slim_ids.tolist() if hasattr(slim_ids, 'tolist') else list(slim_ids)
+        comb_scores = comb_sum(fm_ids, fm_scores, slim_ids_list, slim_scores) # type: ignore
         # Get top-k item ids
         sorted_items = sorted(comb_scores.items(), key=lambda x: x[1], reverse=True)[:top_k]
         return sorted_items

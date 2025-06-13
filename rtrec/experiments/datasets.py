@@ -1,12 +1,13 @@
-import tarfile
-import pandas as pd
-import zipfile
-import urllib.request
 import os
-
+import tarfile
+import urllib.request
+import zipfile
 from datetime import datetime
 
+import pandas as pd
+
 from .kaggle_datasets import load_retailrocket
+
 
 def load_movielens(dataset_scale: str, sort_by_tstamp: bool = False, load_user_attributes: bool = False, load_item_attributes: bool = False) -> pd.DataFrame:
     """
@@ -276,7 +277,7 @@ def load_amazon_review_v2(category_name: str = "Music",
         sort_by_tstamp (bool): Whether to sort the DataFrame by timestamp (default is False).
 
     Returns:
-        pd.DataFrame: A DataFrame containing user, item, rating, timestamp, image_url, and 
+        pd.DataFrame: A DataFrame containing user, item, rating, timestamp, image_url, and
                       (if category is "all") category.
     """
     # Base URL and directory setup

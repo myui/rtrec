@@ -1,9 +1,11 @@
-import os
 import asyncio
+import os
+import signal
+from typing import Dict, List
+
 import boto3
 from botocore.exceptions import ClientError
-import signal
-from typing import List, Dict, Set
+
 from rtrec.models import SLIM
 
 kinesis_client = boto3.client('kinesis')

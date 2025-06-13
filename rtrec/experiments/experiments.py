@@ -1,10 +1,17 @@
-from typing import Dict
 import argparse
+from typing import Dict
 
-from .datasets import load_dataset
-from .split import leave_one_last_item, random_split, temporal_split, temporal_user_split
+from ..models import SLIM, HybridSlimFM, LightFM
+from ..models.base import BaseModel
 from ..recommender import Recommender
-from ..models import SLIM, LightFM, HybridSlimFM
+from .datasets import load_dataset
+from .split import (
+    leave_one_last_item,
+    random_split,
+    temporal_split,
+    temporal_user_split,
+)
+
 
 def run_experiment(
     dataset_name: str,model_name: str, split_method: str = "temporal", epochs: int = 10, batch_size: int = 1000
@@ -40,6 +47,7 @@ def run_experiment(
         raise ValueError(f"Unsupported split method: {split_method}")
 
     # Initialize and train the recommender
+    model: BaseModel
     if model_name == "slim":
         model = SLIM(epochs=epochs, random_seed=43)
     elif model_name == "lightfm":

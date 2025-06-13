@@ -1,5 +1,7 @@
+from typing import Optional, Tuple
+
 import pandas as pd
-from typing import Tuple, Optional
+
 
 def leave_one_last_item(
         df: pd.DataFrame,
@@ -46,7 +48,7 @@ def temporal_split(
 
     Parameters:
         df (pd.DataFrame): A pandas DataFrame with columns ['user', 'item', 'tstamp', 'rating'].
-        test_frac (float): The proportion of data to include in the test set, between 0 and 1. 
+        test_frac (float): The proportion of data to include in the test set, between 0 and 1.
                            Used if timestamp is not provided. Default is 0.2.
         timestamp (Optional[float]): The POSIX timestamp threshold for the split. Interactions before this
                                      timestamp will be in the training set, and interactions on or after

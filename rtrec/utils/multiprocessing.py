@@ -1,5 +1,7 @@
 from multiprocessing import shared_memory
+
 import numpy as np
+
 
 def create_shared_array(array: np.ndarray) -> shared_memory.SharedMemory:
     """

@@ -1,7 +1,9 @@
-from typing import Dict, Any
+from typing import Any, Dict
 
 import pytest
+
 from rtrec.utils.lang import extract_func_args
+
 
 def test_extract_func_args():
     def sample_function(a, b, c):

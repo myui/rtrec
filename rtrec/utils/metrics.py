@@ -1,6 +1,7 @@
-from typing import List, Any, Dict, Iterable, Tuple
-from math import log2
 from collections import defaultdict
+from math import log2
+from typing import Any, Dict, Iterable, List, Tuple
+
 
 def ndcg(ranked_list: List[Any], ground_truth: List[Any], recommend_size: int) -> float:
     """
@@ -163,7 +164,8 @@ def mrr(ranked_lists: Iterable[List[Any]], ground_truths: Iterable[List[Any]], r
         MRR score as a float.
     """
     rr_sum = sum(reciprocal_rank(r, g, recommend_size) for r, g in zip(ranked_lists, ground_truths))
-    return rr_sum / len(ranked_lists) if ranked_lists else 0.0
+    ranked_lists_list = list(ranked_lists) if not isinstance(ranked_lists, list) else ranked_lists
+    return rr_sum / len(ranked_lists_list) if ranked_lists_list else 0.0
 
 def auc(ranked_list: List[Any], ground_truth: List[Any], recommend_size: int) -> float:
     """
@@ -259,7 +261,8 @@ def map_score(ranked_lists: Iterable[List[Any]], ground_truths: Iterable[List[An
         MAP score as a float.
     """
     ap_sum = sum(average_precision(r, g, recommend_size) for r, g in zip(ranked_lists, ground_truths))
-    return ap_sum / len(ranked_lists) if ranked_lists else 0.0
+    ranked_lists_list = list(ranked_lists) if not isinstance(ranked_lists, list) else ranked_lists
+    return ap_sum / len(ranked_lists_list) if ranked_lists_list else 0.0
 
 def compute_scores(
     evaluation_pairs: Iterable[Tuple[List[Any], List[Any]]], recommend_size: int
@@ -274,8 +277,8 @@ def compute_scores(
     Returns:
         Dictionary with averaged scores across all queries.
     """
-    precision_sum = recall_sum = f1_sum = ndcg_sum = rr_sum = ap_sum = auc_sum = 0.0
-    hit_sum = tp_sum = 0
+    precision_sum = recall_sum = f1_sum = ndcg_sum = rr_sum = ap_sum = auc_sum = hit_sum = 0.0
+    tp_sum = 0
     num_queries = 0  # Total number of queries processed
 
     for ranked_list, ground_truth in evaluation_pairs:

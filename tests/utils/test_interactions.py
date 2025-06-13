@@ -1,9 +1,11 @@
-import pytest
-from collections import Counter
 import time
 from time import sleep
+
+import pytest
+from scipy.sparse import coo_matrix, csc_matrix
+
 from rtrec.utils.interactions import UserItemInteractions
-from scipy.sparse import csc_matrix, coo_matrix
+
 
 @pytest.fixture
 def interactions():

@@ -1,8 +1,10 @@
 import os
-import pytest
 from tempfile import NamedTemporaryFile
 
+import pytest
+
 from rtrec.utils.diskcache import PersistentCache
+
 
 # Test class for PersistentCache
 @pytest.fixture

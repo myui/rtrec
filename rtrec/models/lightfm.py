@@ -261,9 +261,9 @@ class LightFM(BaseModel):
             raise ValueError("target_vector is None, cannot compute norm.")
         target_norm = calc_norm(target_vector)
 
-        ids, scores = implicit.topk(items=target_vector, query=query_vector, k=top_k, item_norms=target_norm, filter_items=np.array([query_item_id], dtype="int32"), num_threads=self.n_threads)
-        ids: np.ndarray = ids.ravel()
-        scores: np.ndarray  = scores.ravel()
+        ids_raw, scores_raw = implicit.topk(items=target_vector, query=query_vector, k=top_k, item_norms=target_norm, filter_items=np.array([query_item_id], dtype="int32"), num_threads=self.n_threads)
+        ids: np.ndarray = ids_raw.ravel()
+        scores: np.ndarray = scores_raw.ravel()
 
         # implicit assigns negative infinity to the scores to be fitered out
         # see https://github.com/benfred/implicit/blob/v0.7.2/implicit/cpu/topk.pyx#L54

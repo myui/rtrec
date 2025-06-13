@@ -1,12 +1,13 @@
-from collections import defaultdict
-from typing import Dict
-import pandas as pd
 import os
-import requests
 import zipfile
+from typing import Dict
+
+import pandas as pd
+import requests
 from tqdm import tqdm
 
 from .utils import map_hour_to_period
+
 
 def load_retailrocket(standardize_schema: bool=True) -> pd.DataFrame:
     """

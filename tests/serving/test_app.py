@@ -1,6 +1,6 @@
-from fastapi import FastAPI
 import pytest
 from fastapi.testclient import TestClient
+
 from rtrec.serving.app import create_app
 
 # Mock secret token for tests

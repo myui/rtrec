@@ -1,19 +1,21 @@
 import logging
 import os
+import warnings
+from functools import partial
+from multiprocessing import Pool, shared_memory
 from typing import Any, Dict, List, Optional, Self, Tuple
+
 import numpy as np
+import scipy.sparse as sp
 from numpy import ndarray
 from numpy.typing import ArrayLike
-import scipy.sparse as sp
-from sklearn.linear_model import SGDRegressor, ElasticNet
-import warnings
 from sklearn.exceptions import ConvergenceWarning
-from tqdm import tqdm
+from sklearn.linear_model import ElasticNet, SGDRegressor
 from sklearn.utils.extmath import safe_sparse_dot
-from multiprocessing import Pool, shared_memory
-from functools import partial
+from tqdm import tqdm
 
 from rtrec.utils.multiprocessing import create_shared_array
+
 
 class CSRMatrixWrapper:
     """
@@ -36,7 +38,7 @@ class CSRMatrixWrapper:
     @property
     def shape(self) -> Tuple[int, int]:
         return self.csr_matrix.shape # type: ignore
-    
+
     def get_col(self, j: int) -> sp.csc_matrix:
         """
         Return the j-th column of the matrix.
@@ -55,7 +57,7 @@ class CSRMatrixWrapper:
         col = self.col_view[:, j].copy()
         col.data = self.csr_matrix.data[col.data]
         return col
-    
+
     def set_col(self, j: int, values: ArrayLike) -> None:
         """
         Set the j-th column of the matrix to the given values.
@@ -83,7 +85,7 @@ class CSCMatrixWrapper:
     @property
     def shape(self) -> Tuple[int, int]:
         return self.csc_matrix.shape # type: ignore
-    
+
     def get_col(self, j: int, copy: bool = True) -> sp.spmatrix:
         """
         Return the j-th column of the matrix.
@@ -102,7 +104,7 @@ class CSCMatrixWrapper:
         if copy:
             return col.copy()
         return col
-    
+
     def set_col(self, j: int, values: ArrayLike) -> None:
         """
         Set the j-th column of the matrix to the given values.
@@ -128,14 +130,14 @@ class FeatureSelectionWrapper:
 
     def fit(self, X: sp.spmatrix, y: np.ndarray):
          # Compute dot products between items and the target
-        feature_scores = X.T.dot(y).flatten()
+        feature_scores = X.T.dot(y).flatten() # type: ignore
         # Select the top-k similar items to the target item by sorting the dot products
         selected_features = np.argsort(feature_scores)[-1:-1-self.n_neighbors:-1]
 
         # Only fit the model with the selected features
         # TODO: Implement a more efficient way to select the features for csr_matrix
-        self.model.fit(X[:, selected_features], y)
-        
+        self.model.fit(X[:, selected_features], y) # type: ignore
+
         # Store the coefficients of the fitted model
         coeff = self.model.coef_ # of shape (n_neighbors,)
 
@@ -153,7 +155,7 @@ class SLIMElastic:
     def __init__(self, config: dict={}):
         """
         Initialize the SLIMElastic model.
-        
+
         Args:
             config (dict): Configuration parameters for the model
 
@@ -225,6 +227,7 @@ class SLIMElastic:
             parallel (bool): Whether to use parallel processing for fitting.
             progress_bar (bool): Whether to show a progress bar during training.
         """
+        X: CSCMatrixWrapper | CSRMatrixWrapper
         if isinstance(interaction_matrix, sp.csc_matrix):
             if parallel:
                 return self.fit_in_parallel(interaction_matrix, progress_bar=progress_bar)
@@ -263,7 +266,7 @@ class SLIMElastic:
                     item_similarity[i, j] = value
 
                 # Reattach the item column after training
-                X.set_col(j, y.data)
+                X.set_col(j, y.data) # type: ignore
 
         # Convert item_similarity to CSC format for efficient access
         self.item_similarity = item_similarity.tocsc(copy=False)
@@ -443,7 +446,7 @@ class SLIMElastic:
         return results
 
     @staticmethod
-    def _get_model(config: dict[str, Any]) -> ElasticNet | SGDRegressor | FeatureSelectionWrapper:        
+    def _get_model(config: dict[str, Any]) -> ElasticNet | SGDRegressor | FeatureSelectionWrapper:
         optim_name = config.get("optim", "cd")
         if optim_name == "cd":
             model = ElasticNet(
@@ -490,7 +493,7 @@ class SLIMElastic:
             user_ids (list): List of user indices that were updated.
             parallel (bool): Whether to use parallel processing for fitting.
             progress_bar (bool): Whether to show a progress bar during training.
-        """        
+        """
         user_items = set()
         for user_id in user_ids:
             user_items.update(interaction_matrix[user_id, :].indices.tolist()) # type: ignore
@@ -506,6 +509,7 @@ class SLIMElastic:
             parallel (bool): Whether to use parallel processing for fitting.
             progress_bar (bool): Whether to show a progress bar during training.
         """
+        X: CSCMatrixWrapper | CSRMatrixWrapper
         if isinstance(interaction_matrix, sp.csc_matrix):
             if parallel:
                 return self.fit_in_parallel(interaction_matrix, item_ids=np.array(updated_items), progress_bar=progress_bar)
@@ -534,10 +538,10 @@ class SLIMElastic:
                 y = X.get_col(j)
 
                 # Set the target item column to 0
-                X.set_col(j, np.zeros_like(y.data))
+                X.set_col(j, np.zeros_like(y.data)) # type: ignore
 
                 # Fit the model for the updated item
-                model.fit(X.matrix, y.toarray().ravel())
+                model.fit(X.matrix, y.toarray().ravel()) # type: ignore
 
                 # Update the item similarity matrix with new coefficients (weights for each user-item interaction)
                 # self.item_similarity[:, j] = model.coef_
@@ -545,7 +549,7 @@ class SLIMElastic:
                     item_similarity[i, j] = value
 
                 # Reattach the item column after training
-                X.set_col(j, y.data)
+                X.set_col(j, y.data) # type: ignore
 
         # Convert item_similarity to CSC format for efficient access
         self.item_similarity = item_similarity.tocsc(copy=False)

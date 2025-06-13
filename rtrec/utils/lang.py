@@ -1,4 +1,5 @@
-from typing import Callable, Dict, Any
+from typing import Any, Callable, Dict
+
 
 def extract_func_args(func: Callable, kwargs: Dict[str, Any]) -> Dict[str, Any]:
     """

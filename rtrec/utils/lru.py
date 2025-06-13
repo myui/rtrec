@@ -2,6 +2,7 @@ from collections import OrderedDict
 from collections.abc import MutableSet
 from typing import Any, Iterator, List, Optional, override
 
+
 class LRUFreqSet(MutableSet):
     def __init__(self, capacity: int):
         """
@@ -90,7 +91,7 @@ class LRUFreqSet(MutableSet):
 
     def get_freq_items(self, n: Optional[int] = None, exclude_items: List[Any] = []) -> Iterator[Any]:
         """
-        Retrieve the top `n` most frequently used keys in the set, excluding specified items. 
+        Retrieve the top `n` most frequently used keys in the set, excluding specified items.
         If `n` is None, return all keys sorted by frequency.
 
         Parameters:

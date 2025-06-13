@@ -8,8 +8,8 @@ class IndexedSet(Generic[T]):
     allowing fast addition of unique keys and retrieval of their indices.
     """
     def __init__(self, iterable: Optional[Iterable[T]] = None) -> None:
-        self._key_to_index = {}  # Maps keys to their indices
-        self._index_to_key = []  # Maintains the order of insertion
+        self._key_to_index: dict[T, int] = {}  # Maps keys to their indices
+        self._index_to_key: list[T] = []  # Maintains the order of insertion
         if iterable is not None:
             for item in iterable:
                 self.add(item)

@@ -1,7 +1,9 @@
 import numpy as np
 import pytest
 from scipy.sparse import csr_matrix
+
 from rtrec.utils.features import FeatureStore
+
 
 # Test adding user features
 def test_put_user_feature():
@@ -108,7 +110,7 @@ def test_build_user_features_matrix_with_user_id():
 
     # Test with two valid user IDs
     user_matrix = features.build_user_features_matrix([0, 1])
-    expected_matrix = csr_matrix(np.array([[1, 1, 0], [0, 1, 1]]), shape=(2, 3))  # 2 users, 3 features  
+    expected_matrix = csr_matrix(np.array([[1, 1, 0], [0, 1, 1]]), shape=(2, 3))  # 2 users, 3 features
     assert (user_matrix != expected_matrix).nnz == 0
 
 def test_build_item_features_matrix_with_item_id():

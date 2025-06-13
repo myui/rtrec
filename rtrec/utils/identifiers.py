@@ -2,6 +2,7 @@ from typing import Any, Optional
 
 import numpy as np
 
+
 class IdentifierError(Exception):
     """Custom exception for Identifier class key errors."""
     def __init__(self, id_name: str, obj_id: int):
@@ -19,10 +20,7 @@ class Identifier:
         self.force_identify = force_identify  # Flag to force identification
         self.obj_to_id: dict[Any, int] = {}  # Store object-to-ID mapping
         self.id_to_obj: list[Any] = []  # Store ID-to-object mapping
-        if force_identify:
-            self.pass_through = False
-        else:
-            self.pass_through : Optional[bool] = None # If True, return the object as-is if it is an integer
+        self.pass_through: Optional[bool] = False if force_identify else None
 
     def identify(self, obj: Any) -> int:
         # If the object is an integer, return it as-is
