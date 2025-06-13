@@ -5,6 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.1] - 2025.06.13
+
+This release focuses on improving the library's modularity by making web serving components optional, enhancing type safety, and adding essential model persistence capabilities.
+
+### Improvements
+
+* Refactor dependencies: move FastAPI, Pydantic, Uvicorn, HTTPX to optional dependencies and add Boto3 to dev-dependencies ([586bb56](https://github.com/myui/rtrec/commit/586bb56))
+
+### Enhancements
+
+* Implement model serialization and deserialization methods for BaseModel and its subclasses ([#5](https://github.com/myui/rtrec/pull/5))
+* Type safety improvements ([#6](https://github.com/myui/rtrec/pull/6))
+
+### Bug Fixes
+
+* Fix type errors ([#3](https://github.com/myui/rtrec/pull/3), [#4](https://github.com/myui/rtrec/pull/4))
+
+**Full Changelog**: [v0.2.0...v0.2.1](https://github.com/myui/rtrec/compare/v0.2.0...v0.2.1)
+
 ## [0.2.0] - 05.04.2025
 
 This release introduces architectural improvements to the recommendation system core, with a focus on separating recommendation logic for hot and cold users.
