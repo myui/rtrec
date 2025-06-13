@@ -2,6 +2,7 @@ import shelve
 from collections import OrderedDict
 from typing import Any
 
+
 class PersistentCache:
     def __init__(self, filename: str, cache_size: int = 10_000, pickle_protocol: int = 5):
         """

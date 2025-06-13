@@ -1,8 +1,6 @@
 import logging
 from typing import Any, Iterable, List, Optional, Self, Tuple, override
 
-from numpy import ndarray
-
 from ..models.internal.slim_elastic import SLIMElastic
 from .base import BaseModel
 

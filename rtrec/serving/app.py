@@ -1,9 +1,10 @@
+import logging
+import os
+from typing import Any, List
+
 from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import List, Any
-import logging
-import os
 
 from rtrec.models import SLIM
 

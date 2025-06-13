@@ -3,6 +3,7 @@ from typing import Dict, List
 
 import numpy as np
 
+
 def minmax_normalize(scores: np.ndarray) -> np.ndarray:
     """
     Normalize scores using min-max scaling along a specific axis.

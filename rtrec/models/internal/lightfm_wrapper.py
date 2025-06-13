@@ -1,7 +1,9 @@
-from lightfm import LightFM
-from sklearn.base import clone
 from typing import Optional, override
-from scipy.sparse import csr_matrix, coo_matrix
+
+from lightfm import LightFM
+from scipy.sparse import coo_matrix, csr_matrix
+from sklearn.base import clone
+
 
 class LightFMWrapper(LightFM):
     """

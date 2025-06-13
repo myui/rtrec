@@ -1,13 +1,13 @@
 import datetime
 import os
+import re
 import time
+import urllib.parse
 from typing import Dict, Optional, Tuple
 
-import streamlit as st
 import pandas as pd
 import requests
-import re
-import urllib.parse
+import streamlit as st
 
 from rtrec.models import SLIM
 from rtrec.recommender import Recommender
@@ -28,10 +28,10 @@ def load_movielens_100k() -> Tuple[pd.DataFrame, pd.DataFrame, pd.DataFrame]:
     ratings_df = pd.read_csv(RATINGS_FILE, sep='\t', names=col_rat)
 
     col_items = [
-        'movie_id', 'movie_title', 'release_date', 'video_release_date', 
-        'IMDb_URL', 'unknown', 'Action', 'Adventure', 'Animation', 
-        'Childrens', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Fantasy', 
-        'Film-Noir', 'Horror', 'Musical', 'Mystery', 'Romance', 'Sci_Fi', 
+        'movie_id', 'movie_title', 'release_date', 'video_release_date',
+        'IMDb_URL', 'unknown', 'Action', 'Adventure', 'Animation',
+        'Childrens', 'Comedy', 'Crime', 'Documentary', 'Drama', 'Fantasy',
+        'Film-Noir', 'Horror', 'Musical', 'Mystery', 'Romance', 'Sci_Fi',
         'Thriller', 'War', 'Western'
     ]
     items_df = pd.read_csv(ITEMS_FILE, sep='|', names=col_items, encoding='latin-1')

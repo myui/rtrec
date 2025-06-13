@@ -1,8 +1,10 @@
+import random
+import time
+
 import pytest
 
 from rtrec.models.lightfm import LightFM
-import time
-import random
+
 
 @pytest.fixture
 def model():
@@ -243,7 +245,7 @@ def test_recommend_and_similar_items(model):
     interactions = [
         ('user_1', 'item_1', current_unixtime + rng.uniform(0, jitter_range), 5.0),
         ('user_2', 'item_2', current_unixtime + 1 + rng.uniform(0, jitter_range), 3.0),
-        ('user_1', 'item_3', current_unixtime + 2 + rng.uniform(0, jitter_range), 4.0), 
+        ('user_1', 'item_3', current_unixtime + 2 + rng.uniform(0, jitter_range), 4.0),
         ('user_5', 'item_10', current_unixtime + 9 + rng.uniform(0, jitter_range), 4.0),
         ('user_5', 'item_1', current_unixtime + 9 + rng.uniform(0, jitter_range), 4.0),
         ('user_3', 'item_5', current_unixtime + 3 + rng.uniform(0, jitter_range), 5.0),

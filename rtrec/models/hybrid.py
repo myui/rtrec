@@ -462,10 +462,10 @@ class HybridSlimFM(BaseModel):
         # Get SLIM similar items
         slim_ids, slim_scores = self.slim_model.similar_items(query_item_id, top_k=top_k, ret_ndarrays=True)
         assert isinstance(slim_ids, np.ndarray), "slim_ids should be a numpy array"
-        assert isinstance(slim_scores, np.ndarray), "slim_scores should be a numpy array" 
+        assert isinstance(slim_scores, np.ndarray), "slim_scores should be a numpy array"
 
         # Combine scores from both models
-        fm_scores = minmax_normalize(fm_scores)       
+        fm_scores = minmax_normalize(fm_scores)
         slim_scores = minmax_normalize(slim_scores)
         slim_ids_list = slim_ids.tolist() if hasattr(slim_ids, 'tolist') else list(slim_ids)
         comb_scores = comb_sum(fm_ids, fm_scores, slim_ids_list, slim_scores) # type: ignore

@@ -4,8 +4,6 @@ from abc import ABC, abstractmethod
 from io import BytesIO
 from typing import Any, Iterable, List, Optional, Self, Tuple, Union
 
-from numpy import ndarray
-
 from rtrec.utils.features import FeatureStore
 from rtrec.utils.identifiers import Identifier
 from rtrec.utils.interactions import UserItemInteractions

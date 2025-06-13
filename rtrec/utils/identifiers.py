@@ -2,6 +2,7 @@ from typing import Any, Optional
 
 import numpy as np
 
+
 class IdentifierError(Exception):
     """Custom exception for Identifier class key errors."""
     def __init__(self, id_name: str, obj_id: int):

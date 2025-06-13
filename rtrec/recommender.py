@@ -1,12 +1,13 @@
 import math
-import pandas as pd
 import time
+from typing import Any, Dict, Iterable, Iterator, List, Optional, Self, Tuple
 
+import pandas as pd
 from tqdm import tqdm
-from typing import Dict, Iterator, Optional, Tuple, Iterable, Any, List, Self
 
 from .models.base import BaseModel
 from .utils.metrics import compute_scores
+
 
 class Recommender:
 

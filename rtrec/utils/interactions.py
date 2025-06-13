@@ -1,13 +1,15 @@
-from collections import defaultdict
-from typing import List, Optional, Any
-import time
-import math
 import logging
+import math
+import time
+from collections import defaultdict
 from datetime import datetime, timezone
+from typing import Any, List, Optional
 
 import numpy as np
-from scipy.sparse import csr_matrix, csc_matrix, coo_matrix
+from scipy.sparse import coo_matrix, csc_matrix, csr_matrix
+
 from .lru import LRUFreqSet
+
 
 class UserItemInteractions:
     def __init__(self, min_value: int = -5, max_value: int = 10, decay_in_days: Optional[int] = None, **kwargs: Any) -> None:

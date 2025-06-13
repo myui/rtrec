@@ -1,7 +1,10 @@
 from typing import List, Optional
-from scipy.sparse import csr_matrix
+
 import numpy as np
+from scipy.sparse import csr_matrix
+
 from .collections import IndexedSet
+
 
 class FeatureStore:
 

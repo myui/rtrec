@@ -4,6 +4,7 @@ import pytest
 
 from rtrec.models.slim import SLIM
 
+
 @pytest.fixture
 def model():
     model = SLIM()

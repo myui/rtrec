@@ -1,6 +1,7 @@
-from typing import List, Any, Dict, Iterable, Tuple
-from math import log2
 from collections import defaultdict
+from math import log2
+from typing import Any, Dict, Iterable, List, Tuple
+
 
 def ndcg(ranked_list: List[Any], ground_truth: List[Any], recommend_size: int) -> float:
     """

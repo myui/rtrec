@@ -2,6 +2,7 @@ import pytest
 
 from rtrec.utils.collections import IndexedSet
 
+
 def test_add():
     indexed_set = IndexedSet()
     assert indexed_set.add("apple") == 0  # First entry should have index 0
