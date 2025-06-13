@@ -130,13 +130,13 @@ class FeatureSelectionWrapper:
 
     def fit(self, X: sp.spmatrix, y: np.ndarray):
          # Compute dot products between items and the target
-        feature_scores = X.T.dot(y).flatten()
+        feature_scores = X.T.dot(y).flatten() # type: ignore
         # Select the top-k similar items to the target item by sorting the dot products
         selected_features = np.argsort(feature_scores)[-1:-1-self.n_neighbors:-1]
 
         # Only fit the model with the selected features
         # TODO: Implement a more efficient way to select the features for csr_matrix
-        self.model.fit(X[:, selected_features], y)
+        self.model.fit(X[:, selected_features], y) # type: ignore
 
         # Store the coefficients of the fitted model
         coeff = self.model.coef_ # of shape (n_neighbors,)
@@ -266,7 +266,7 @@ class SLIMElastic:
                     item_similarity[i, j] = value
 
                 # Reattach the item column after training
-                X.set_col(j, y.data)
+                X.set_col(j, y.data) # type: ignore
 
         # Convert item_similarity to CSC format for efficient access
         self.item_similarity = item_similarity.tocsc(copy=False)
@@ -538,10 +538,10 @@ class SLIMElastic:
                 y = X.get_col(j)
 
                 # Set the target item column to 0
-                X.set_col(j, np.zeros_like(y.data))
+                X.set_col(j, np.zeros_like(y.data)) # type: ignore
 
                 # Fit the model for the updated item
-                model.fit(X.matrix, y.toarray().ravel())
+                model.fit(X.matrix, y.toarray().ravel()) # type: ignore
 
                 # Update the item similarity matrix with new coefficients (weights for each user-item interaction)
                 # self.item_similarity[:, j] = model.coef_
@@ -549,7 +549,7 @@ class SLIMElastic:
                     item_similarity[i, j] = value
 
                 # Reattach the item column after training
-                X.set_col(j, y.data)
+                X.set_col(j, y.data) # type: ignore
 
         # Convert item_similarity to CSC format for efficient access
         self.item_similarity = item_similarity.tocsc(copy=False)
