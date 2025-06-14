@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.3] - 2025.06.14
+
+### Bug Fixes
+
+* Fix `@override` decorator import compatibility for Python 3.10-3.11 by using conditional imports with `typing_extensions` fallback
+
+**Full Changelog**: [v0.2.2...v0.2.3](https://github.com/myui/rtrec/compare/v0.2.2...v0.2.3)
+
 ## [0.2.2] - 2025.06.14
 
 This release improves Python version compatibility by adding proper support for the `Self` type hint across Python 3.10+.
