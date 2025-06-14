@@ -1,6 +1,6 @@
 [project]
 name = "rtrec"
-version = "0.2.1"
+version = "0.2.2"
 description = "A realtime recommendation system supporting online updates"
 authors = [
     { name = "myui", email = "myui@apache.org" }

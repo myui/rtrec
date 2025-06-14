@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.2] - 2025.06.14
+
+This release improves Python version compatibility by adding proper support for the `Self` type hint across Python 3.10+.
+
+### Improvements
+
+* Add support for 'Self' type in type hints for compatibility with Python 3.10+ ([c22b4b0](https://github.com/myui/rtrec/commit/c22b4b0))
+
+**Full Changelog**: [v0.2.1...v0.2.2](https://github.com/myui/rtrec/compare/v0.2.1...v0.2.2)
+
 ## [0.2.1] - 2025.06.13
 
 This release focuses on improving the library's modularity by making web serving components optional, enhancing type safety, and adding essential model persistence capabilities.
