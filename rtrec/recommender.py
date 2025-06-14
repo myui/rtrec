@@ -1,6 +1,14 @@
 import math
 import time
-from typing import Any, Dict, Iterable, Iterator, List, Optional, Self, Tuple
+from typing import Any, Dict, Iterable, Iterator, List, Optional, Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:  # static analyzers
+    from typing import Self
+else:  # runtime on 3.10
+    try:
+        from typing import Self  # 3.11+
+    except ImportError:
+        from typing_extensions import Self
 
 import pandas as pd
 from tqdm import tqdm

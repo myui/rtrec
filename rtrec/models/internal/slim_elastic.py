@@ -3,7 +3,15 @@ import os
 import warnings
 from functools import partial
 from multiprocessing import Pool, shared_memory
-from typing import Any, Dict, List, Optional, Self, Tuple
+from typing import Any, Dict, List, Optional, Tuple, TYPE_CHECKING
+
+if TYPE_CHECKING:  # static analyzers
+    from typing import Self
+else:  # runtime on 3.10
+    try:
+        from typing import Self  # 3.11+
+    except ImportError:
+        from typing_extensions import Self
 
 import numpy as np
 import scipy.sparse as sp

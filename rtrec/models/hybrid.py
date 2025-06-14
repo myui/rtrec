@@ -1,6 +1,14 @@
 import logging
 from collections import defaultdict
-from typing import Any, Dict, Iterable, List, Optional, Self, Tuple, override
+from typing import Any, Dict, Iterable, List, Optional, Tuple, override, TYPE_CHECKING
+
+if TYPE_CHECKING:  # static analyzers
+    from typing import Self
+else:  # runtime on 3.10
+    try:
+        from typing import Self  # 3.11+
+    except ImportError:
+        from typing_extensions import Self
 
 import implicit.cpu.topk as implicit
 import numpy as np

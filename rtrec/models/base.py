@@ -2,7 +2,15 @@ import logging
 import pickle
 from abc import ABC, abstractmethod
 from io import BytesIO
-from typing import Any, Iterable, List, Optional, Self, Tuple, Union
+from typing import Any, Iterable, List, Optional, Tuple, Union, TYPE_CHECKING
+
+if TYPE_CHECKING:  # static analyzers
+    from typing import Self
+else:  # runtime on 3.10
+    try:
+        from typing import Self  # 3.11+
+    except ImportError:
+        from typing_extensions import Self
 
 from rtrec.utils.features import FeatureStore
 from rtrec.utils.identifiers import Identifier

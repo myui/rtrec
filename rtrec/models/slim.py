@@ -1,5 +1,13 @@
 import logging
-from typing import Any, Iterable, List, Optional, Self, Tuple, override
+from typing import Any, Iterable, List, Optional, Tuple, override, TYPE_CHECKING
+
+if TYPE_CHECKING:  # static analyzers
+    from typing import Self
+else:  # runtime on 3.10
+    try:
+        from typing import Self  # 3.11+
+    except ImportError:
+        from typing_extensions import Self
 
 from ..models.internal.slim_elastic import SLIMElastic
 from .base import BaseModel
