@@ -1,4 +1,9 @@
-from typing import Optional, override
+from typing import Optional
+
+try:
+    from typing import override  # 3.12+
+except ImportError:
+    from typing_extensions import override
 
 from lightfm import LightFM
 from scipy.sparse import coo_matrix, csr_matrix

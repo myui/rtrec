@@ -1,6 +1,11 @@
 from collections import OrderedDict
 from collections.abc import MutableSet
-from typing import Any, Iterator, List, Optional, override
+from typing import Any, Iterator, List, Optional
+
+try:
+    from typing import override  # 3.12+
+except ImportError:
+    from typing_extensions import override
 
 
 class LRUFreqSet(MutableSet):
