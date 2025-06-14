@@ -9,7 +9,8 @@ readme = "README.md"
 requires-python = ">= 3.10"
 dependencies = [
     # Requires NumPy >= 1.21.0 for features like the improved random number generator API
-    "numpy>=1.21.0,<3.0.0",
+    # dtype support for numpy.hstack requires 1.24.0 https://numpy.org/doc/1.24/reference/generated/numpy.hstack.html
+    "numpy>=1.24.0,<3.0.0",
 
     # Requires SciPy >= 1.5.0 for compatibility with Python >= 3.10
     "scipy>=1.5.0,<2.0.0",
