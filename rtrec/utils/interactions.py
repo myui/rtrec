@@ -237,6 +237,25 @@ class UserItemInteractions:
             interacted_items = self.get_user_items(user_id)
         return list(self.hot_items.get_freq_items(n, exclude_items=interacted_items))
 
+    def get_users_by_items(self, item_ids: List[int]) -> List[int]:
+        """
+        Retrieves all users who have interacted with any of the given items.
+
+        Args:
+            item_ids (List[int]): List of item IDs to search for.
+
+        Returns:
+            List[int]: List of user IDs who have interacted with any of the specified items.
+        """
+        item_set = set(item_ids)
+        users = set()
+
+        for user_id, user_interactions in self.interactions.items():
+            if any(iid in item_set for iid in user_interactions.keys()):
+                users.add(user_id)
+
+        return list(users)
+
     def to_csr(self, select_users: Optional[List[int]] = None, include_weights: bool = True) -> csr_matrix:
         rows, cols = [], []
 

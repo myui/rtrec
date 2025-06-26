@@ -339,6 +339,28 @@ class BaseModel(ABC):
         else:
             return [self.item_ids.get(item_id) for item_id, _ in similar_item_ids]
 
+    def get_users_by_items(self, items: List[Any]) -> List[Any]:
+        """
+        Get all users who have interacted with any of the given items.
+        :param items: List of items to find users for
+        :return: List of users who have interacted with any of the specified items
+        """
+        # Convert items to item_ids
+        item_ids = []
+        for item in items:
+            item_id = self.item_ids.get_id(item)
+            if item_id is not None:
+                item_ids.append(item_id)
+
+        if not item_ids:
+            return []
+
+        # Get user IDs from interactions
+        user_ids = self.interactions.get_users_by_items(item_ids)
+
+        # Convert user IDs back to original users
+        return [self.user_ids.get(user_id) for user_id in user_ids]
+
     @abstractmethod
     def _similar_items(self, query_item_id: int, query_item_tags: Optional[List[str]] = None, top_k: int = 10) -> List[Tuple[int, float]]:
         """
