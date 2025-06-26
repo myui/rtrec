@@ -5,6 +5,18 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/) 
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.5] - 2025.06.26
+
+### Enhancements
+
+* Add methods to retrieve users by items in BaseModel and UserItemInteractions ([3484e8e](https://github.com/myui/rtrec/commit/3484e8e))
+
+### Documentation
+
+* Explained about time decay ([aa5f1b0](https://github.com/myui/rtrec/commit/aa5f1b0))
+
+**Full Changelog**: [v0.2.4...v0.2.5](https://github.com/myui/rtrec/compare/v0.2.4...v0.2.5)
+
 ## [0.2.4] - 2025.06.14
 
 ### Improvements
