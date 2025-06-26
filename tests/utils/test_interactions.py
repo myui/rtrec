@@ -173,5 +173,35 @@ def test_to_coo():
     ), shape=(3, 3))
     assert (coo_filtered_users_items != expected_filtered_users_items).nnz == 0
 
+def test_get_users_by_items(interactions):
+    tstamp = time.time()
+    # Add interactions for different users and items
+    interactions.add_interaction(1, 10, tstamp, 5.0)
+    interactions.add_interaction(1, 20, tstamp, 3.0)
+    interactions.add_interaction(2, 10, tstamp, 4.0)
+    interactions.add_interaction(2, 30, tstamp, 2.0)
+    interactions.add_interaction(3, 20, tstamp, 1.0)
+    interactions.add_interaction(3, 30, tstamp, 3.0)
+    
+    # Test single item
+    users = interactions.get_users_by_items([10])
+    assert set(users) == {1, 2}
+    
+    # Test multiple items
+    users = interactions.get_users_by_items([10, 20])
+    assert set(users) == {1, 2, 3}
+    
+    # Test item with no interactions
+    users = interactions.get_users_by_items([99])
+    assert users == []
+    
+    # Test empty item list
+    users = interactions.get_users_by_items([])
+    assert users == []
+    
+    # Test item that only one user interacted with
+    users = interactions.get_users_by_items([30])
+    assert set(users) == {2, 3}
+
 if __name__ == "__main__":
     pytest.main()
