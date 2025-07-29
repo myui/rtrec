@@ -78,6 +78,31 @@ class SLIM(BaseModel):
         dense_output = not self.item_ids.pass_through
         return self.model.recommend(user_id, interaction_matrix, candidate_item_ids=candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted, dense_output=dense_output, ret_scores=False)  # type: ignore
 
+    @override
+    def _recommend_hot_batch(self, user_ids: List[int], candidate_item_ids: Optional[List[int]] = None, users_tags: Optional[List[List[str]]] = None, top_k: int = 10, filter_interacted: bool = True) -> List[List[int]]:
+        """
+        Recommend top-K items for a list of users.
+        :param user_ids: List of user indices
+        :param candidate_item_ids: List of candidate item indices to recommend from
+        :param users_tags: List of user tags
+        :param interaction_matrix: User-item interaction matrix
+        :param top_k: Number of top items to recommend
+        :param filter_interacted: Whether to filter out items the user has already interacted with
+        :return: List of top-K item indices recommended for each user
+        """
+        interaction_matrix = self.interactions.to_csr(select_users=user_ids)
+        dense_output = not self.item_ids.pass_through
+
+        return self.model.recommend_batch(
+            user_ids,
+            interaction_matrix,
+            candidate_item_ids=candidate_item_ids,
+            top_k=top_k,
+            filter_interacted=filter_interacted,
+            dense_output=dense_output,
+            ret_scores=False
+        ) # type: ignore
+
     def _similar_items(self, query_item_id: int, query_item_tags: Optional[List[str]] = None, top_k: int = 10) -> List[Tuple[int, float]]:
         """
         Find similar items for a list of query items.

@@ -671,6 +671,75 @@ class SLIMElastic:
                 return top_items, scores[sorted_indices]
             return top_items
 
+    def recommend_batch(self,
+                       user_ids: List[int],
+                       interaction_matrix: sp.csr_matrix,
+                       candidate_item_ids: Optional[List[int]]=None,
+                       top_k: int=10,
+                       filter_interacted: bool=True,
+                       dense_output: bool=True,
+                       ret_scores: bool=False
+    ) -> List[List[int]] | List[Tuple[List[int], ndarray]]:
+        """
+        Recommend top-K items for multiple users efficiently.
+
+        Args:
+            user_ids (List[int]): List of user IDs (row indices in interaction_matrix).
+            interaction_matrix (csr_matrix): User-item interaction matrix (sparse).
+            candidate_item_ids (List[int]): List of candidate item indices to recommend from. If None, recommend from all items.
+            top_k (int): Number of recommendations to return per user.
+            filter_interacted (bool): Whether to exclude items users have already interacted with. Ignored if candidate_item_ids is provided.
+            dense_output (bool): Whether to return dense item IDs at prediction time.
+            ret_scores (bool): Whether to return scores along with recommended items.
+
+        Returns:
+            List[List[int]] | List[Tuple[List[int], ndarray]]:
+                If ret_scores=False: List of lists, each containing top-K item indices for each user.
+                If ret_scores=True: List of tuples, each containing (List of top-K item indices, array of corresponding scores) for each user.
+        """
+        if self.item_similarity is None:
+            raise RuntimeError("Model must be fitted before calling batch_recommend.")
+
+        results = []
+        
+        if candidate_item_ids is None:
+            # Batch prediction for all users at once
+            user_interaction_matrix = interaction_matrix[user_ids, :]
+            scores_matrix = safe_sparse_dot(user_interaction_matrix, self.item_similarity, dense_output=dense_output)
+            
+            if dense_output:
+                # Handle dense output efficiently
+                for i, user_id in enumerate(user_ids):
+                    user_scores = scores_matrix[i, :] # type: ignore
+                    result = self._dense_topk_indicies(user_scores, top_k, user_id, interaction_matrix, filter_interacted, ret_scores)
+                    results.append(result)
+            else:
+                # Handle sparse output
+                for i, user_id in enumerate(user_ids):
+                    user_scores = scores_matrix[i, :] # type: ignore
+                    result = self._sparse_topk_indicies(user_scores, top_k, user_id, interaction_matrix, filter_interacted, ret_scores) # type: ignore
+                    results.append(result)
+        else:
+            # Batch prediction for selected items only
+            user_interaction_matrix = interaction_matrix[user_ids, :]
+            selected_similarity = self.item_similarity[:, candidate_item_ids]
+            scores_matrix = safe_sparse_dot(user_interaction_matrix, selected_similarity, dense_output=True)
+            
+            for i, user_id in enumerate(user_ids):
+                user_scores = scores_matrix[i, :].ravel() # type: ignore
+                assert len(user_scores) == len(candidate_item_ids), f"Predicted scores must have the same length as candidate_item_ids: {len(user_scores)} != {len(candidate_item_ids)}"
+                
+                # Sort the candidate_item_ids by user_scores and take top-k
+                sorted_indices = np.argsort(user_scores)[-top_k:][::-1]
+                top_items = [candidate_item_ids[idx] for idx in sorted_indices]
+                
+                if ret_scores:
+                    results.append((top_items, user_scores[sorted_indices]))
+                else:
+                    results.append(top_items)
+        
+        return results
+
     @staticmethod
     def _dense_topk_indicies(scores: ndarray, top_k: int, user_id: int, interaction_matrix: sp.csr_matrix, filter_interacted: bool=True, ret_scores: bool=False) -> List[int] | Tuple[List[int], ndarray]:
         """
