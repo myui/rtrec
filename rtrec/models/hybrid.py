@@ -378,10 +378,7 @@ class HybridSlimFM(BaseModel):
             # No features registered, use SLIM
             interaction_matrix = self.interactions.to_csr(select_users=user_ids)
             dense_output = not self.item_ids.pass_through
-            result = [
-                self.slim_model.recommend(user_id, interaction_matrix, candidate_item_ids=candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted, dense_output=dense_output, ret_scores=False)
-                for user_id in user_ids
-            ]
+            result = self.slim_model.recommend_batch(user_ids, interaction_matrix, candidate_item_ids=candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted, dense_output=dense_output, ret_scores=False)
             return result # type: ignore
 
         user_features = self._create_user_features(user_ids, users_tags=users_tags, slice=True)
@@ -407,24 +404,28 @@ class HybridSlimFM(BaseModel):
         ids_array, scores_array = implicit.topk(items=item_vector, query=user_vector, k=top_k, filter_query_items=filter_query_items, num_threads=self.n_threads)
         assert len(ids_array) == len(user_ids)
 
+        # Get SLIM recommendations for all users in batch
+        dense_output = not self.item_ids.pass_through
+        slim_batch_results = self.slim_model.recommend_batch(user_ids, ui_csr, candidate_item_ids=candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted, dense_output=dense_output, ret_scores=True)
+
         results = []
         # implicit assigns negative infinity to the scores to be fitered out
         # see https://github.com/benfred/implicit/blob/v0.7.2/implicit/cpu/topk.pyx#L54
         # the largest possible negative finite value in float32, which is approximately -3.4028235e+38.
         min_score = -np.finfo(np.float32).max
-        dense_output = not self.item_ids.pass_through
-        for user_id, fm_ids, fm_scores in zip(user_ids, ids_array, scores_array):
+        for user_id, fm_ids, fm_scores, (slim_ids, slim_scores) in zip(user_ids, ids_array, scores_array, slim_batch_results):
             for i in range(len(fm_ids)):
                 if candidate_item_ids and fm_ids[i] not in candidate_item_ids:
                     # remove ids not exist in candidate_item_ids
                     fm_ids = fm_ids[:i]
+                    fm_scores = fm_scores[:i]
                     break
                 elif fm_scores[i] <= min_score:
                     # remove ids less than or equal to min_score
                     fm_ids = fm_ids[:i]
+                    fm_scores = fm_scores[:i]
                     break
 
-            slim_ids, slim_scores = self.slim_model.recommend(user_id, ui_csr, candidate_item_ids=candidate_item_ids, top_k=top_k, filter_interacted=filter_interacted, dense_output=dense_output, ret_scores=True)
             # Combine scores from both models and get top-k item ids
             top_items = self._ensemble_by_scores(user_id, fm_ids, fm_scores, slim_ids, slim_scores, top_k) # type: ignore
             results.append(top_items)
